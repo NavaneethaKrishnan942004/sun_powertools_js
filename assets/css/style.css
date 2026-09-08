@@ -1722,3 +1722,164 @@ html[data-theme="dark"] .btn-close {
     margin-left: auto;
   }
 }
+
+/* =========================================================
+   STANDARDIZED MANAGE TABLE & FILTER DESIGN SYSTEM
+   Consistent across all Manage pages
+========================================================= */
+
+.manage-search-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.manage-search-input {
+  padding-left: 2.5rem !important;
+  height: 44px;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text);
+  transition: all var(--transition-fast);
+}
+
+.manage-search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--admin-muted);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.manage-search-input:focus {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px var(--admin-primary-soft);
+  background-color: var(--admin-surface);
+}
+
+.btn-filter-toggle {
+  height: 44px;
+  padding: 0 1.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-filter-toggle .filter-chevron {
+  transition: transform 0.2s ease;
+}
+
+.btn-filter-toggle[aria-expanded="true"] .filter-chevron {
+  transform: rotate(180deg);
+}
+
+.btn-filter-toggle[aria-expanded="true"] {
+  background-color: var(--admin-primary);
+  color: #ffffff !important;
+  border-color: var(--admin-primary);
+}
+
+.filter-panel-box {
+  background: var(--admin-surface-soft);
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
+}
+
+html[data-theme="dark"] .filter-panel-box,
+[data-bs-theme="dark"] .filter-panel-box {
+  background: var(--admin-surface-subtle);
+  border-color: var(--admin-border);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+/* Modern Responsive Table Container */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--admin-surface-soft);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--admin-border);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: var(--admin-muted-light);
+}
+
+/* Pagination Styling */
+.table-pagination-container {
+  border-top: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+}
+
+.pagination {
+  gap: 4px;
+}
+
+.pagination .page-item .page-link {
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  transition: all var(--transition-fast);
+}
+
+.pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+  background-color: var(--admin-surface-soft);
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
+  transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--admin-primary);
+  border-color: var(--admin-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--admin-primary-soft);
+}
+
+.pagination .page-item.disabled .page-link {
+  background-color: var(--admin-surface-soft);
+  border-color: var(--admin-border);
+  color: var(--admin-muted-light);
+  opacity: 0.6;
+}

@@ -17,28 +17,38 @@ const manageUser = async (req, res, next) => {
         const statusFilter = req.query.status !== undefined ? String(req.query.status) : '';
         const roleFilter = (req.query.role || '').trim();
 
-        let sql = 'SELECT * FROM user_master WHERE 1=1';
+        const page = Math.max(1, parseInt(req.query.page || 1, 10));
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        let whereSql = ' WHERE 1=1';
         const params = [];
 
         if (search !== '') {
-            sql += ' AND (user_id LIKE ? OR user_name LIKE ? OR user_email LIKE ? OR user_phone LIKE ?)';
+            whereSql += ' AND (user_id LIKE ? OR user_name LIKE ? OR user_email LIKE ? OR user_phone LIKE ?)';
             const searchParam = `%${search}%`;
             params.push(searchParam, searchParam, searchParam, searchParam);
         }
 
         if (statusFilter === '0' || statusFilter === '1') {
-            sql += ' AND status = ?';
+            whereSql += ' AND status = ?';
             params.push(parseInt(statusFilter, 10));
         }
 
         if (roleFilter === 'user' || roleFilter === 'admin') {
-            sql += ' AND role = ?';
+            whereSql += ' AND role = ?';
             params.push(roleFilter);
         }
 
-        sql += ' ORDER BY id DESC';
+        const [countRows] = await db.query(
+            `SELECT COUNT(*) AS total FROM user_master ${whereSql}`,
+            params
+        );
+        const totalRecords = countRows[0].total;
+        const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
 
-        const [users] = await db.query(sql, params);
+        const dataSql = `SELECT * FROM user_master ${whereSql} ORDER BY id DESC LIMIT ? OFFSET ?`;
+        const [users] = await db.query(dataSql, [...params, limit, offset]);
 
         res.render('manage_user', {
             pageTitle: 'User Master',
@@ -47,7 +57,13 @@ const manageUser = async (req, res, next) => {
             statusFilter,
             roleFilter,
             success: req.query.success || '',
-            error: req.query.error || ''
+            error: req.query.error || '',
+            page,
+            limit,
+            offset,
+            totalRecords,
+            totalPages,
+            queryParams: req.query
         });
     } catch (err) {
         next(err);

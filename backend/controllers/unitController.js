@@ -19,28 +19,42 @@ const unitController = {
             const search = (req.query.search || '').trim();
             const statusFilter = req.query.status || '';
 
-            let sql = `
+            const page = Math.max(1, parseInt(req.query.page || 1, 10));
+            const limit = 10;
+            const offset = (page - 1) * limit;
+
+            let whereSql = " WHERE 1=1";
+            const params = [];
+
+            if (search !== '') {
+                whereSql += " AND (um.unit_code LIKE ? OR um.unit_name LIKE ?)";
+                const sp = `%${search}%`;
+                params.push(sp, sp);
+            }
+
+            if (statusFilter !== '' && ['0', '1'].includes(statusFilter)) {
+                whereSql += " AND um.status = ?";
+                params.push(parseInt(statusFilter, 10));
+            }
+
+            const [countRows] = await db.query(
+                `SELECT COUNT(*) AS total FROM unit_master um ${whereSql}`,
+                params
+            );
+            const totalRecords = countRows[0].total;
+            const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
+
+            const dataSql = `
                 SELECT um.*, creator.user_name AS created_by_name, updater.user_name AS updated_by_name
                 FROM unit_master um
                 LEFT JOIN user_master creator ON creator.id = um.created_by
                 LEFT JOIN user_master updater ON updater.id = um.updated_by
-                WHERE 1=1
+                ${whereSql}
+                ORDER BY um.id DESC
+                LIMIT ? OFFSET ?
             `;
-            const params = {};
 
-            if (search !== '') {
-                sql += " AND (um.unit_code LIKE :search OR um.unit_name LIKE :search)";
-                params.search = `%${search}%`;
-            }
-
-            if (statusFilter !== '' && ['0', '1'].includes(statusFilter)) {
-                sql += " AND um.status = :status";
-                params.status = parseInt(statusFilter, 10);
-            }
-
-            sql += " ORDER BY um.id DESC";
-
-            const [units] = await db.query(sql, params);
+            const [units] = await db.query(dataSql, [...params, limit, offset]);
 
             res.render('manaage_unit', {
                 pageTitle: 'Unit Master',
@@ -52,7 +66,13 @@ const unitController = {
                 descriptionError: '',
                 duplicateNameError: '',
                 validationAction: '',
-                validationId: 0
+                validationId: 0,
+                page,
+                limit,
+                offset,
+                totalRecords,
+                totalPages,
+                queryParams: req.query
             });
         } catch (err) {
             console.error('[UnitController.index] Error:', err);

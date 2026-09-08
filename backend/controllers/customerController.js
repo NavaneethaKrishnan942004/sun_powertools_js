@@ -26,20 +26,15 @@ exports.manageCustomers = async (req, res) => {
             }
         }
 
-        let sql = `
-            SELECT 
-                cm.*,
-                creator.user_name AS created_by_name,
-                updater.user_name AS updated_by_name
-            FROM customer_master cm
-            LEFT JOIN user_master creator ON creator.id = cm.created_by
-            LEFT JOIN user_master updater ON updater.id = cm.updated_by
-            WHERE 1=1
-        `;
+        const page = Math.max(1, parseInt(req.query.page || 1, 10));
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        let whereSql = ' WHERE 1=1';
         const params = [];
 
         if (search.trim() !== '') {
-            sql += ` AND (
+            whereSql += ` AND (
                 cm.customer_code LIKE ? 
                 OR cm.customer_name LIKE ? 
                 OR cm.company_name LIKE ? 
@@ -50,23 +45,41 @@ exports.manageCustomers = async (req, res) => {
         }
 
         if (customer_type !== '' && ['Individual', 'Business'].includes(customer_type)) {
-            sql += ` AND cm.customer_type = ?`;
+            whereSql += ` AND cm.customer_type = ?`;
             params.push(customer_type);
         }
 
         if (credit_allowed !== '' && ['0', '1'].includes(credit_allowed)) {
-            sql += ` AND cm.credit_allowed = ?`;
+            whereSql += ` AND cm.credit_allowed = ?`;
             params.push(parseInt(credit_allowed, 10));
         }
 
         if (status !== '' && ['0', '1'].includes(status)) {
-            sql += ` AND cm.status = ?`;
+            whereSql += ` AND cm.status = ?`;
             params.push(parseInt(status, 10));
         }
 
-        sql += ` ORDER BY cm.id DESC`;
+        // Count total matching records
+        const countSql = `SELECT COUNT(*) AS total FROM customer_master cm ${whereSql}`;
+        const [countRows] = await pool.query(countSql, params);
+        const totalRecords = countRows && countRows.length > 0 ? countRows[0].total : 0;
+        const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
 
-        const [customers] = await pool.query(sql, params);
+        // Fetch paginated records
+        const dataSql = `
+            SELECT 
+                cm.*,
+                creator.user_name AS created_by_name,
+                updater.user_name AS updated_by_name
+            FROM customer_master cm
+            LEFT JOIN user_master creator ON creator.id = cm.created_by
+            LEFT JOIN user_master updater ON updater.id = cm.updated_by
+            ${whereSql}
+            ORDER BY cm.id DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        const [customers] = await pool.query(dataSql, [...params, limit, offset]);
 
         for (const c of customers) {
             c.summary = await getCustomerFinancialSummary(pool, c.id);
@@ -78,7 +91,12 @@ exports.manageCustomers = async (req, res) => {
             search,
             customerTypeFilter: customer_type,
             creditAllowedFilter: credit_allowed,
-            statusFilter: status
+            statusFilter: status,
+            page,
+            limit,
+            totalRecords,
+            totalPages,
+            queryParams: req.query
         });
     } catch (err) {
         console.error('manageCustomers error:', err);

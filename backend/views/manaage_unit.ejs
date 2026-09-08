@@ -27,58 +27,77 @@
             </div>
         <% } %>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <form method="GET" id="filterForm">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-12 col-md-8">
-                            <label class="form-label">Search</label>
-                            <input type="text" name="search" id="unitSearch" class="form-control"
-                                placeholder="Search ID or unit name" value="<%= e(search) %>"
-                                autocomplete="off">
-                        </div>
+        <%
+        const hasActiveFilters = Boolean(statusFilter && statusFilter !== '');
+        %>
 
-                        <% if (search !== '' || statusFilter !== '') { %>
-                            <div class="col-6 col-md-2">
-                                <a href="manaage_unit.php" class="btn btn-outline-secondary w-100">
-                                    <i class="bi bi-x-circle me-1"></i> Clear
-                                </a>
-                            </div>
+        <!-- STANDARDIZED SEARCH & FILTER HEADER -->
+        <div class="row g-3 align-items-center mb-3">
+            <div class="col-12 col-md d-flex flex-grow-1 gap-2">
+                <form method="GET" action="manaage_unit.php" class="w-100 d-flex gap-2">
+                    <div class="manage-search-wrapper">
+                        <i class="bi bi-search manage-search-icon"></i>
+                        <input type="text" name="search" class="form-control manage-search-input" placeholder="Search by ID or unit name..." value="<%= e(search) %>" aria-label="Search Units">
+                        <% if (search) { %>
+                            <a href="manaage_unit.php" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </a>
                         <% } %>
+                    </div>
+                    <% if (statusFilter !== '') { %><input type="hidden" name="status" value="<%= statusFilter %>"><% } %>
+                </form>
+            </div>
+            <div class="col-12 col-md-auto d-flex gap-2 justify-content-end">
+                <button class="btn btn-filter-toggle <%= hasActiveFilters ? 'active' : '' %>" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" aria-expanded="<%= hasActiveFilters ? 'true' : 'false' %>" aria-controls="filterSection">
+                    <i class="bi bi-funnel"></i>
+                    <span>Filters</span>
+                    <% if (hasActiveFilters) { %>
+                        <span class="badge bg-primary text-white rounded-pill ms-1">Active</span>
+                    <% } %>
+                    <i class="bi bi-chevron-down filter-toggle-icon"></i>
+                </button>
+            </div>
+        </div>
 
-                        <div class="<%= (search !== '' || statusFilter !== '') ? 'col-6' : 'col-12' %> col-md-2">
-                            <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="collapse"
-                                data-bs-target="#filterSection" aria-expanded="false" aria-controls="filterSection"
-                                id="filterToggleBtn">
-                                <i class="bi bi-funnel me-1"></i> Filter
-                                <i class="bi bi-chevron-down ms-1" id="filterIcon"></i>
-                            </button>
+        <!-- EXPANDABLE FILTER PANEL -->
+        <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
+            <div class="filter-panel-box">
+                <form method="GET" action="manaage_unit.php" id="filterForm">
+                    <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6 col-md-4">
+                            <label class="form-label small fw-semibold text-muted">Status</label>
+                            <select name="status" id="statusFilter" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="1" <%= statusFilter === '1' ? 'selected' : '' %>>Active</option>
+                                <option value="0" <%= statusFilter === '0' ? 'selected' : '' %>>Inactive</option>
+                            </select>
                         </div>
                     </div>
-
-                    <div class="collapse mt-3" id="filterSection">
-                        <div class="filter-section-box">
-                            <div class="row g-3">
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Status</label>
-                                    <select name="status" id="statusFilter" class="form-select">
-                                        <option value="">All Status</option>
-                                        <option value="1" <%= statusFilter === '1' ? 'selected' : '' %>>Active</option>
-                                        <option value="0" <%= statusFilter === '0' ? 'selected' : '' %>>Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="filter-actions">
+                        <a href="manaage_unit.php<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="category-table-wrapper">
-                    <div class="category-table-scroll">
-                        <table class="table category-table align-middle mb-0">
+        <!-- UNITS TABLE CARD -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="fw-bold">
+                    <span>Records: </span>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5"><%= numberFormat(totalRecords) %></span>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
                             <thead>
                                 <tr>
                                     <th>Unit ID</th>
@@ -245,6 +264,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- STANDARDIZED PAGINATION -->
+            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manaage_unit.php' }) %>
         </div>
 
     </div>

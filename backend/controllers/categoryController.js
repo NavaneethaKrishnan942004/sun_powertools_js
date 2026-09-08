@@ -19,28 +19,42 @@ const categoryController = {
             const search = (req.query.search || '').trim();
             const statusFilter = req.query.status || '';
 
-            let sql = `
+            const page = Math.max(1, parseInt(req.query.page || 1, 10));
+            const limit = 10;
+            const offset = (page - 1) * limit;
+
+            let whereSql = " WHERE 1=1";
+            const params = [];
+
+            if (search !== '') {
+                whereSql += " AND (cm.category_code LIKE ? OR cm.category_name LIKE ?)";
+                const sp = `%${search}%`;
+                params.push(sp, sp);
+            }
+
+            if (statusFilter !== '' && ['0', '1'].includes(statusFilter)) {
+                whereSql += " AND cm.status = ?";
+                params.push(parseInt(statusFilter, 10));
+            }
+
+            const [countRows] = await db.query(
+                `SELECT COUNT(*) AS total FROM category_master cm ${whereSql}`,
+                params
+            );
+            const totalRecords = countRows[0].total;
+            const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
+
+            const dataSql = `
                 SELECT cm.*, creator.user_name AS created_by_name, updater.user_name AS updated_by_name
                 FROM category_master cm
                 LEFT JOIN user_master creator ON creator.id = cm.created_by
                 LEFT JOIN user_master updater ON updater.id = cm.updated_by
-                WHERE 1=1
+                ${whereSql}
+                ORDER BY cm.id DESC
+                LIMIT ? OFFSET ?
             `;
-            const params = {};
 
-            if (search !== '') {
-                sql += " AND (cm.category_code LIKE :search OR cm.category_name LIKE :search)";
-                params.search = `%${search}%`;
-            }
-
-            if (statusFilter !== '' && ['0', '1'].includes(statusFilter)) {
-                sql += " AND cm.status = :status";
-                params.status = parseInt(statusFilter, 10);
-            }
-
-            sql += " ORDER BY cm.id DESC";
-
-            const [categories] = await db.query(sql, params);
+            const [categories] = await db.query(dataSql, [...params, limit, offset]);
 
             res.render('manage_category', {
                 pageTitle: 'Category Master',
@@ -52,7 +66,13 @@ const categoryController = {
                 descriptionError: '',
                 duplicateNameError: '',
                 validationAction: '',
-                validationId: 0
+                validationId: 0,
+                page,
+                limit,
+                offset,
+                totalRecords,
+                totalPages,
+                queryParams: req.query
             });
         } catch (err) {
             console.error('[CategoryController.index] Error:', err);

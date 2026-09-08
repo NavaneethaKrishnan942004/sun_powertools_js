@@ -92,7 +92,7 @@ exports.manageSalesNotes = async (req, res) => {
         const statusFilter = req.query.status !== undefined ? req.query.status : '1';
 
         const page = Math.max(1, parseInt(req.query.page || 1, 10));
-        const limit = 15;
+        const limit = 10;
         const offset = (page - 1) * limit;
 
         let whereSql = ' WHERE 1=1 ';

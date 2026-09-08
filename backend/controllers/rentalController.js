@@ -48,7 +48,59 @@ exports.manageRentals = async (req, res) => {
             to_date = ''
         } = req.query;
 
-        let sql = `
+        const page = Math.max(1, parseInt(req.query.page || 1, 10));
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        let whereSql = ' WHERE 1=1 ';
+        const params = [];
+
+        if (search.trim() !== '') {
+            whereSql += ` AND (
+                r.rental_no LIKE ?
+                OR cm.customer_name LIKE ?
+                OR cm.customer_code LIKE ?
+                OR cm.mobile_number LIKE ?
+                OR pm.product_name LIKE ?
+                OR pm.product_code LIKE ?
+            )`;
+            const sp = `%${search.trim()}%`;
+            params.push(sp, sp, sp, sp, sp, sp);
+        }
+
+        if (status !== '') {
+            if (status === 'Overdue') {
+                whereSql += ` AND (r.rental_status = 'Overdue' OR (r.rental_status = 'Active' AND r.expected_checkout_datetime < NOW()))`;
+            } else if (status === 'Active') {
+                whereSql += ` AND r.rental_status = 'Active' AND r.expected_checkout_datetime >= NOW()`;
+            } else if (['Returned', 'Cancelled'].includes(status)) {
+                whereSql += ` AND r.rental_status = ?`;
+                params.push(status);
+            }
+        }
+
+        if (from_date.trim() !== '') {
+            whereSql += ` AND DATE(r.check_in_datetime) >= ?`;
+            params.push(from_date.trim());
+        }
+
+        if (to_date.trim() !== '') {
+            whereSql += ` AND DATE(r.check_in_datetime) <= ?`;
+            params.push(to_date.trim());
+        }
+
+        const [countRows] = await pool.query(
+            `SELECT COUNT(*) AS total
+            FROM rentals r
+            INNER JOIN customer_master cm ON cm.id = r.customer_id
+            INNER JOIN product_master pm ON pm.id = r.product_id
+            ${whereSql}`,
+            params
+        );
+        const totalRecords = countRows[0].total;
+        const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
+
+        const dataSql = `
             SELECT
                 r.*,
                 cm.customer_code,
@@ -68,47 +120,12 @@ exports.manageRentals = async (req, res) => {
             LEFT JOIN category_master c ON c.id = pm.category_id
             LEFT JOIN user_master creator ON creator.id = r.created_by
             LEFT JOIN user_master updater ON updater.id = r.updated_by
-            WHERE 1=1
+            ${whereSql}
+            ORDER BY r.id DESC
+            LIMIT ? OFFSET ?
         `;
-        const params = [];
 
-        if (search.trim() !== '') {
-            sql += ` AND (
-                r.rental_no LIKE ?
-                OR cm.customer_name LIKE ?
-                OR cm.customer_code LIKE ?
-                OR cm.mobile_number LIKE ?
-                OR pm.product_name LIKE ?
-                OR pm.product_code LIKE ?
-            )`;
-            const sp = `%${search.trim()}%`;
-            params.push(sp, sp, sp, sp, sp, sp);
-        }
-
-        if (status !== '') {
-            if (status === 'Overdue') {
-                sql += ` AND (r.rental_status = 'Overdue' OR (r.rental_status = 'Active' AND r.expected_checkout_datetime < NOW()))`;
-            } else if (status === 'Active') {
-                sql += ` AND r.rental_status = 'Active' AND r.expected_checkout_datetime >= NOW()`;
-            } else if (['Returned', 'Cancelled'].includes(status)) {
-                sql += ` AND r.rental_status = ?`;
-                params.push(status);
-            }
-        }
-
-        if (from_date.trim() !== '') {
-            sql += ` AND DATE(r.check_in_datetime) >= ?`;
-            params.push(from_date.trim());
-        }
-
-        if (to_date.trim() !== '') {
-            sql += ` AND DATE(r.check_in_datetime) <= ?`;
-            params.push(to_date.trim());
-        }
-
-        sql += ` ORDER BY r.id DESC`;
-
-        const [rentals] = await pool.query(sql, params);
+        const [rentals] = await pool.query(dataSql, [...params, limit, offset]);
 
         // Compute effective statuses
         rentals.forEach(r => {
@@ -127,7 +144,13 @@ exports.manageRentals = async (req, res) => {
             fromDateFilter: from_date,
             toDateFilter: to_date,
             getRentalStatusBadge,
-            currentDatetimeLocal: formatDatetimeLocal()
+            currentDatetimeLocal: formatDatetimeLocal(),
+            page,
+            limit,
+            offset,
+            totalRecords,
+            totalPages,
+            queryParams: req.query
         });
     } catch (err) {
         console.error('manageRentals error:', err);

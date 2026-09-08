@@ -72,6 +72,96 @@ function renderBreadcrumbs(items) {
 }
 
 /**
+ * Renders Standard Pagination Component
+ */
+function renderPagination(options = {}) {
+    const page = parseInt(options.page || 1, 10);
+    const totalPages = parseInt(options.totalPages || 1, 10);
+    const totalRecords = parseInt(options.totalRecords || 0, 10);
+    const limit = parseInt(options.limit || 10, 10);
+    const queryParams = options.queryParams || {};
+    const baseUrl = options.baseUrl || '';
+
+    if (totalRecords === 0) {
+        return '';
+    }
+
+    const startRec = (page - 1) * limit + 1;
+    const endRec = Math.min(page * limit, totalRecords);
+
+    function getPageUrl(p) {
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(queryParams)) {
+            if (k !== 'page' && v !== '' && v !== null && v !== undefined) {
+                params.set(k, v);
+            }
+        }
+        params.set('page', p);
+        const qStr = params.toString();
+        return (baseUrl ? baseUrl : '') + (qStr ? '?' + qStr : '');
+    }
+
+    let pages = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        pages.push(1);
+        let start = Math.max(2, page - 2);
+        let end = Math.min(totalPages - 1, page + 2);
+
+        if (start > 2) {
+            pages.push('...');
+        }
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+        pages.push(totalPages);
+    }
+
+    let html = `
+    <div class="table-pagination-container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 p-3 p-md-4 border-top bg-surface">
+        <div class="small text-muted text-center text-sm-start">
+            Showing <strong class="text-body fw-semibold">${startRec}–${endRec}</strong> of <strong class="text-body fw-semibold">${totalRecords.toLocaleString('en-IN')}</strong> records
+        </div>
+        ${totalPages > 1 ? `
+        <nav aria-label="Table navigation">
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                <li class="page-item ${page <= 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="${page > 1 ? e(getPageUrl(page - 1)) : '#'}" aria-label="Previous">
+                        <i class="bi bi-chevron-left small me-1"></i> Prev
+                    </a>
+                </li>
+                ${pages.map(p => {
+                    if (p === '...') {
+                        return '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                    }
+                    const isActive = (p === page);
+                    return `
+                        <li class="page-item ${isActive ? 'active' : ''}">
+                            <a class="page-link" href="${e(getPageUrl(p))}" ${isActive ? 'aria-current="page"' : ''}>
+                                ${p}
+                            </a>
+                        </li>
+                    `;
+                }).join('')}
+                <li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="${page < totalPages ? e(getPageUrl(page + 1)) : '#'}" aria-label="Next">
+                        Next <i class="bi bi-chevron-right small ms-1"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        ` : ''}
+    </div>
+    `;
+
+    return html;
+}
+
+/**
  * View Helpers Middleware
  */
 function viewHelpers(req, res, next) {
@@ -88,6 +178,7 @@ function viewHelpers(req, res, next) {
     res.locals.nl2br = nl2br;
     res.locals.numberFormat = numberFormat;
     res.locals.renderBreadcrumbs = renderBreadcrumbs;
+    res.locals.renderPagination = renderPagination;
     res.locals.formatCustomerBalance = formatCustomerBalance;
     res.locals.getPaymentTypeBadge = getPaymentTypeBadge;
     res.locals.evaluateCreditStatus = evaluateCreditStatus;
@@ -109,6 +200,7 @@ module.exports = {
     nl2br,
     numberFormat,
     renderBreadcrumbs,
+    renderPagination,
     formatCustomerBalance,
     getPaymentTypeBadge,
     evaluateCreditStatus,

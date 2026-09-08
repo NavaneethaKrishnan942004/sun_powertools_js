@@ -23,6 +23,10 @@ exports.manageProducts = async (req, res) => {
     try {
         const { search = '', status = '', category_id = '', brand_id = '' } = req.query;
 
+        const page = Math.max(1, parseInt(req.query.page || 1, 10));
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
         const [categories] = await pool.query(`
             SELECT id, category_code, category_name
             FROM category_master
@@ -37,7 +41,42 @@ exports.manageProducts = async (req, res) => {
             ORDER BY brand_name ASC
         `);
 
-        let sql = `
+        let whereSql = ' WHERE 1=1';
+        const params = [];
+
+        if (search.trim() !== '') {
+            whereSql += ` AND (
+                p.product_code LIKE ?
+                OR p.product_name LIKE ?
+                OR p.short_name LIKE ?
+            )`;
+            const sp = `%${search.trim()}%`;
+            params.push(sp, sp, sp);
+        }
+
+        if (status !== '' && ['0', '1'].includes(status)) {
+            whereSql += ` AND p.status = ?`;
+            params.push(parseInt(status, 10));
+        }
+
+        if (category_id !== '') {
+            whereSql += ` AND p.category_id = ?`;
+            params.push(parseInt(category_id, 10));
+        }
+
+        if (brand_id !== '') {
+            whereSql += ` AND p.brand_id = ?`;
+            params.push(parseInt(brand_id, 10));
+        }
+
+        // Count total matching records
+        const countSql = `SELECT COUNT(*) AS total FROM product_master p ${whereSql}`;
+        const [countRows] = await pool.query(countSql, params);
+        const totalRecords = countRows && countRows.length > 0 ? countRows[0].total : 0;
+        const totalPages = Math.max(1, Math.ceil(totalRecords / limit));
+
+        // Fetch paginated data
+        const dataSql = `
             SELECT
                 p.*,
                 c.category_code,
@@ -51,38 +90,12 @@ exports.manageProducts = async (req, res) => {
             LEFT JOIN brand_master b ON b.id = p.brand_id
             LEFT JOIN user_master creator ON creator.id = p.created_by
             LEFT JOIN user_master updater ON updater.id = p.updated_by
-            WHERE 1=1
+            ${whereSql}
+            ORDER BY p.id DESC
+            LIMIT ? OFFSET ?
         `;
-        const params = [];
 
-        if (search.trim() !== '') {
-            sql += ` AND (
-                p.product_code LIKE ?
-                OR p.product_name LIKE ?
-                OR p.short_name LIKE ?
-            )`;
-            const sp = `%${search.trim()}%`;
-            params.push(sp, sp, sp);
-        }
-
-        if (status !== '' && ['0', '1'].includes(status)) {
-            sql += ` AND p.status = ?`;
-            params.push(parseInt(status, 10));
-        }
-
-        if (category_id !== '') {
-            sql += ` AND p.category_id = ?`;
-            params.push(parseInt(category_id, 10));
-        }
-
-        if (brand_id !== '') {
-            sql += ` AND p.brand_id = ?`;
-            params.push(parseInt(brand_id, 10));
-        }
-
-        sql += ` ORDER BY p.id DESC`;
-
-        const [products] = await pool.query(sql, params);
+        const [products] = await pool.query(dataSql, [...params, limit, offset]);
 
         res.render('manage_product', {
             pageTitle: 'Product Master',
@@ -92,7 +105,12 @@ exports.manageProducts = async (req, res) => {
             search,
             statusFilter: status,
             categoryFilter: category_id,
-            brandFilter: brand_id
+            brandFilter: brand_id,
+            page,
+            limit,
+            totalRecords,
+            totalPages,
+            queryParams: req.query
         });
     } catch (err) {
         console.error('manageProducts error:', err);
