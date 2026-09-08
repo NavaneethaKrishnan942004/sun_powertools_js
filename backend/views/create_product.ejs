@@ -1,0 +1,549 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+<div class="container-fluid px-3 px-lg-4 py-4">
+
+<!-- Breadcrumb Navigation -->
+<%- renderBreadcrumbs([
+    { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+    { title: 'Settings', link: 'settings.php' },
+    { title: 'DMS Masters', link: 'masters.php' },
+    { title: 'Product Master', link: 'manage_product.php' },
+    { title: 'Add' }
+]) %>
+
+<!-- PAGE HEADING -->
+<div class="page-heading d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title mb-1">Create Product</h1>
+        <p class="text-muted mb-0">Add a new product for rental and sales.</p>
+    </div>
+    <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
+</div>
+
+<% if (generalError) { %>
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-circle me-2"></i>
+    <%= generalError %>
+</div>
+<% } %>
+
+<form method="POST" enctype="multipart/form-data" id="productForm">
+
+<!-- SECTION 1 -->
+<div class="card shadow-sm mb-4">
+<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="card-title mb-0">
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-box-seam me-2 text-primary"></i>1. Basic Information
+        </h5>
+    </div>
+    <div class="card-header-actions">
+        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+            <input
+                class="form-check-input"
+                type="checkbox"
+                name="status"
+                id="status"
+                <%= (!old || old.status === undefined || old.status) ? 'checked' : '' %>
+            >
+            <label class="form-check-label mb-0 fw-semibold" id="statusLabel" for="status">
+                <%= (!old || old.status === undefined || old.status) ? 'Active' : 'Inactive' %>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="card-body">
+<div class="row g-3">
+
+<!-- PRODUCT NAME -->
+<div class="col-12">
+    <label class="form-label">Product Name <span class="text-danger">*</span></label>
+    <input
+        type="text"
+        name="product_name"
+        class="form-control <%= productNameError ? 'is-invalid' : '' %>"
+        value="<%= (old && old.product_name) || '' %>"
+        minlength="2"
+        maxlength="200"
+        placeholder="Enter product name"
+        required
+    >
+    <% if (productNameError) { %>
+    <div class="validation-message"><%= productNameError %></div>
+    <% } %>
+</div>
+
+<!-- SHORT NAME -->
+<div class="col-12 col-md-6">
+    <label class="form-label">Short Name <span class="text-danger">*</span></label>
+    <input
+        type="text"
+        name="short_name"
+        class="form-control <%= shortNameError ? 'is-invalid' : '' %>"
+        value="<%= (old && old.short_name) || '' %>"
+        minlength="2"
+        maxlength="100"
+        placeholder="Enter short name"
+        required
+    >
+    <% if (shortNameError) { %>
+    <div class="validation-message"><%= shortNameError %></div>
+    <% } %>
+</div>
+
+<!-- CATEGORY -->
+<div class="col-12 col-md-6">
+    <label class="form-label">Category <span class="text-danger">*</span></label>
+    <select name="category_id" class="form-select <%= categoryError ? 'is-invalid' : '' %>" required>
+        <option value="">Select Category</option>
+        <% categories.forEach(category => { %>
+        <option
+            value="<%= category.id %>"
+            <%= (old && String(old.category_id) === String(category.id)) ? 'selected' : '' %>
+        >
+            <%= category.category_code %> - <%= category.category_name %>
+        </option>
+        <% }) %>
+    </select>
+    <% if (categoryError) { %>
+    <div class="validation-message"><%= categoryError %></div>
+    <% } %>
+</div>
+
+<!-- BRAND -->
+<div class="col-12 col-md-6">
+    <label class="form-label">Brand <span class="text-danger">*</span></label>
+    <select name="brand_id" class="form-select <%= brandError ? 'is-invalid' : '' %>" required>
+        <option value="">Select Brand</option>
+        <% brands.forEach(brand => { %>
+        <option
+            value="<%= brand.id %>"
+            <%= (old && String(old.brand_id) === String(brand.id)) ? 'selected' : '' %>
+        >
+            <%= brand.brand_code %> - <%= brand.brand_name %>
+        </option>
+        <% }) %>
+    </select>
+    <% if (brandError) { %>
+    <div class="validation-message"><%= brandError %></div>
+    <% } %>
+</div>
+
+<!-- IMAGES -->
+<div class="col-12">
+    <label class="form-label">Product Image <span class="text-danger">*</span></label>
+    <input
+        type="file"
+        name="product_images"
+        class="form-control <%= imageError ? 'is-invalid' : '' %>"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
+        required
+    >
+    <small class="text-muted">You can upload multiple JPG, JPEG, PNG, GIF or WEBP images.</small>
+    <% if (imageError) { %>
+    <div class="validation-message"><%= imageError %></div>
+    <% } %>
+</div>
+
+<!-- DESCRIPTION -->
+<div class="col-12">
+    <div class="d-flex justify-content-between">
+        <label class="form-label">Description</label>
+        <small class="text-muted" id="descriptionCount">0 / 2000</small>
+    </div>
+    <textarea
+        name="description"
+        id="description"
+        class="form-control"
+        rows="4"
+        maxlength="2000"
+        placeholder="Enter product description"
+    ><%= (old && old.description) || '' %></textarea>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- SECTION 2 SALES -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">2. Sales</h5>
+</div>
+<div class="card-body">
+<div class="row g-3">
+
+<!-- SALE AVAILABLE -->
+<div class="col-12 col-md-4">
+    <label class="form-label">Sale Available <span class="text-danger">*</span></label>
+    <select name="sale_available" id="saleAvailable" class="form-select" required>
+        <option value="">Select</option>
+        <option value="yes" <%= (old && old.sale_available === 'yes') ? 'selected' : '' %>>Yes</option>
+        <option value="no" <%= (old && old.sale_available === 'no') ? 'selected' : '' %>>No</option>
+    </select>
+</div>
+
+<!-- PURCHASE -->
+<div class="col-12 col-md-4">
+    <label class="form-label">Purchase Price</label>
+    <input
+        type="number"
+        name="purchase_price"
+        class="form-control"
+        step="0.01"
+        min="0"
+        placeholder="Enter purchase price"
+        value="<%= (old && old.purchase_price) || '' %>"
+    >
+</div>
+
+<!-- SELLING -->
+<div class="col-12 col-md-4">
+    <label class="form-label">
+        Selling Price
+        <span class="text-danger sale-required" style="display:none">*</span>
+    </label>
+    <input
+        type="number"
+        name="selling_price"
+        id="sellingPrice"
+        class="form-control"
+        step="0.01"
+        min="0"
+        placeholder="Enter selling price"
+        value="<%= (old && old.selling_price) || '' %>"
+    >
+    <% if (sellingPriceError) { %>
+    <div class="validation-message"><%= sellingPriceError %></div>
+    <% } %>
+</div>
+
+<!-- DISCOUNT -->
+<div class="col-12 col-md-4">
+    <label class="form-label">Discount Allow</label>
+    <select name="discount_allowed" id="discountAllowed" class="form-select">
+        <option value="no" <%= (old && old.discount_allowed === 'no') ? 'selected' : '' %>>No</option>
+        <option value="yes" <%= (old && old.discount_allowed === 'yes') ? 'selected' : '' %>>Yes</option>
+    </select>
+</div>
+
+<!-- DISCOUNT % -->
+<div class="col-12 col-md-4" id="discountPercentWrapper" style="display:none">
+    <label class="form-label">Discount %</label>
+    <input
+        type="number"
+        name="discount_percent"
+        class="form-control"
+        step="0.01"
+        min="0"
+        max="100"
+        placeholder="Enter discount percentage"
+        value="<%= (old && old.discount_percent) || '' %>"
+    >
+</div>
+
+<!-- UNIT OF SALE -->
+<div class="col-12 col-md-4">
+    <label class="form-label">Unit of Sale</label>
+    <input
+        type="number"
+        name="sale_unit"
+        class="form-control"
+        step="any"
+        min="0"
+        placeholder="Enter number"
+        value="<%= (old && old.sale_unit) || '' %>"
+    >
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- SECTION 3 RENTAL -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">3. Rental</h5>
+</div>
+<div class="card-body">
+<div class="row g-3">
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Rental Available <span class="text-danger">*</span></label>
+    <select name="rental_available" id="rentalAvailable" class="form-select" required>
+        <option value="">Select</option>
+        <option value="yes" <%= (old && old.rental_available === 'yes') ? 'selected' : '' %>>Yes</option>
+        <option value="no" <%= (old && old.rental_available === 'no') ? 'selected' : '' %>>No</option>
+    </select>
+</div>
+
+</div>
+
+<div id="rentalSection" style="display:none" class="mt-4">
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#hourlyTab">Hourly</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#dailyTab">Daily</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#weeklyTab">Weekly</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#monthlyTab">Monthly</button></li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-3">
+        <% const periods = { hourly: 'Hourly', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }; %>
+        <% let first = true; %>
+        <% for (const [key, label] of Object.entries(periods)) { %>
+        <div class="tab-pane fade <%= first ? 'show active' : '' %>" id="<%= key %>Tab">
+            <div class="form-check form-switch mb-3">
+                <input
+                    class="form-check-input rental-available-checkbox"
+                    type="checkbox"
+                    name="rental_available_period[<%= key %>]"
+                    id="rentalAvailable<%= key.charAt(0).toUpperCase() + key.slice(1) %>"
+                    data-period="<%= key %>"
+                >
+                <label class="form-check-label" for="rentalAvailable<%= key.charAt(0).toUpperCase() + key.slice(1) %>">Available</label>
+            </div>
+
+            <div class="rental-fields" id="rentalFields<%= key.charAt(0).toUpperCase() + key.slice(1) %>" style="display:none">
+                <div class="row g-3">
+                    <!-- RENTAL UNIT -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Rental Unit <span class="text-danger">*</span></label>
+                        <select name="rental_unit_id[<%= key %>]" class="form-select rental-required">
+                            <option value="">Select Unit</option>
+                            <% units.forEach(unit => { %>
+                            <option value="<%= unit.id %>"><%= unit.unit_code %> - <%= unit.unit_name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <!-- SECURITY DEPOSIT -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Security Deposit <span class="text-danger">*</span></label>
+                        <input
+                            type="number"
+                            name="security_deposit[<%= key %>]"
+                            class="form-control rental-required"
+                            step="0.01"
+                            min="0"
+                            placeholder="Enter security deposit"
+                        >
+                    </div>
+
+                    <!-- RENTAL RATE -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Rental Rate <span class="text-danger">*</span></label>
+                        <input
+                            type="number"
+                            name="rental_rate[<%= key %>]"
+                            class="form-control rental-required"
+                            step="0.01"
+                            min="0"
+                            placeholder="Enter rental rate"
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% first = false; %>
+        <% } %>
+    </div>
+</div>
+
+</div>
+</div>
+
+<!-- SECTION 4 SPECIFICATIONS -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">4. Specifications</h5>
+</div>
+<div class="card-body">
+<div class="row g-3">
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Power Rating</label>
+    <input type="text" name="power_rating" class="form-control" placeholder="e.g. 750W" value="<%= (old && old.power_rating) || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Voltage</label>
+    <input type="text" name="voltage" class="form-control" placeholder="e.g. 220V" value="<%= (old && old.voltage) || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">RPM</label>
+    <input type="text" name="rpm" class="form-control" placeholder="e.g. 11000 RPM" value="<%= (old && old.rpm) || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Chuck / Disc Size</label>
+    <input type="text" name="chuck_disc_size" class="form-control" placeholder="Enter size" value="<%= (old && old.chuck_disc_size) || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Weight</label>
+    <input type="text" name="weight" class="form-control" placeholder="e.g. 2.5 KG" value="<%= (old && old.weight) || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Battery Capacity</label>
+    <input type="text" name="battery_capacity" class="form-control" placeholder="e.g. 5Ah" value="<%= (old && old.battery_capacity) || '' %>">
+</div>
+
+<div class="col-12">
+    <label class="form-label">Warranty Period</label>
+    <input type="text" name="warranty_period" class="form-control" placeholder="e.g. 1 Year" value="<%= (old && old.warranty_period) || '' %>">
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- SECTION 5 WARRANTY -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">5. Warranty & Maintenance</h5>
+</div>
+<div class="card-body">
+<div class="row g-3">
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Warranty Applicable</label>
+    <select name="warranty_applicable" id="warrantyApplicable" class="form-select">
+        <option value="no" <%= (old && old.warranty_applicable === 'no') ? 'selected' : '' %>>No</option>
+        <option value="yes" <%= (old && old.warranty_applicable === 'yes') ? 'selected' : '' %>>Yes</option>
+    </select>
+</div>
+
+<div class="col-12 col-md-4" id="warrantyMonthsWrapper" style="display:none">
+    <label class="form-label">Warranty Period</label>
+    <div class="input-group">
+        <input
+            type="number"
+            name="warranty_months"
+            class="form-control"
+            min="0"
+            step="1"
+            placeholder="Enter months"
+            value="<%= (old && old.warranty_months) || '' %>"
+        >
+        <span class="input-group-text">Month</span>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- BUTTONS -->
+<div class="d-flex justify-content-end gap-2 mb-4">
+    <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
+    <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg me-1"></i> Save
+    </button>
+</div>
+
+</form>
+
+</div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const status = document.getElementById('status');
+    const statusLabel = document.getElementById('statusLabel');
+    if (status && statusLabel) {
+        status.addEventListener('change', function () {
+            statusLabel.textContent = this.checked ? 'Active' : 'Inactive';
+        });
+    }
+
+    const description = document.getElementById('description');
+    const descriptionCount = document.getElementById('descriptionCount');
+    if (description && descriptionCount) {
+        description.addEventListener('input', function () {
+            descriptionCount.textContent = this.value.length + ' / 2000';
+        });
+    }
+
+    const saleAvailable = document.getElementById('saleAvailable');
+    const sellingPrice = document.getElementById('sellingPrice');
+    const saleRequired = document.querySelector('.sale-required');
+
+    function updateSaleFields() {
+        if (saleAvailable && sellingPrice && saleRequired) {
+            if (saleAvailable.value === 'yes') {
+                sellingPrice.required = true;
+                saleRequired.style.display = 'inline';
+            } else {
+                sellingPrice.required = false;
+                saleRequired.style.display = 'none';
+            }
+        }
+    }
+
+    if (saleAvailable) {
+        saleAvailable.addEventListener('change', updateSaleFields);
+        updateSaleFields();
+    }
+
+    const discountAllowed = document.getElementById('discountAllowed');
+    const discountWrapper = document.getElementById('discountPercentWrapper');
+    if (discountAllowed && discountWrapper) {
+        discountAllowed.addEventListener('change', function () {
+            discountWrapper.style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+        if (discountAllowed.value === 'yes') {
+            discountWrapper.style.display = 'block';
+        }
+    }
+
+    const rentalAvailable = document.getElementById('rentalAvailable');
+    const rentalSection = document.getElementById('rentalSection');
+    if (rentalAvailable && rentalSection) {
+        rentalAvailable.addEventListener('change', function () {
+            rentalSection.style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+        if (rentalAvailable.value === 'yes') {
+            rentalSection.style.display = 'block';
+        }
+    }
+
+    document.querySelectorAll('.rental-available-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            const period = this.dataset.period;
+            const fields = document.getElementById('rentalFields' + period.charAt(0).toUpperCase() + period.slice(1));
+            if (fields) {
+                if (this.checked) {
+                    fields.style.display = 'block';
+                    fields.querySelectorAll('.rental-required').forEach(function (input) {
+                        input.required = true;
+                    });
+                } else {
+                    fields.style.display = 'none';
+                    fields.querySelectorAll('.rental-required').forEach(function (input) {
+                        input.required = false;
+                    });
+                }
+            }
+        });
+    });
+
+    const warrantyApplicable = document.getElementById('warrantyApplicable');
+    const warrantyWrapper = document.getElementById('warrantyMonthsWrapper');
+    if (warrantyApplicable && warrantyWrapper) {
+        warrantyApplicable.addEventListener('change', function () {
+            warrantyWrapper.style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+        if (warrantyApplicable.value === 'yes') {
+            warrantyWrapper.style.display = 'block';
+        }
+    }
+});
+</script>
+
+<%- include('includes/footer') %>

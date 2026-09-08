@@ -1,0 +1,308 @@
+<%- include('includes/header') %>
+
+<style>
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 13px !important;
+    }
+    .admin-navbar, .admin-sidebar, .sidebar-backdrop, .admin-breadcrumb-nav, .page-heading, .no-print, .footer {
+        display: none !important;
+    }
+    .admin-main {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    .container-fluid {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+    .print-invoice-card {
+        border: none !important;
+    }
+    .badge {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        background: transparent !important;
+    }
+    a {
+        text-decoration: none !important;
+        color: #000 !important;
+    }
+}
+</style>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <div class="no-print">
+            <%- renderBreadcrumbs([
+                { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+                { title: 'Sales Notes', link: 'manage_sales_note.php' },
+                { title: sale.sales_note_no }
+            ]) %>
+        </div>
+
+        <!-- PAGE TITLE & ACTIONS -->
+        <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4 no-print">
+            <div>
+                <h1 class="page-title mb-1">
+                    <i class="bi bi-receipt-cutoff text-primary me-2"></i>Sales Note: <%= sale.sales_note_no %>
+                </h1>
+                <p class="text-muted mb-0">Generated on <%= new Date(sale.sales_date + 'T' + sale.sales_time).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) %></p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print Sales Note
+                </button>
+                <% if (Number(sale.status) === 1) { %>
+                    <a href="edit_sales_note.php?id=<%= sale.id %>" class="btn btn-outline-warning">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                <% } %>
+                <a href="manage_sales_note.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+            </div>
+        </div>
+
+        <!-- SUCCESS ALERT -->
+        <% if (locals.success) { %>
+            <div class="alert alert-success alert-dismissible fade show auto-hide-alert d-flex align-items-center gap-2 shadow-sm mb-4 no-print" role="alert">
+                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                <div class="fw-medium"><%= success %></div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <% if (Number(sale.status) === 0) { %>
+            <div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+                <i class="bi bi-exclamation-octagon-fill text-danger fs-5"></i>
+                <div>
+                    <strong>This Sales Note is CANCELLED.</strong> Product stock and customer ledger were reverted.
+                </div>
+            </div>
+        <% } %>
+
+        <!-- INVOICE CARD CONTAINER -->
+        <div class="card border-0 shadow-sm rounded-4 print-invoice-card p-4 p-lg-5 mb-4 bg-surface">
+
+            <!-- HEADER / STORE INFO -->
+            <div class="row align-items-start pb-4 mb-4 border-bottom g-3">
+                <div class="col-12 col-sm-7">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                            <i class="bi bi-tools fs-5"></i>
+                        </div>
+                        <h3 class="fw-bold text-primary mb-0">Sun PowerTools</h3>
+                    </div>
+                    <p class="text-muted small mb-1">Heavy Machinery & Power Tools Sales, Spares and Service</p>
+                    <p class="text-muted small mb-0">Coimbatore, Tamil Nadu, India &bull; Phone: +91 93459 88594</p>
+                </div>
+                <div class="col-12 col-sm-5 text-sm-end">
+                    <h4 class="fw-bold text-body mb-1">SALES NOTE</h4>
+                    <div class="text-primary fw-bold fs-5"><%= sale.sales_note_no %></div>
+                    <div class="text-muted small">Date: <%= new Date(sale.sales_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %></div>
+                    <div class="text-muted small">Time: <%= sale.sales_time %></div>
+                    <div class="mt-2">
+                        <%- getPaymentTypeBadge(sale.payment_type) %>
+                        <span class="badge <%= evalCredit.badge_class %> ms-1"><%= sale.credit_status %></span>
+                        <% if (sale.credit_override) { %>
+                            <span class="badge bg-danger text-white ms-1">Override</span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMER & INVOICE DETAILS -->
+            <div class="row g-4 pb-4 mb-4 border-bottom">
+                <!-- Customer Details -->
+                <div class="col-12 col-md-6">
+                    <h6 class="fw-bold text-muted text-uppercase small mb-2">Customer Details:</h6>
+                    <h5 class="fw-bold text-body mb-1">
+                        <%= sale.customer_name %>
+                        <% if (sale.company_name) { %>
+                            <span class="text-muted fs-6 fw-normal">(<%= sale.company_name %>)</span>
+                        <% } %>
+                    </h5>
+                    <div class="small text-muted mb-1">
+                        <span class="badge bg-light text-dark border me-1"><%= sale.customer_code %></span>
+                        <i class="bi bi-telephone me-1"></i><%= sale.mobile_number %>
+                        <% if (sale.email) { %>
+                            &bull; <i class="bi bi-envelope me-1"></i><%= sale.email %>
+                        <% } %>
+                    </div>
+                    <% if (sale.gst_number) { %>
+                        <div class="small text-muted mb-1">GSTIN: <strong><%= sale.gst_number %></strong></div>
+                    <% } %>
+                    <div class="small text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>
+                        <%= [sale.address, sale.area, sale.city, sale.state, sale.pincode].filter(Boolean).join(', ') || 'N/A' %>
+                    </div>
+                </div>
+
+                <!-- Credit & Audit Info -->
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-surface-soft rounded-3 border small">
+                        <h6 class="fw-bold text-primary mb-2"><i class="bi bi-credit-card-2-front me-1"></i> Customer Financial & Credit Ledger</h6>
+                        <div class="row g-2 text-center">
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small">Credit Limit</span>
+                                <strong class="text-body">₹<%= numberFormat(sale.credit_limit, 2) %></strong>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small">Prev Outstanding</span>
+                                <strong class="text-danger">₹<%= numberFormat(sale.previous_outstanding, 2) %></strong>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small">Credit Applied</span>
+                                <strong class="text-danger">₹<%= numberFormat(sale.credit_amount, 2) %></strong>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small">New Outstanding</span>
+                                <strong class="text-primary fw-bold">₹<%= numberFormat(sale.new_outstanding, 2) %></strong>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top text-muted">
+                            <span>Remaining Avail Credit: <strong class="text-success">₹<%= numberFormat(Math.max(0.00, Number(sale.credit_limit) - Number(sale.new_outstanding)), 2) %></strong></span>
+                            <span>Payment Terms: <strong><%= sale.payment_terms || 'Immediate' %></strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCT ITEMS TABLE -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 5%;">#</th>
+                            <th style="width: 35%;">Product Description</th>
+                            <th class="text-center" style="width: 10%;">Unit</th>
+                            <th class="text-center" style="width: 10%;">Qty</th>
+                            <th class="text-end" style="width: 12%;">Rate (₹)</th>
+                            <th class="text-end" style="width: 10%;">Disc (₹)</th>
+                            <th class="text-center" style="width: 8%;">Tax %</th>
+                            <th class="text-end" style="width: 10%;">Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (items && items.length > 0) { %>
+                            <% items.forEach((it, idx) => { %>
+                                <tr>
+                                    <td class="text-center text-muted"><%= idx + 1 %></td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary me-1"><%= it.product_code %></span>
+                                        <strong class="text-body"><%= it.product_name %></strong>
+                                        <% if (it.brand_name) { %>
+                                            <div class="small text-muted"><%= it.brand_name %> &bull; <%= it.category_name || '' %></div>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-center text-muted"><%= it.unit_name || 'Qty' %></td>
+                                    <td class="text-center fw-bold"><%= numberFormat(it.quantity) %></td>
+                                    <td class="text-end">₹<%= numberFormat(it.unit_price, 2) %></td>
+                                    <td class="text-end text-success">
+                                        <%= Number(it.discount) > 0 ? '-₹' + numberFormat(it.discount, 2) : '—' %>
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        <%= Number(it.tax_percent) > 0 ? numberFormat(it.tax_percent) + '%' : '0%' %>
+                                    </td>
+                                    <td class="text-end fw-bold text-body">
+                                        ₹<%= numberFormat(it.line_total, 2) %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="8" class="text-center py-3 text-muted">No items found</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAYMENT SUMMARY & AUDIT -->
+            <div class="row g-4">
+                <!-- Left: Notes & Audit Trails -->
+                <div class="col-12 col-md-6">
+                    <% if (sale.notes) { %>
+                        <div class="p-3 bg-surface-soft rounded-3 border mb-3">
+                            <h6 class="fw-bold small text-muted text-uppercase mb-1">Notes / Remarks:</h6>
+                            <p class="small text-body mb-0"><%- nl2br(e(sale.notes)) %></p>
+                        </div>
+                    <% } %>
+
+                    <div class="small text-muted">
+                        <div>Created By: <strong><%= sale.created_by_name || 'Admin' %></strong> on <%= sale.created_at ? new Date(sale.created_at).toLocaleString('en-GB') : '' %></div>
+                        <% if (sale.updated_at) { %>
+                            <div>Updated By: <strong><%= sale.updated_by_name || 'Admin' %></strong> on <%= new Date(sale.updated_at).toLocaleString('en-GB') %></div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Right: Financial Grand Totals -->
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-surface-soft rounded-3 border">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal:</span>
+                            <span class="fw-bold text-body">₹<%= numberFormat(sale.subtotal, 2) %></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Discount:</span>
+                            <span class="text-success fw-semibold">- ₹<%= numberFormat(sale.discount, 2) %></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tax / GST:</span>
+                            <span class="text-body fw-semibold">+ ₹<%= numberFormat(sale.tax, 2) %></span>
+                        </div>
+                        <% if (Number(sale.other_charges) > 0) { %>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Other Charges:</span>
+                                <span class="text-body fw-semibold">+ ₹<%= numberFormat(sale.other_charges, 2) %></span>
+                            </div>
+                        <% } %>
+
+                        <hr class="my-2">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fs-5 fw-bold text-body">Grand Total:</span>
+                            <span class="fs-4 fw-extrabold text-primary">₹<%= numberFormat(sale.total_amount, 2) %></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-1 small">
+                            <span class="text-success fw-semibold">Amount Paid:</span>
+                            <strong class="text-success">₹<%= numberFormat(sale.paid_amount, 2) %></strong>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-danger fw-semibold">Credit Balance Added:</span>
+                            <strong class="text-danger">₹<%= numberFormat(sale.credit_amount, 2) %></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INVOICE FOOTER NOTE -->
+            <div class="mt-4 pt-3 border-top text-center text-muted small">
+                <span>Thank you for choosing <strong>Sun PowerTools</strong>! Goods once sold can be serviced as per warranty terms.</span>
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<% if (autoPrint) { %>
+<script>
+window.addEventListener('load', function() {
+    window.print();
+});
+</script>
+<% } %>
+
+<%- include('includes/footer') %>

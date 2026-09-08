@@ -1,0 +1,275 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Profile' }
+        ]) %>
+
+        <!-- Page Heading -->
+        <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-4">
+            <div>
+                <h1 class="page-title mb-1">My Profile</h1>
+                <p class="text-muted mb-0">Manage your personal information, contact details, and account security.</p>
+            </div>
+            <div>
+                <a href="index.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Feedback Alerts -->
+        <% if (message) { %>
+            <div id="profileAlert" class="alert alert-success d-flex align-items-center gap-2 mb-4 py-3 px-4 rounded-3 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                <div class="fw-medium"><%= e(message) %></div>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div id="profileAlert" class="alert alert-danger d-flex align-items-center gap-2 mb-4 py-3 px-4 rounded-3 shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                <div class="fw-medium"><%= e(error) %></div>
+            </div>
+        <% } %>
+
+        <form method="POST" action="profile.php" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="update_profile">
+
+            <div class="row g-4">
+
+                <!-- Left Column: User Summary & Avatar Card -->
+                <div class="col-12 col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 text-center p-4">
+                        <div class="avatar-container position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                            <img src="<%= avatarSrc %>" alt="<%= e(user.user_name) %>" 
+                                 id="avatarPreview"
+                                 class="rounded-circle w-100 h-100 object-fit-cover shadow border border-3 border-primary"
+                                 onerror="this.src='/sun_powertools/assets/images/avatar/avatar.jpg';">
+                            <label for="avatarInput" class="avatar-edit-btn position-absolute bottom-0 end-0 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow" 
+                                   style="width: 38px; height: 38px; cursor: pointer;" title="Change Photo">
+                                <i class="bi bi-camera-fill"></i>
+                            </label>
+                            <input type="file" id="avatarInput" name="avatar" class="d-none" accept=".jpg,.jpeg,.png,.webp">
+                        </div>
+
+                        <h4 class="fw-bold mb-1">
+                            <%= e((`${user.first_name || ''} ${user.last_name || ''}`).trim() || user.user_name) %>
+                        </h4>
+                        <div class="text-muted small mb-2">@<%= e(user.user_name) %></div>
+
+                        <div class="d-flex justify-content-center gap-2 mb-3">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-semibold">
+                                <i class="bi bi-shield-check me-1"></i> <%= e((user.role || '').charAt(0).toUpperCase() + (user.role || '').slice(1).toLowerCase()) %>
+                            </span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px;"></i> Active
+                            </span>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <div class="text-start small">
+                            <div class="d-flex justify-content-between py-2 border-bottom border-light-subtle">
+                                <span class="text-muted">User Code</span>
+                                <span class="fw-semibold font-monospace"><%= e(user.user_id) %></span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom border-light-subtle">
+                                <span class="text-muted">Email</span>
+                                <span class="fw-semibold text-truncate ms-2" style="max-width: 180px;"><%= e(user.user_email) %></span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom border-light-subtle">
+                                <span class="text-muted">Phone</span>
+                                <span class="fw-semibold"><%= e(user.user_phone) %></span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2">
+                                <span class="text-muted">Member Since</span>
+                                <span class="fw-semibold"><%= user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A' %></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Personal & Contact Information -->
+                <div class="col-12 col-lg-8">
+
+                    <!-- Personal Information Card -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="p-2 rounded-3 bg-primary-subtle text-primary">
+                                    <i class="bi bi-person-badge fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-bold mb-0">Personal Information</h5>
+                                    <p class="text-muted small mb-0">Update your public profile details</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6">
+                                    <label for="first_name" class="form-label fw-semibold small">First Name</label>
+                                    <input type="text" id="first_name" name="first_name" class="form-control"
+                                           value="<%= e(user.first_name || '') %>" placeholder="Enter first name" maxlength="50">
+                                </div>
+
+                                <div class="col-12 col-sm-6">
+                                    <label for="last_name" class="form-label fw-semibold small">Last Name</label>
+                                    <input type="text" id="last_name" name="last_name" class="form-control"
+                                           value="<%= e(user.last_name || '') %>" placeholder="Enter last name" maxlength="50">
+                                </div>
+
+                                <div class="col-12 col-sm-6">
+                                    <label for="user_name" class="form-label fw-semibold small">Username <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-at"></i></span>
+                                        <input type="text" id="user_name" name="user_name" class="form-control"
+                                               value="<%= e(user.user_name) %>" required maxlength="100">
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-sm-6">
+                                    <label for="user_email" class="form-label fw-semibold small">Email Address <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                        <input type="email" id="user_email" name="user_email" class="form-control"
+                                               value="<%= e(user.user_email) %>" required maxlength="150">
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-sm-6">
+                                    <label for="user_phone" class="form-label fw-semibold small">Phone Number <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                        <input type="text" id="user_phone" name="user_phone" class="form-control"
+                                               value="<%= e(user.user_phone) %>" required maxlength="20">
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-sm-3">
+                                    <label for="gender" class="form-label fw-semibold small">Gender</label>
+                                    <select id="gender" name="gender" class="form-select">
+                                        <option value="">Select Gender</option>
+                                        <option value="Male" <%= (user.gender || '') === 'Male' ? 'selected' : '' %>>Male</option>
+                                        <option value="Female" <%= (user.gender || '') === 'Female' ? 'selected' : '' %>>Female</option>
+                                        <option value="Other" <%= (user.gender || '') === 'Other' ? 'selected' : '' %>>Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-sm-3">
+                                    <label for="date_of_birth" class="form-label fw-semibold small">Date of Birth</label>
+                                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control"
+                                           value="<%= e(user.date_of_birth ? user.date_of_birth.split('T')[0] : '') %>">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information Card -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="p-2 rounded-3 bg-info-subtle text-info">
+                                    <i class="bi bi-geo-alt fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-bold mb-0">Location & Address</h5>
+                                    <p class="text-muted small mb-0">Your mailing and residential details</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="address" class="form-label fw-semibold small">Street Address</label>
+                                    <textarea id="address" name="address" class="form-control" rows="2" 
+                                              placeholder="Enter street address" maxlength="500"><%= e(user.address || '') %></textarea>
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label for="city" class="form-label fw-semibold small">City</label>
+                                    <input type="text" id="city" name="city" class="form-control"
+                                           value="<%= e(user.city || '') %>" placeholder="Enter city" maxlength="100">
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label for="state" class="form-label fw-semibold small">State / Province</label>
+                                    <input type="text" id="state" name="state" class="form-control"
+                                           value="<%= e(user.state || '') %>" placeholder="Enter state" maxlength="100">
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label for="pincode" class="form-label fw-semibold small">Pincode / Postal Code</label>
+                                    <input type="text" id="pincode" name="pincode" class="form-control"
+                                           value="<%= e(user.pincode || '') %>" placeholder="6-digit pincode" maxlength="6">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="index.php" class="btn btn-light px-4 py-2 rounded-3 fw-semibold">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 fw-semibold shadow-sm">
+                            <i class="bi bi-check2-circle me-1"></i> Save Changes
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<script>
+    // Live Avatar Preview
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+
+    if (avatarInput && avatarPreview) {
+        avatarInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Avatar image size must be less than 2 MB.');
+                this.value = '';
+                return;
+            }
+
+            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowed.includes(file.type)) {
+                alert('Only JPG, PNG and WEBP image files are allowed.');
+                this.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                avatarPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Auto-dismiss Alerts
+    const alertEl = document.getElementById('profileAlert');
+    if (alertEl) {
+        setTimeout(function () {
+            alertEl.style.transition = 'opacity 0.35s ease';
+            alertEl.style.opacity = '0';
+            setTimeout(function () { alertEl.remove(); }, 350);
+        }, 3500);
+    }
+</script>
+
+<%- include('includes/footer') %>

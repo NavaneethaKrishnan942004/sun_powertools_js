@@ -1,0 +1,85 @@
+<%- include('includes/header') %>
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Settings', link: 'settings.php' },
+            { title: 'DMS Masters', link: 'masters.php' },
+            { title: 'User Master', link: 'manage_user.php' },
+            { title: 'View' }
+        ]) %>
+
+        <div class="page-heading d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title mb-1">View User</h1>
+                <p class="text-muted mb-0"><%= user.user_id %></p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="edit_user.php?id=<%= user.id %>" class="btn btn-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+                <a href="manage_user.php" class="btn btn-outline-secondary">Back</a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="card-title mb-0">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill me-2 text-primary"></i>User Details</h5>
+                </div>
+                <div class="card-header-actions">
+                    <span class="badge <%= parseInt(user.status) === 1 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-3 py-1.5 rounded-pill border">
+                        <span class="status-dot <%= parseInt(user.status) === 1 ? 'active' : 'inactive' %>"></span>
+                        <%= parseInt(user.status) === 1 ? 'Active' : 'Inactive' %>
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">User ID</label>
+                        <div class="form-control bg-body-tertiary"><%= user.user_id %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">User Name</label>
+                        <div class="form-control bg-body-tertiary"><%= user.user_name %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">User Mail</label>
+                        <div class="form-control bg-body-tertiary"><%= user.user_email %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">User Phone No</label>
+                        <div class="form-control bg-body-tertiary"><%= user.user_phone %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">Role</label>
+                        <div class="form-control bg-body-tertiary"><%= user.role.charAt(0).toUpperCase() + user.role.slice(1) %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">Status</label>
+                        <div class="form-control bg-body-tertiary">
+                            <span class="status-dot <%= parseInt(user.status) === 1 ? 'active' : 'inactive' %>"></span>
+                            <%= parseInt(user.status) === 1 ? 'Active' : 'Inactive' %>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <hr>
+                        <h6 class="mb-3 fw-bold">Audit Information</h6>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">Created At</label>
+                        <div class="form-control bg-body-tertiary"><%= user.created_at %></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted">Updated At</label>
+                        <div class="form-control bg-body-tertiary"><%= user.updated_at ? user.updated_at : '-' %></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<%- include('includes/footer') %>

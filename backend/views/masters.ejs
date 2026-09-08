@@ -1,0 +1,119 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Masters' }
+        ]) %>
+        
+        <!-- Page Heading -->
+        <div class="page-heading mb-4">
+            <h1 class="page-title mb-1">
+                Masters
+            </h1>
+            <p class="text-muted mb-0">Manage core application masters.</p>
+        </div>
+
+        <!-- MASTER CARDS -->
+        <div class="row g-3 g-lg-4">
+
+            <!-- CATEGORY MASTER -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manage_category.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-tags-fill"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Category Master</h5>
+                            <p class="master-card-description">Manage Product Categories</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- BRAND MASTER -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manage_brand.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-bootstrap-fill"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Brand Master</h5>
+                            <p class="master-card-description">Manage Brand Categories</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- UNIT MASTER -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manaage_unit.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Unit Master</h5>
+                            <p class="master-card-description">Manage Unit Categories</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- PRODUCT TYPE MASTER -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manage_producttype.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-diagram-3-fill"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Product Type Master</h5>
+                            <p class="master-card-description">Manage Product Types</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- CUSTOMER MASTER -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manage_customer.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Customer Master</h5>
+                            <p class="master-card-description">Manage Customers & Credit</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- SALES NOTES -->
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                <a href="manage_sales_note.php" class="master-card-link">
+                    <div class="master-card">
+                        <div class="master-card-icon">
+                            <i class="bi bi-receipt-cutoff"></i>
+                        </div>
+                        <div class="master-card-content">
+                            <h5 class="master-card-title">Sales Notes</h5>
+                            <p class="master-card-description">Manage Sales & Invoices</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</main>
+
+<%- include('includes/footer') %>

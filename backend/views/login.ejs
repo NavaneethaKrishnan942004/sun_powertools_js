@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Sun PowerTools ERP</title>
+
+    <!-- Theme Initialization Script (Anti-FOUC) -->
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('admin-theme');
+                var theme = (saved === 'dark' || saved === 'light') ? saved :
+                    (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {}
+        })();
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/sun_powertools/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/sun_powertools/assets/vendors/bootstrap-icons/bootstrap-icons.css">
+    <script src="/sun_powertools/assets/js/main.js"></script>
+    <link rel="shortcut icon" href="favicon.ico">
+    <style>
+        :root {
+            --login-bg: #f1f5f9;
+            --login-card: #ffffff;
+            --login-border: #e2e8f0;
+            --login-text: #0f172a;
+            --login-muted: #64748b;
+            --login-primary: #2563eb;
+            --login-primary-hover: #1d4ed8;
+            --login-ring: rgba(37, 99, 235, 0.18);
+        }
+
+        html[data-theme="dark"], [data-bs-theme="dark"] {
+            --login-bg: #090d16;
+            --login-card: #111827;
+            --login-border: #1f2d47;
+            --login-text: #f8fafc;
+            --login-muted: #94a3b8;
+            --login-primary: #38bdf8;
+            --login-primary-hover: #0284c7;
+            --login-ring: rgba(56, 189, 248, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--login-bg);
+            color: var(--login-text);
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            transition: background-color 0.25s ease, color 0.25s ease;
+            position: relative;
+            padding: 1.5rem;
+        }
+
+        .login-top-actions {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+        }
+
+        .theme-toggle-btn {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            border: 1px solid var(--login-border);
+            background: var(--login-card);
+            color: var(--login-text);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--login-primary);
+            color: var(--login-primary);
+            transform: translateY(-2px);
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .login-card {
+            background: var(--login-card);
+            border: 1px solid var(--login-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.12);
+            transition: all 0.25s ease;
+        }
+
+        .brand-avatar {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 1.5rem;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: #ffffff;
+            font-size: 2rem;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+        }
+
+        .login-title {
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-align: center;
+            margin-bottom: 0.35rem;
+            color: var(--login-text);
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--login-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.85rem;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.45rem;
+            color: var(--login-text);
+        }
+
+        .input-group-text {
+            background: var(--login-card);
+            border: 1px solid var(--login-border);
+            border-right: none;
+            color: var(--login-muted);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .form-control {
+            min-height: 48px;
+            border: 1px solid var(--login-border);
+            border-radius: 0 12px 12px 0;
+            background: var(--login-card);
+            color: var(--login-text);
+            font-size: 0.92rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            background: var(--login-card);
+            border-color: var(--login-primary);
+            color: var(--login-text);
+            box-shadow: 0 0 0 3px var(--login-ring);
+        }
+
+        .form-control::placeholder {
+            color: var(--login-muted);
+            opacity: 0.6;
+        }
+
+        .btn-login {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+            transition: all 0.2s ease;
+            margin-top: 0.75rem;
+        }
+
+        .btn-login:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 26px rgba(37, 99, 235, 0.38);
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .login-footer {
+            margin-top: 1.75rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--login-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Theme Switcher on Login Page -->
+    <div class="login-top-actions">
+        <button type="button" class="theme-toggle-btn" id="loginThemeToggle" title="Toggle theme">
+            <i class="bi bi-moon-stars-fill" id="loginThemeIcon"></i>
+        </button>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            <!-- Logo -->
+            <div class="brand-avatar">
+                <i class="bi bi-tools"></i>
+            </div>
+
+            <!-- Header -->
+            <h1 class="login-title">Sign In</h1>
+            <p class="login-subtitle">Access the Sun PowerTools Management Portal</p>
+
+            <!-- Error Notification -->
+            <% if (error) { %>
+                <div id="loginError" class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                    <div class="small fw-medium"><%= e(error) %></div>
+                </div>
+            <% } %>
+
+            <!-- Form -->
+            <form method="POST" action="login.php" autocomplete="off">
+                <!-- Username -->
+                <div class="mb-3">
+                    <label for="user_name" class="form-label">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input
+                            type="text"
+                            id="user_name"
+                            name="user_name"
+                            class="form-control"
+                            placeholder="Enter your username"
+                            maxlength="100"
+                            autocomplete="username"
+                            value="<%= typeof userName !== 'undefined' ? e(userName) : '' %>"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="form-control"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Portal
+                </button>
+            </form>
+
+            <div class="login-footer">
+                &copy; <%= new Date().getFullYear() %> Sun PowerTools. Enterprise ERP System.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Auto-dismiss Error
+        const loginError = document.getElementById('loginError');
+        if (loginError) {
+            setTimeout(function () {
+                loginError.style.transition = 'opacity 0.35s ease';
+                loginError.style.opacity = '0';
+                setTimeout(function () { loginError.remove(); }, 350);
+            }, 3000);
+        }
+
+        // Theme Switcher Logic for Login Page
+        (function() {
+            const toggleBtn = document.getElementById('loginThemeToggle');
+            const toggleIcon = document.getElementById('loginThemeIcon');
+
+            function updateIcon(theme) {
+                if (theme === 'dark') {
+                    toggleIcon.className = 'bi bi-sun-fill text-warning';
+                } else {
+                    toggleIcon.className = 'bi bi-moon-stars-fill';
+                }
+            }
+
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            updateIcon(current);
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.documentElement.setAttribute('data-bs-theme', theme);
+                    try { localStorage.setItem('admin-theme', theme); } catch(e) {}
+                    updateIcon(theme);
+                });
+            }
+        })();
+    </script>
+
+</body>
+</html>

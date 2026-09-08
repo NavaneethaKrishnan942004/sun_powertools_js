@@ -1,0 +1,252 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Masters', link: 'masters.php' },
+            { title: 'Customer Master' }
+        ]) %>
+
+        <!-- PAGE HEADING -->
+        <div class="page-heading d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title mb-1">Customer Master</h1>
+                <p class="text-muted mb-0">Manage customer accounts, credit limits, and financial balances.</p>
+            </div>
+            <a href="create_customer.php" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add Customer
+            </a>
+        </div>
+
+        <!-- SUCCESS / ERROR FLASH MESSAGES -->
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show auto-hide-alert">
+                <span><i class="bi bi-check-circle me-2"></i><%= e(success) %></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="alert-time-line"></div>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div class="alert alert-danger alert-dismissible fade show auto-hide-alert">
+                <span><i class="bi bi-exclamation-circle me-2"></i><%= e(error) %></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="alert-time-line"></div>
+            </div>
+        <% } %>
+
+        <!-- SEARCH & FILTER SECTION -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" id="customerFilterForm">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-7">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="search" id="customerSearch" class="form-control"
+                                placeholder="Search by customer code, name, company, or mobile number"
+                                value="<%= e(search) %>" autocomplete="off">
+                        </div>
+
+                        <% if (search !== '' || customerTypeFilter !== '' || creditAllowedFilter !== '' || statusFilter !== '') { %>
+                            <div class="col-6 col-md-2">
+                                <a href="manage_customer.php" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-x-circle me-1"></i> Clear
+                                </a>
+                            </div>
+                        <% } %>
+
+                        <div class="<%= (search !== '' || customerTypeFilter !== '' || creditAllowedFilter !== '' || statusFilter !== '') ? 'col-6' : 'col-12' %> col-md-3">
+                            <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="collapse"
+                                data-bs-target="#customerFilterSection" aria-expanded="false">
+                                <i class="bi bi-funnel me-1"></i> Filter <i class="bi bi-chevron-down ms-1" id="customerFilterIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="collapse mt-3" id="customerFilterSection">
+                        <div class="filter-section-box">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Customer Type</label>
+                                    <select name="customer_type" class="form-select" onchange="this.form.submit()">
+                                        <option value="">All Types</option>
+                                        <option value="Individual" <%= customerTypeFilter === 'Individual' ? 'selected' : '' %>>Individual</option>
+                                        <option value="Business" <%= customerTypeFilter === 'Business' ? 'selected' : '' %>>Business</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Credit Allowed</label>
+                                    <select name="credit_allowed" class="form-select" onchange="this.form.submit()">
+                                        <option value="">All Credit Status</option>
+                                        <option value="1" <%= creditAllowedFilter === '1' ? 'selected' : '' %>>Credit Allowed</option>
+                                        <option value="0" <%= creditAllowedFilter === '0' ? 'selected' : '' %>>No Credit</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-select" onchange="this.form.submit()">
+                                        <option value="">All Status</option>
+                                        <option value="1" <%= statusFilter === '1' ? 'selected' : '' %>>Active</option>
+                                        <option value="0" <%= statusFilter === '0' ? 'selected' : '' %>>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CUSTOMER TABLE -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="category-table-wrapper">
+                    <div class="category-table-scroll">
+                        <table class="table category-table align-middle mb-0 customer-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer Code</th>
+                                    <th>Customer Name</th>
+                                    <th>Company Name</th>
+                                    <th>Mobile Number</th>
+                                    <th>Customer Type</th>
+                                    <th>Credit Allowed</th>
+                                    <th>Debit / Outstanding</th>
+                                    <th>Status</th>
+                                    <th>Created By</th>
+                                    <th>Updated By</th>
+                                    <th class="action-column text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!customers || customers.length === 0) { %>
+                                    <tr>
+                                        <td colspan="11" class="text-center py-5 text-muted">
+                                            <i class="bi bi-people fs-2 d-block mb-2"></i>
+                                            No customer records found.
+                                        </td>
+                                    </tr>
+                                <% } else { %>
+                                    <% customers.forEach(function(row) { %>
+                                        <tr>
+                                            <!-- CODE -->
+                                            <td>
+                                                <span class="status-dot <%= (parseInt(row.status) === 1) ? 'active' : 'inactive' %>"
+                                                    title="<%= (parseInt(row.status) === 1) ? 'Active' : 'Inactive' %>"></span>
+                                                <strong><%= e(row.customer_code) %></strong>
+                                            </td>
+
+                                            <!-- NAME -->
+                                            <td>
+                                                <a href="view_customer.php?id=<%= row.id %>" class="fw-semibold text-decoration-none text-body">
+                                                    <%= e(row.customer_name) %>
+                                                </a>
+                                            </td>
+
+                                            <!-- COMPANY -->
+                                            <td class="text-muted">
+                                                <%= row.company_name ? e(row.company_name) : '-' %>
+                                            </td>
+
+                                            <!-- MOBILE -->
+                                            <td><%= e(row.mobile_number) %></td>
+
+                                            <!-- TYPE -->
+                                            <td>
+                                                <span class="badge <%= (row.customer_type === 'Business') ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' %>">
+                                                    <%= e(row.customer_type) %>
+                                                </span>
+                                            </td>
+
+                                            <!-- CREDIT ALLOWED -->
+                                            <td>
+                                                <% if (parseInt(row.credit_allowed) === 1) { %>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" title="Limit: ₹<%= numberFormat(row.credit_limit, 2) %>">
+                                                        Yes (₹<%= numberFormat(row.credit_limit, 0) %>)
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">No</span>
+                                                <% } %>
+                                            </td>
+
+                                            <!-- DEBIT / OUTSTANDING BALANCE -->
+                                            <td>
+                                                <%- formatCustomerBalance(row.summary) %>
+                                            </td>
+
+                                            <!-- STATUS -->
+                                            <td>
+                                                <span class="badge <%= (parseInt(row.status) === 1) ? 'text-bg-success' : 'text-bg-secondary' %>">
+                                                    <%= (parseInt(row.status) === 1) ? 'Active' : 'Inactive' %>
+                                                </span>
+                                            </td>
+
+                                            <!-- CREATED BY -->
+                                            <td><%= e(row.created_by_name || row.created_by || '-') %></td>
+
+                                            <!-- UPDATED BY -->
+                                            <td><%= e(row.updated_by_name || row.updated_by || '-') %></td>
+
+                                            <!-- ACTION -->
+                                            <td class="action-column text-end text-nowrap">
+                                                <!-- View -->
+                                                <a href="view_customer.php?id=<%= row.id %>"
+                                                    class="btn btn-sm btn-outline-secondary" title="View Customer Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+
+                                                <!-- Edit -->
+                                                <a href="edit_customer.php?id=<%= row.id %>"
+                                                    class="btn btn-sm btn-outline-primary" title="Edit Customer">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+
+                                                <!-- Activate / Deactivate Toggle -->
+                                                <% if (parseInt(row.status) === 1) { %>
+                                                    <a href="manage_customer.php?action=deactivate&id=<%= row.id %>"
+                                                        class="btn btn-sm btn-outline-warning" title="Deactivate Customer"
+                                                        onclick="return confirm('Are you sure you want to deactivate customer <%= e(row.customer_name) %>?');">
+                                                        <i class="bi bi-slash-circle"></i>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a href="manage_customer.php?action=activate&id=<%= row.id %>"
+                                                        class="btn btn-sm btn-outline-success" title="Activate Customer">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </a>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterBtn = document.querySelector('[data-bs-target="#customerFilterSection"]');
+    const filterIcon = document.getElementById('customerFilterIcon');
+    const filterSection = document.getElementById('customerFilterSection');
+    if (filterBtn && filterIcon && filterSection) {
+        filterSection.addEventListener('shown.bs.collapse', function () {
+            filterIcon.classList.replace('bi-chevron-down', 'bi-chevron-up');
+        });
+        filterSection.addEventListener('hidden.bs.collapse', function () {
+            filterIcon.classList.replace('bi-chevron-up', 'bi-chevron-down');
+        });
+    }
+});
+</script>
+
+<%- include('includes/footer') %>

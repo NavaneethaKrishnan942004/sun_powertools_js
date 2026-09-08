@@ -1,0 +1,214 @@
+/* =========================================================
+   MASTER CARD - Modern Enterprise Style
+   Sun PowerTools Admin
+========================================================= */
+
+.master-card-link {
+    text-decoration: none;
+    display: block;
+    height: 100%;
+    color: inherit;
+}
+
+.master-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    min-height: 110px;
+    padding: 1.35rem 1.4rem;
+    border: 1px solid var(--admin-border, #e2e8f0);
+    border-radius: 16px;
+    background: var(--admin-surface, #ffffff);
+    color: var(--admin-text, #0f172a);
+    box-shadow: var(--admin-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.04));
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.22s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.master-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--admin-primary, #3b82f6);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.master-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--admin-shadow-lg, 0 16px 36px rgba(15, 23, 42, 0.12));
+    border-color: var(--admin-primary, #3b82f6);
+}
+
+.master-card:hover::before {
+    opacity: 1;
+}
+
+/* =========================================================
+   ICON
+========================================================= */
+
+.master-card-icon {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(15, 118, 110, 0.12));
+    color: var(--admin-primary, #2563eb);
+    font-size: 1.55rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.master-card:hover .master-card-icon {
+    background: linear-gradient(135deg, #2563eb, #0ea5e9);
+    color: #ffffff;
+    transform: scale(1.06);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.master-card-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.master-card-title {
+    margin: 0 0 0.3rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--admin-text, #0f172a);
+    letter-spacing: -0.01em;
+}
+
+.master-card-description {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--admin-muted, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* =========================================================
+   ARROW
+========================================================= */
+
+.master-card-arrow {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--admin-muted, #94a3b8);
+    background: var(--admin-surface-soft, #f8fafc);
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.master-card:hover .master-card-arrow {
+    color: #ffffff;
+    background: var(--admin-primary, #2563eb);
+    transform: translateX(4px);
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+html[data-theme="dark"] .master-card,
+[data-bs-theme="dark"] .master-card {
+    background: var(--admin-surface, #111827);
+    border-color: var(--admin-border, #1e293b);
+    color: var(--admin-text, #f8fafc);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .master-card:hover,
+[data-bs-theme="dark"] .master-card:hover {
+    border-color: var(--admin-primary, #38bdf8);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] .master-card-title,
+[data-bs-theme="dark"] .master-card-title {
+    color: var(--admin-text, #f8fafc);
+}
+
+html[data-theme="dark"] .master-card-description,
+[data-bs-theme="dark"] .master-card-description {
+    color: var(--admin-muted, #94a3b8);
+}
+
+html[data-theme="dark"] .master-card-icon,
+[data-bs-theme="dark"] .master-card-icon {
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .master-card:hover .master-card-icon,
+[data-bs-theme="dark"] .master-card:hover .master-card-icon {
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(56, 189, 248, 0.35);
+}
+
+html[data-theme="dark"] .master-card-arrow,
+[data-bs-theme="dark"] .master-card-arrow {
+    background: #1e293b;
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .master-card:hover .master-card-arrow,
+[data-bs-theme="dark"] .master-card:hover .master-card-arrow {
+    background: #38bdf8;
+    color: #0f172a;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 575.98px) {
+    .master-card {
+        min-height: 95px;
+        padding: 1.1rem;
+        border-radius: 14px;
+        gap: 0.85rem;
+    }
+    .master-card-icon {
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
+        font-size: 1.3rem;
+        border-radius: 12px;
+    }
+    .master-card-title {
+        font-size: 0.95rem;
+    }
+    .master-card-description {
+        font-size: 0.8rem;
+    }
+    .master-card-arrow {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 0.8rem;
+    }
+}

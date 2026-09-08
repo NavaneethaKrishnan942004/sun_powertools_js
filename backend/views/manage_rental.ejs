@@ -1,0 +1,525 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Rentals' }
+        ]) %>
+
+        <!-- PAGE HEADING & PRIMARY ACTIONS -->
+        <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+            <div>
+                <h1 class="page-title mb-1">
+                    <i class="bi bi-clock-history text-primary me-2"></i>Rental Management
+                </h1>
+                <p class="text-muted mb-0">Track equipment rentals, return schedules, customer advance amounts & tool availability.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="create_rental.php" class="btn btn-primary shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Create Rental Checkout
+                </a>
+            </div>
+        </div>
+
+        <!-- ALERTS / NOTIFICATIONS -->
+        <% if (locals.success) { %>
+            <div class="alert alert-success alert-dismissible fade show auto-hide-alert d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                <div class="fw-medium"><%= success %></div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <% if (locals.error) { %>
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                <div class="fw-medium"><%= error %></div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <!-- SUMMARY KPI CARDS -->
+        <div class="row g-3 mb-4">
+            <!-- Total Rentals -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="metric-card metric-primary p-3 rounded-4 shadow-sm border bg-surface">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-semibold text-uppercase">Total Rentals</span>
+                        <div class="avatar-xs bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i class="bi bi-tools fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1"><%= numberFormat(analytics.total_rentals, 0) %></h3>
+                    <div class="text-muted small">
+                        <span class="badge bg-primary-subtle text-primary"><%= numberFormat(analytics.returned_rentals, 0) %></span> returned
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Rentals -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="metric-card metric-info p-3 rounded-4 shadow-sm border bg-surface">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-semibold text-uppercase">Active Rentals</span>
+                        <div class="avatar-xs bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i class="bi bi-clock-history fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-info"><%= numberFormat(analytics.active_rentals, 0) %></h3>
+                    <div class="text-muted small">Currently rented out</div>
+                </div>
+            </div>
+
+            <!-- Overdue Rentals -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="metric-card <%= analytics.overdue_rentals > 0 ? 'metric-danger border-danger-subtle' : 'metric-warning' %> p-3 rounded-4 shadow-sm border bg-surface">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-semibold text-uppercase">Overdue Returns</span>
+                        <div class="avatar-xs <%= analytics.overdue_rentals > 0 ? 'bg-danger text-white' : 'bg-warning-subtle text-warning-emphasis' %> rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 <%= analytics.overdue_rentals > 0 ? 'text-danger' : 'text-body' %>"><%= numberFormat(analytics.overdue_rentals, 0) %></h3>
+                    <div class="text-muted small">
+                        <% if (analytics.overdue_rentals > 0) { %>
+                            <span class="text-danger fw-semibold">Action needed</span> - past due date
+                        <% } else { %>
+                            All returns on schedule
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Advance Collected -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="metric-card metric-success p-3 rounded-4 shadow-sm border bg-surface">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-semibold text-uppercase">Advance Collected</span>
+                        <div class="avatar-xs bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i class="bi bi-currency-rupee fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-success">₹<%= numberFormat(analytics.total_advance_collected, 2) %></h3>
+                    <div class="text-muted small">Advances from active rentals</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEARCH & FILTER CONTROLS -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-3 p-md-4">
+                <form method="GET" action="manage_rental.php" id="rentalFilterForm">
+                    <div class="row g-3 align-items-end">
+                        <!-- Search Box -->
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-semibold text-muted mb-1">Search Rentals</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-surface-soft border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    name="search"
+                                    class="form-control border-start-0"
+                                    placeholder="Search by Rental #, Customer Name, Mobile, Product..."
+                                    value="<%= search %>"
+                                    autocomplete="off"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">Rental Status</label>
+                            <select name="status" class="form-select" onchange="document.getElementById('rentalFilterForm').submit()">
+                                <option value="">All Statuses</option>
+                                <option value="Active" <%= statusFilter === 'Active' ? 'selected' : '' %>>Active</option>
+                                <option value="Overdue" <%= statusFilter === 'Overdue' ? 'selected' : '' %>>Overdue</option>
+                                <option value="Returned" <%= statusFilter === 'Returned' ? 'selected' : '' %>>Returned</option>
+                                <option value="Cancelled" <%= statusFilter === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                            </select>
+                        </div>
+
+                        <!-- From Date -->
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+                            <input type="date" name="from_date" class="form-control" value="<%= fromDateFilter %>" onchange="document.getElementById('rentalFilterForm').submit()">
+                        </div>
+
+                        <!-- To Date -->
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+                            <input type="date" name="to_date" class="form-control" value="<%= toDateFilter %>" onchange="document.getElementById('rentalFilterForm').submit()">
+                        </div>
+
+                        <!-- Submit / Reset Buttons -->
+                        <div class="col-6 col-md-1 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100" title="Filter">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                            <% if (search || statusFilter || fromDateFilter || toDateFilter) { %>
+                                <a href="manage_rental.php" class="btn btn-outline-secondary" title="Reset Filters">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RENTALS DATA TABLE -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="fw-bold mb-0 text-body">
+                    <i class="bi bi-list-ul me-2 text-primary"></i>Rental Contracts (<%= rentals.length %>)
+                </h5>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0" id="rentalsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Rental ID</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Check-In (Issued)</th>
+                                <th>Expected Check-Out</th>
+                                <th>Advance Amount</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (rentals.length === 0) { %>
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted">
+                                        <div class="my-4">
+                                            <i class="bi bi-clock-history display-4 text-muted d-block mb-3"></i>
+                                            <h5 class="fw-semibold text-body">No Rental Records Found</h5>
+                                            <p class="text-muted mb-3">Start renting power tools by creating a new rental transaction.</p>
+                                            <a href="create_rental.php" class="btn btn-primary">
+                                                <i class="bi bi-plus-lg me-1"></i> Create Rental
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% } else { %>
+                                <% rentals.forEach(row => { %>
+                                    <tr>
+                                        <!-- RENTAL ID -->
+                                        <td class="ps-4 text-nowrap">
+                                            <div class="fw-bold text-primary">
+                                                <a href="view_rental.php?id=<%= row.id %>" class="text-decoration-none text-primary">
+                                                    <%= row.rental_no %>
+                                                </a>
+                                            </div>
+                                            <small class="text-muted"><%= row.created_at ? String(row.created_at).slice(0, 10) : '' %></small>
+                                        </td>
+
+                                        <!-- CUSTOMER -->
+                                        <td>
+                                            <div class="fw-semibold text-body">
+                                                <a href="view_customer.php?id=<%= row.customer_id %>" class="text-decoration-none text-body">
+                                                    <%= row.customer_name %>
+                                                </a>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <span><%= row.customer_code %></span> &bull;
+                                                <span><i class="bi bi-telephone me-1"></i><%= row.mobile_number %></span>
+                                            </div>
+                                        </td>
+
+                                        <!-- PRODUCT -->
+                                        <td>
+                                            <div class="fw-semibold text-body text-truncate" style="max-width: 250px;" title="<%= row.product_name %>">
+                                                <a href="view_product.php?id=<%= row.product_id %>" class="text-decoration-none text-body">
+                                                    <%= row.product_name %>
+                                                </a>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <span class="badge bg-light text-dark border"><%= row.product_code %></span>
+                                                <% if (row.brand_name) { %>
+                                                    <span class="ms-1 text-muted"><%= row.brand_name %></span>
+                                                <% } %>
+                                            </div>
+                                        </td>
+
+                                        <!-- CHECK-IN -->
+                                        <td class="text-nowrap">
+                                            <div class="fw-medium">
+                                                <i class="bi bi-box-arrow-right text-success me-1"></i>
+                                                <%= row.check_in_datetime ? String(row.check_in_datetime).replace('T', ' ').slice(0, 16) : '-' %>
+                                            </div>
+                                            <small class="text-muted text-capitalize"><%= row.rental_period_type || 'Daily' %> Rate: ₹<%= numberFormat(row.rental_rate, 2) %></small>
+                                        </td>
+
+                                        <!-- EXPECTED CHECK-OUT -->
+                                        <td class="text-nowrap">
+                                            <div class="fw-medium <%= row.effective_status === 'Overdue' ? 'text-danger fw-bold' : '' %>">
+                                                <i class="bi bi-box-arrow-in-left <%= row.effective_status === 'Overdue' ? 'text-danger' : 'text-primary' %> me-1"></i>
+                                                <%= row.expected_checkout_datetime ? String(row.expected_checkout_datetime).replace('T', ' ').slice(0, 16) : '-' %>
+                                            </div>
+                                            <% if (row.effective_status === 'Returned' && row.actual_return_datetime) { %>
+                                                <small class="text-success d-block">Returned: <%= String(row.actual_return_datetime).replace('T', ' ').slice(0, 16) %></small>
+                                            <% } else if (row.effective_status === 'Overdue') { %>
+                                                <small class="text-danger fw-semibold d-block"><i class="bi bi-exclamation-circle me-1"></i>Past Expected Return</small>
+                                            <% } %>
+                                        </td>
+
+                                        <!-- ADVANCE AMOUNT -->
+                                        <td class="text-nowrap">
+                                            <div class="fw-bold text-success">
+                                                ₹<%= numberFormat(row.advance_rental_amount, 2) %>
+                                            </div>
+                                            <% if (Number(row.security_deposit) > 0) { %>
+                                                <small class="text-muted d-block">Deposit: ₹<%= numberFormat(row.security_deposit, 2) %></small>
+                                            <% } %>
+                                        </td>
+
+                                        <!-- STATUS -->
+                                        <td>
+                                            <%- getRentalStatusBadge(row.rental_status, row.expected_checkout_datetime) %>
+                                        </td>
+
+                                        <!-- ACTIONS -->
+                                        <td class="text-end pe-4 text-nowrap">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <!-- View -->
+                                                <a href="view_rental.php?id=<%= row.id %>" class="btn btn-outline-secondary" title="View Rental Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+
+                                                <!-- Return Product (if Active or Overdue) -->
+                                                <% if (['Active', 'Overdue'].includes(row.effective_status)) { %>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-success"
+                                                        title="Return Product"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#returnModal"
+                                                        data-rental-id="<%= row.id %>"
+                                                        data-rental-no="<%= row.rental_no %>"
+                                                        data-customer="<%= row.customer_name %>"
+                                                        data-product="<%= row.product_name %>"
+                                                        data-advance="<%= row.advance_rental_amount %>"
+                                                        data-rate="<%= row.rental_rate %>"
+                                                        data-total="<%= row.total_rental_amount %>"
+                                                    >
+                                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Return
+                                                    </button>
+                                                <% } %>
+
+                                                <!-- Cancel (if Active) -->
+                                                <% if (row.rental_status === 'Active') { %>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-danger"
+                                                        title="Cancel Rental"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#cancelModal"
+                                                        data-rental-id="<%= row.id %>"
+                                                        data-rental-no="<%= row.rental_no %>"
+                                                    >
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- RETURN PRODUCT MODAL -->
+<div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form method="POST" action="return_rental.php" id="returnForm">
+                <input type="hidden" name="id" id="returnRentalId">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-success" id="returnModalLabel">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Return Rental Product
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-surface-soft rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Rental Number:</span>
+                            <strong class="text-primary" id="modalRentalNo">-</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Customer:</span>
+                            <strong id="modalCustomer">-</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Product:</span>
+                            <strong id="modalProduct">-</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Advance Paid:</span>
+                            <strong class="text-success" id="modalAdvance">₹0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Actual Return Date & Time -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Actual Return Date & Time <span class="text-danger">*</span></label>
+                            <input
+                                type="datetime-local"
+                                name="actual_return_datetime"
+                                id="modalReturnDatetime"
+                                class="form-control"
+                                value="<%= currentDatetimeLocal %>"
+                                required
+                            >
+                        </div>
+
+                        <!-- Final Total Rental Amount -->
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold">Final Rental Amount (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                name="total_rental_amount"
+                                id="modalTotalAmount"
+                                class="form-control"
+                                placeholder="0.00"
+                            >
+                        </div>
+
+                        <!-- Additional Charges -->
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold">Additional Charges / Late Fee (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                name="additional_charges"
+                                id="modalAdditionalCharges"
+                                class="form-control"
+                                value="0.00"
+                            >
+                        </div>
+
+                        <!-- Refund Amount -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Security Deposit Refund (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                name="refund_amount"
+                                id="modalRefundAmount"
+                                class="form-control"
+                                value="0.00"
+                            >
+                        </div>
+
+                        <!-- Notes / Condition -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Condition Notes / Remarks</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Tool returned in good condition..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg me-1"></i> Confirm Product Return
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CANCEL RENTAL MODAL -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form method="POST" action="cancel_rental.php" id="cancelForm">
+                <input type="hidden" name="id" id="cancelRentalId">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-danger" id="cancelModalLabel">
+                        <i class="bi bi-x-circle me-2"></i>Cancel Rental Transaction
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-exclamation-triangle text-warning display-4 mb-3 d-block"></i>
+                    <h6 class="fw-bold mb-2">Are you sure you want to cancel rental <span id="cancelRentalNo" class="text-primary"></span>?</h6>
+                    <p class="text-muted small mb-3">Cancelling this rental will restore the product stock back to inventory and cancel the customer ledger transaction.</p>
+                    <div class="text-start">
+                        <label class="form-label small fw-semibold">Reason for Cancellation</label>
+                        <input type="text" name="reason" class="form-control" placeholder="Customer cancelled, wrong order, etc." required>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Yes, Cancel Rental
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Return Modal Population
+    const returnModal = document.getElementById('returnModal');
+    if (returnModal) {
+        returnModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const id = button.getAttribute('data-rental-id');
+            const rentalNo = button.getAttribute('data-rental-no');
+            const customer = button.getAttribute('data-customer');
+            const product = button.getAttribute('data-product');
+            const advance = parseFloat(button.getAttribute('data-advance') || 0);
+            const total = parseFloat(button.getAttribute('data-total') || 0);
+
+            document.getElementById('returnRentalId').value = id;
+            document.getElementById('modalRentalNo').textContent = rentalNo;
+            document.getElementById('modalCustomer').textContent = customer;
+            document.getElementById('modalProduct').textContent = product;
+            document.getElementById('modalAdvance').textContent = '₹' + advance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById('modalTotalAmount').value = total > 0 ? total.toFixed(2) : advance.toFixed(2);
+        });
+    }
+
+    // Cancel Modal Population
+    const cancelModal = document.getElementById('cancelModal');
+    if (cancelModal) {
+        cancelModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const id = button.getAttribute('data-rental-id');
+            const rentalNo = button.getAttribute('data-rental-no');
+
+            document.getElementById('cancelRentalId').value = id;
+            document.getElementById('cancelRentalNo').textContent = rentalNo;
+        });
+    }
+});
+</script>
+
+<%- include('includes/footer') %>

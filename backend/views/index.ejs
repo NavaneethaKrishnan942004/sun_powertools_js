@@ -1,0 +1,174 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' }
+        ]) %>
+
+        <!-- Page Heading -->
+        <div class="page-heading">
+            <div class="page-heading-copy d-flex align-items-center">
+                <div class="page-icon me-2">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <h1 class="h3 mb-0">
+                    Dashboard
+                </h1>
+            </div>
+        </div>
+
+        <!-- Dashboard Cards -->
+        <section class="row g-3 mt-1">
+
+            <!-- Revenue -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="manage_sales_note.php" class="text-decoration-none">
+                    <article class="metric-card metric-primary">
+                        <div class="metric-top">
+                            <span class="metric-label">Sales Revenue</span>
+                            <span class="metric-icon"><i class="bi bi-currency-rupee"></i></span>
+                        </div>
+                        <div class="metric-value">₹<%= numberFormat(totalRevenue, 2) %></div>
+                        <div class="metric-meta">
+                            <span class="text-success"><%= totalSalesCount.toLocaleString('en-IN') %></span>
+                            <span>sales notes generated</span>
+                        </div>
+                    </article>
+                </a>
+            </div>
+
+            <!-- Sales Notes -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="manage_sales_note.php" class="text-decoration-none">
+                    <article class="metric-card metric-success">
+                        <div class="metric-top">
+                            <span class="metric-label">Sales Notes</span>
+                            <span class="metric-icon"><i class="bi bi-receipt"></i></span>
+                        </div>
+                        <div class="metric-value"><%= totalSalesCount.toLocaleString('en-IN') %></div>
+                        <div class="metric-meta">
+                            <span class="text-primary">Manage & Create</span>
+                            <span>sales notes</span>
+                        </div>
+                    </article>
+                </a>
+            </div>
+
+            <!-- Customers -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="manage_customer.php" class="text-decoration-none">
+                    <article class="metric-card metric-warning">
+                        <div class="metric-top">
+                            <span class="metric-label">Customers</span>
+                            <span class="metric-icon"><i class="bi bi-people"></i></span>
+                        </div>
+                        <div class="metric-value"><%= totalCustomers.toLocaleString('en-IN') %></div>
+                        <div class="metric-meta">
+                            <span class="text-success">Active</span>
+                            <span>customer master</span>
+                        </div>
+                    </article>
+                </a>
+            </div>
+
+            <!-- Products -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="manage_product.php" class="text-decoration-none">
+                    <article class="metric-card metric-danger">
+                        <div class="metric-top">
+                            <span class="metric-label">Products</span>
+                            <span class="metric-icon"><i class="bi bi-box-seam"></i></span>
+                        </div>
+                        <div class="metric-value"><%= totalProducts.toLocaleString('en-IN') %></div>
+                        <div class="metric-meta">
+                            <span class="text-info">In Inventory</span>
+                            <span>product master</span>
+                        </div>
+                    </article>
+                </a>
+            </div>
+
+        </section>
+
+        <!-- Sales + Activity -->
+        <section class="row g-3 mt-1">
+
+            <div class="col-12 col-xl-8">
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <h2 class="h5 mb-1 section-title">
+
+                                <i class="bi bi-graph-up-arrow"></i>
+
+                                <span>
+                                    Sales Performance
+                                </span>
+
+                            </h2>
+
+                            <p class="text-muted mb-0">
+                                Monthly revenue performance.
+                            </p>
+
+                        </div>
+
+                        <a href="manage_sales_note.php" class="btn btn-light btn-sm">
+                            View Details
+                        </a>
+
+                    </div>
+
+                    <div class="chart-bars">
+
+                        <div class="chart-column bar-42">
+                            <span></span>
+                            <small>Jan</small>
+                        </div>
+
+                        <div class="chart-column bar-58">
+                            <span></span>
+                            <small>Feb</small>
+                        </div>
+
+                        <div class="chart-column bar-51">
+                            <span></span>
+                            <small>Mar</small>
+                        </div>
+
+                        <div class="chart-column bar-72">
+                            <span></span>
+                            <small>Apr</small>
+                        </div>
+
+                        <div class="chart-column bar-66">
+                            <span></span>
+                            <small>May</small>
+                        </div>
+
+                        <div class="chart-column bar-83">
+                            <span></span>
+                            <small>Jun</small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</main>
+
+<%- include('includes/footer') %>

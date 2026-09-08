@@ -1,0 +1,115 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Master', link: 'masters.php' },
+            { title: 'Unit Master', link: 'manaage_unit.php' },
+            { title: 'View' }
+        ]) %>
+
+        <!-- Page Heading -->
+        <div class="page-heading d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title mb-1">View Unit</h1>
+                <p class="text-muted mb-0">View unit details.</p>
+            </div>
+        </div>
+
+        <% if (!unit) { %>
+            <div class="alert alert-danger">Unit not found.</div>
+            <a href="manaage_unit.php" class="btn btn-secondary">Back</a>
+        <% } else { %>
+            <!-- Unit Details -->
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="card-title mb-0">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-box me-2 text-primary"></i>Unit Details</h5>
+                    </div>
+                    <div class="card-header-actions">
+                        <div class="d-flex gap-2">
+                            <a href="manaage_unit.php" class="btn btn-outline-secondary">Back</a>
+                            <a href="manaage_unit.php?edit=<%= unit.id %>" class="btn btn-primary">
+                                <i class="bi bi-pencil me-1"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-4">
+                        <!-- Unit Code -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Unit ID : <%= e(unit.unit_code) %>
+                            </label>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Status : <% if (parseInt(unit.status) === 1) { %>
+                                    <span class="badge bg-success">Active</span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary">Inactive</span>
+                                <% } %>
+                            </label>
+                        </div>
+
+                        <!-- Unit Name -->
+                        <div class="col-6">
+                            <label class="form-label text-muted">
+                                Unit Name : <%= e(unit.unit_name) %>
+                            </label>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label class="form-label text-muted">
+                                Description : <% if (unit.description) { %>
+                                    <%- nl2br(unit.description) %>
+                                <% } else { %>
+                                    <span class="text-muted">-</span>
+                                <% } %>
+                            </label>
+                        </div>
+
+                        <!-- Created By -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Created By : <%= e(unit.created_by_name || unit.created_by || '-') %>
+                            </label>
+                        </div>
+
+                        <!-- Created At -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Created At : <%= e(unit.created_at) %>
+                            </label>
+                        </div>
+
+                        <!-- Updated By -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Updated By : <%= e(unit.updated_by_name || unit.updated_by || '-') %>
+                            </label>
+                        </div>
+
+                        <!-- Updated At -->
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted">
+                                Updated At : <%= unit.updated_at ? e(unit.updated_at) : '-' %>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+    </div>
+</main>
+
+<%- include('includes/footer') %>

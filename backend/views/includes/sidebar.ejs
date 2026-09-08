@@ -1,0 +1,91 @@
+<%
+const salesPages = ['manage_sales_note.php', 'create_sales_note.php', 'edit_sales_note.php', 'view_sales_note.php', 'manage_sales_note', 'create_sales_note', 'edit_sales_note', 'view_sales_note'];
+const rentalPages = ['manage_rental.php', 'create_rental.php', 'edit_rental.php', 'view_rental.php', 'manage_rental', 'create_rental', 'view_rental'];
+const productPages = ['manage_product.php', 'create_product.php', 'edit_product.php', 'view_product.php', 'manage_product', 'create_product', 'edit_product', 'view_product'];
+const customerPages = ['manage_customer.php', 'create_customer.php', 'edit_customer.php', 'view_customer.php', 'manage_customer', 'create_customer', 'edit_customer', 'view_customer'];
+const userPages = ['manage_user.php', 'create_user.php', 'edit_user.php', 'view_user.php', 'manage_user', 'create_user', 'edit_user', 'view_user'];
+
+const menuItems = [
+    {
+        title: 'Dashboard',
+        icon: 'bi-speedometer2',
+        link: 'index.php',
+        active: (currentPage === 'index.php' || currentPage === '')
+    },
+    {
+        title: 'Sales Notes',
+        icon: 'bi-receipt',
+        link: 'manage_sales_note.php',
+        active: salesPages.includes(currentPage)
+    },
+    {
+        title: 'Rentals',
+        icon: 'bi-clock-history',
+        link: 'manage_rental.php',
+        active: rentalPages.includes(currentPage)
+    },
+    {
+        title: 'Product',
+        icon: 'bi-box-seam',
+        link: 'manage_product.php',
+        active: productPages.includes(currentPage)
+    },
+    {
+        title: 'Customers',
+        icon: 'bi-people',
+        link: 'manage_customer.php',
+        active: customerPages.includes(currentPage)
+    },
+    {
+        title: 'Users',
+        icon: 'bi-person-badge',
+        link: 'manage_user.php',
+        active: userPages.includes(currentPage)
+    },
+    {
+        title: 'Profile',
+        icon: 'bi-person-circle',
+        link: 'profile.php',
+        active: (currentPage === 'profile.php')
+    },
+    {
+        title: 'Settings',
+        icon: 'bi-gear',
+        link: 'masters.php',
+        active: ['masters.php', 'manage_category.php', 'manage_brand.php', 'manaage_unit.php', 'manage_producttype.php'].includes(currentPage)
+    }
+];
+%>
+
+<aside class="admin-sidebar" id="adminSidebar" aria-label="Main navigation">
+
+    <!-- Logo -->
+    <div class="sidebar-header">
+        <a class="brand-mark" href="index.php" aria-label="Dashboard">
+            <span class="brand-icon">
+                <i class="bi bi-tools"></i>
+            </span>
+
+            <span class="brand-copy">
+                <span class="brand-title">
+                    Sun PowerTools
+                </span>
+            </span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        <% menuItems.forEach(function(item) { %>
+            <a class="nav-link <%= item.active ? 'active' : '' %>" href="<%= e(item.link) %>"
+                <%= item.active ? 'aria-current="page"' : '' %>>
+                <span class="nav-icon">
+                    <i class="bi <%= e(item.icon) %>" aria-hidden="true"></i>
+                </span>
+                <span class="nav-text">
+                    <%= e(item.title) %>
+                </span>
+            </a>
+        <% }); %>
+    </nav>
+</aside>

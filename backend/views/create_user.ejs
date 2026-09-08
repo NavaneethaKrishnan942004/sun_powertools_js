@@ -1,0 +1,99 @@
+<%- include('includes/header') %>
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Users Management', link: 'manage_user.php' },
+            { title: 'Add' }
+        ]) %>
+
+        <div class="page-heading mb-4">
+            <div>
+                <h1 class="page-title mb-1">Create User</h1>
+                <p class="text-muted mb-0">Create a new application user.</p>
+            </div>
+        </div>
+
+        <form method="POST" novalidate>
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="card-title mb-0">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2 text-primary"></i>User Details</h5>
+                    </div>
+                    <div class="card-header-actions">
+                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="checkbox" name="status" id="createStatus" <%= (v && v.status) ? 'checked' : '' %>>
+                            <label class="form-check-label mb-0 fw-semibold" id="createStatusLabel" for="createStatus"><%= (v && v.status) ? 'Active' : 'Inactive' %></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">User Name <span class="text-danger">*</span></label>
+                            <input type="text" name="user_name" class="form-control <%= (errors && errors.user_name) ? 'is-invalid' : '' %>" value="<%= (v && v.user_name) || '' %>" placeholder="Enter user name">
+                            <% if (errors && errors.user_name) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.user_name %></div>
+                            <% } %>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">User Mail <span class="text-danger">*</span></label>
+                            <input type="email" name="user_email" class="form-control <%= (errors && errors.user_email) ? 'is-invalid' : '' %>" value="<%= (v && v.user_email) || '' %>" placeholder="Enter user mail">
+                            <% if (errors && errors.user_email) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.user_email %></div>
+                            <% } %>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">User Phone No <span class="text-danger">*</span></label>
+                            <input type="text" name="user_phone" class="form-control <%= (errors && errors.user_phone) ? 'is-invalid' : '' %>" value="<%= (v && v.user_phone) || '' %>" placeholder="Enter user phone no">
+                            <% if (errors && errors.user_phone) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.user_phone %></div>
+                            <% } %>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Password <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control <%= (errors && errors.password) ? 'is-invalid' : '' %>" placeholder="Enter password">
+                            <% if (errors && errors.password) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.password %></div>
+                            <% } %>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" name="confirm_password" class="form-control <%= (errors && errors.confirm_password) ? 'is-invalid' : '' %>" placeholder="Confirm password">
+                            <% if (errors && errors.confirm_password) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.confirm_password %></div>
+                            <% } %>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Role <span class="text-danger">*</span></label>
+                            <select name="role" class="form-select <%= (errors && errors.role) ? 'is-invalid' : '' %>">
+                                <option value="user" <%= (v && v.role === 'user') ? 'selected' : '' %>>User</option>
+                                <option value="admin" <%= (v && v.role === 'admin') ? 'selected' : '' %>>Admin</option>
+                            </select>
+                            <% if (errors && errors.role) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= errors.role %></div>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="manage_user.php" class="btn btn-outline-secondary">Back</a>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const s = document.getElementById('createStatus'), l = document.getElementById('createStatusLabel');
+    if (s && l) {
+        s.addEventListener('change', function () {
+            l.textContent = this.checked ? 'Active' : 'Inactive';
+        });
+    }
+});
+</script>
+<%- include('includes/footer') %>

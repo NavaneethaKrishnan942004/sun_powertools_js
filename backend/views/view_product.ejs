@@ -1,0 +1,317 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+<div class="container-fluid px-3 px-lg-4 py-4">
+
+<!-- Breadcrumb Navigation -->
+<%- renderBreadcrumbs([
+    { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+    { title: 'Settings', link: 'settings.php' },
+    { title: 'DMS Masters', link: 'masters.php' },
+    { title: 'Product Master', link: 'manage_product.php' },
+    { title: 'View' }
+]) %>
+
+<!-- PAGE HEADING -->
+<div class="page-heading d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title mb-1">View Product</h1>
+        <p class="text-muted mb-0">View complete product details.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
+        <a href="edit_product.php?id=<%= product.id %>" class="btn btn-primary">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+    </div>
+</div>
+
+<!-- 1. BASIC INFORMATION -->
+<div class="card shadow-sm mb-4">
+<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="card-title mb-0">
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-box-seam me-2 text-primary"></i>1. Basic Information
+        </h5>
+    </div>
+    <div class="card-header-actions">
+        <span class="badge <%= Number(product.status) === 1 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %> px-3 py-1.5 rounded-pill border">
+            <span class="status-dot <%= Number(product.status) === 1 ? 'active' : 'inactive' %>"></span>
+            <%= Number(product.status) === 1 ? 'Active' : 'Inactive' %>
+        </span>
+    </div>
+</div>
+
+<div class="card-body">
+<div class="row g-4">
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Product ID</label>
+    <div class="fw-semibold"><%= product.product_code %></div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Status</label>
+    <div>
+        <% if (Number(product.status) === 1) { %>
+            <span class="badge bg-success">Active</span>
+        <% } else { %>
+            <span class="badge bg-secondary">Inactive</span>
+        <% } %>
+    </div>
+</div>
+
+<div class="col-12 col-md-6">
+    <label class="form-label text-muted">Product Name</label>
+    <div class="fw-semibold"><%= product.product_name %></div>
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label text-muted">Short Name</label>
+    <div><%= product.short_name %></div>
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label text-muted">Category</label>
+    <div><%= product.category_code %> - <%= product.category_name %></div>
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label text-muted">Brand</label>
+    <div><%= product.brand_code %> - <%= product.brand_name %></div>
+</div>
+
+<div class="col-12">
+    <label class="form-label text-muted">Description</label>
+    <div class="border rounded p-3 bg-light">
+        <%- product.description ? nl2br(e(product.description)) : '<span class="text-muted">No description available.</span>' %>
+    </div>
+</div>
+
+<!-- IMAGES -->
+<div class="col-12">
+    <label class="form-label text-muted">Product Images</label>
+    <div class="row g-3">
+        <% if (images.length === 0) { %>
+        <div class="col-12 text-muted">No product images available.</div>
+        <% } else { %>
+        <% images.forEach(image => { %>
+        <div class="col-6 col-md-3">
+            <div class="border rounded p-2">
+                <img
+                    src="<%= image.image_path %>"
+                    class="img-fluid rounded"
+                    style="width:100%;height:180px;object-fit:cover"
+                >
+                <% if (Number(image.is_primary) === 1) { %>
+                <span class="badge bg-primary mt-2">Primary Image</span>
+                <% } %>
+            </div>
+        </div>
+        <% }) %>
+        <% } %>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- 2. SALES -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">2. Sales</h5>
+</div>
+<div class="card-body">
+<div class="row g-4">
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Sale Available</label>
+    <div>
+        <%- Number(product.sale_available) === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' %>
+    </div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Purchase Price</label>
+    <div>
+        <%= product.purchase_price !== null ? numberFormat(product.purchase_price, 2) : '-' %>
+    </div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Selling Price</label>
+    <div>
+        <%= product.selling_price !== null ? numberFormat(product.selling_price, 2) : '-' %>
+    </div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Discount Allow</label>
+    <div>
+        <%- Number(product.discount_allowed) === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' %>
+    </div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Discount %</label>
+    <div>
+        <%= product.discount_percent !== null ? (product.discount_percent + ' %') : '-' %>
+    </div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Unit of Sale</label>
+    <div>
+        <%= product.sale_unit !== null ? product.sale_unit : '-' %>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- 3. RENTAL -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">3. Rental</h5>
+</div>
+<div class="card-body">
+
+<div class="mb-4">
+    <label class="form-label text-muted">Rental Available</label>
+    <div>
+        <%- Number(product.rental_available) === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' %>
+    </div>
+</div>
+
+<% if (Number(product.rental_available) === 1) { %>
+<div class="table-responsive">
+    <table class="table table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>Available</th>
+                <th>Rental Unit</th>
+                <th>Security Deposit</th>
+                <th>Rental Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% rentalRates.forEach(rate => { %>
+            <tr>
+                <td><%= rate.rental_period ? rate.rental_period.charAt(0).toUpperCase() + rate.rental_period.slice(1) : '' %></td>
+                <td>
+                    <%- Number(rate.available) === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' %>
+                </td>
+                <td>
+                    <% if (rate.unit_code) { %>
+                    <%= rate.unit_code %> - <%= rate.unit_name %>
+                    <% } else { %>
+                    -
+                    <% } %>
+                </td>
+                <td>
+                    <%= rate.security_deposit !== null ? numberFormat(rate.security_deposit, 2) : '-' %>
+                </td>
+                <td>
+                    <%= rate.rental_rate !== null ? numberFormat(rate.rental_rate, 2) : '-' %>
+                </td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>
+<% } %>
+
+</div>
+</div>
+
+<!-- 4. SPECIFICATIONS -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">4. Specifications</h5>
+</div>
+<div class="card-body">
+<div class="row g-4">
+    <% const specifications = {
+        power_rating: 'Power Rating',
+        voltage: 'Voltage',
+        rpm: 'RPM',
+        chuck_disc_size: 'Chuck / Disc Size',
+        weight: 'Weight',
+        battery_capacity: 'Battery Capacity',
+        warranty_period: 'Warranty Period'
+    }; %>
+    <% for (const [field, label] of Object.entries(specifications)) { %>
+    <div class="col-6 col-md-3">
+        <label class="form-label text-muted"><%= label %></label>
+        <div><%= product[field] || '-' %></div>
+    </div>
+    <% } %>
+</div>
+</div>
+</div>
+
+<!-- 5. WARRANTY & MAINTENANCE -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">5. Warranty & Maintenance</h5>
+</div>
+<div class="card-body">
+<div class="row g-4">
+
+<div class="col-6 col-md-4">
+    <label class="form-label text-muted">Warranty Applicable</label>
+    <div>
+        <%- Number(product.warranty_applicable) === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' %>
+    </div>
+</div>
+
+<% if (Number(product.warranty_applicable) === 1) { %>
+<div class="col-6 col-md-4">
+    <label class="form-label text-muted">Warranty Period</label>
+    <div><%= product.warranty_months %> Month</div>
+</div>
+<% } %>
+
+</div>
+</div>
+</div>
+
+<!-- AUDIT INFORMATION -->
+<div class="card shadow-sm mb-4">
+<div class="card-header">
+    <h5 class="mb-0">Audit Information</h5>
+</div>
+<div class="card-body">
+<div class="row g-4">
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Created By</label>
+    <div><%= product.created_by_name || product.created_by || '-' %></div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Created At</label>
+    <div><%= product.created_at %></div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Updated By</label>
+    <div><%= product.updated_by_name || product.updated_by || '-' %></div>
+</div>
+
+<div class="col-6 col-md-3">
+    <label class="form-label text-muted">Updated At</label>
+    <div><%= product.updated_at || '-' %></div>
+</div>
+
+</div>
+</div>
+</div>
+
+</div>
+</main>
+
+<%- include('includes/footer') %>

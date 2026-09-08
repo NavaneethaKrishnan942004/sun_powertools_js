@@ -1,0 +1,344 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Masters', link: 'masters.php' },
+            { title: 'Brand Master' }
+        ]) %>
+
+        <div class="page-heading d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title mb-1">Brand Master</h1>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBrandModal">
+                <i class="bi bi-plus-lg me-1"></i> Create Brand
+            </button>
+        </div>
+
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show auto-hide-alert">
+                <span><i class="bi bi-check-circle me-2"></i><%= e(success) %></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="alert-time-line"></div>
+            </div>
+        <% } %>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" id="filterForm">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-8">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="search" id="brandSearch" class="form-control"
+                                placeholder="Search ID or brand name" value="<%= e(search) %>"
+                                autocomplete="off">
+                        </div>
+
+                        <% if (search !== '' || statusFilter !== '') { %>
+                            <div class="col-6 col-md-2">
+                                <a href="manage_brand.php" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-x-circle me-1"></i> Clear
+                                </a>
+                            </div>
+                        <% } %>
+
+                        <div class="<%= (search !== '' || statusFilter !== '') ? 'col-6' : 'col-12' %> col-md-2">
+                            <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="collapse"
+                                data-bs-target="#filterSection" aria-expanded="false" aria-controls="filterSection"
+                                id="filterToggleBtn">
+                                <i class="bi bi-funnel me-1"></i> Filter
+                                <i class="bi bi-chevron-down ms-1" id="filterIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="collapse mt-3" id="filterSection">
+                        <div class="filter-section-box">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" id="statusFilter" class="form-select">
+                                        <option value="">All Status</option>
+                                        <option value="1" <%= statusFilter === '1' ? 'selected' : '' %>>Active</option>
+                                        <option value="0" <%= statusFilter === '0' ? 'selected' : '' %>>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="category-table-wrapper">
+                    <div class="category-table-scroll">
+                        <table class="table category-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Brand ID</th>
+                                    <th>Brand Name</th>
+                                    <th>Description</th>
+                                    <th>Created By</th>
+                                    <th>Created At</th>
+                                    <th>Updated By</th>
+                                    <th>Updated At</th>
+                                    <th class="action-column text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!brands || brands.length === 0) { %>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                                            No brands found.
+                                        </td>
+                                    </tr>
+                                <% } else { %>
+                                    <% brands.forEach(function(row) { %>
+                                        <tr>
+                                            <td>
+                                                <span
+                                                    class="status-dot <%= (parseInt(row.status) === 1) ? 'active' : 'inactive' %>"
+                                                    title="<%= (parseInt(row.status) === 1) ? 'Active' : 'Inactive' %>"></span>
+                                                <strong><%= e(row.brand_code) %></strong>
+                                            </td>
+                                            <td><%= e(row.brand_name) %></td>
+                                            <td class="text-muted">
+                                                <%= row.description ? e(row.description) : '-' %>
+                                            </td>
+                                            <td><%= e(row.created_by_name || row.created_by || '-') %></td>
+                                            <td><%= e(row.created_at) %></td>
+                                            <td><%= e(row.updated_by_name || row.updated_by || '-') %></td>
+                                            <td><%= row.updated_at ? e(row.updated_at) : '-' %></td>
+                                            <td class="action-column text-end text-nowrap">
+                                                <a href="view_brand.php?id=<%= row.id %>"
+                                                    class="btn btn-sm btn-outline-secondary" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+
+                                                <button type="button" class="btn btn-sm btn-outline-primary" title="Edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editBrandModal<%= row.id %>">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        <%
+                                        const isEditValidation = (validationAction === 'edit' && validationId === parseInt(row.id));
+                                        const editBrandName = isEditValidation ? (formData.brand_name || row.brand_name) : row.brand_name;
+                                        const editDescription = isEditValidation ? (formData.description || row.description) : row.description;
+                                        const editStatus = isEditValidation ? (formData.status === 1 || formData.status === '1') : (parseInt(row.status) === 1);
+                                        %>
+
+                                        <div class="modal fade" id="editBrandModal<%= row.id %>" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <div>
+                                                            <h5 class="modal-title">Edit Brand</h5>
+                                                            <small class="text-muted"><%= e(row.brand_code) %></small>
+                                                        </div>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+
+                                                    <form method="POST" action="manage_brand.php">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="form_action" value="edit">
+                                                            <input type="hidden" name="id" value="<%= row.id %>">
+
+                                                            <div class="row g-3">
+                                                                <div class="col-6 col-md-6">
+                                                                    <label class="form-label">Brand Code</label>
+                                                                    <input type="text" class="form-control"
+                                                                        value="<%= e(row.brand_code) %>" readonly>
+                                                                </div>
+
+                                                                <div class="col-6 col-md-6">
+                                                                    <label class="form-label">Status</label>
+                                                                    <div class="form-check form-switch mt-2">
+                                                                        <input class="form-check-input" type="checkbox"
+                                                                            name="status" id="editStatus<%= row.id %>"
+                                                                            <%= editStatus ? 'checked' : '' %>>
+                                                                        <label class="form-check-label"
+                                                                            for="editStatus<%= row.id %>"
+                                                                            id="editStatusLabel<%= row.id %>">
+                                                                            <%= editStatus ? 'Active' : 'Inactive' %>
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="col-12">
+                                                                    <label class="form-label">Brand Name <span class="text-danger">*</span></label>
+                                                                    <input type="text" name="brand_name"
+                                                                        class="form-control <%= (isEditValidation && (brandNameError || duplicateNameError)) ? 'is-invalid' : '' %>"
+                                                                        value="<%= e(editBrandName) %>"
+                                                                        placeholder="Enter brand name">
+
+                                                                    <% if (isEditValidation && brandNameError) { %>
+                                                                        <div class="validation-message"><i
+                                                                                class="bi bi-exclamation-circle me-1"></i><%= e(brandNameError) %>
+                                                                        </div>
+                                                                    <% } else if (isEditValidation && duplicateNameError) { %>
+                                                                        <div class="validation-message"><i
+                                                                                class="bi bi-exclamation-circle me-1"></i><%= e(duplicateNameError) %>
+                                                                        </div>
+                                                                    <% } %>
+                                                                </div>
+
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between">
+                                                                        <label class="form-label">Description</label>
+                                                                        <small class="text-muted"
+                                                                            id="editDescriptionCount<%= row.id %>"><%= (editDescription || '').length %> / 200</small>
+                                                                    </div>
+
+                                                                    <textarea name="description"
+                                                                        id="editDescription<%= row.id %>"
+                                                                        class="form-control <%= (isEditValidation && descriptionError) ? 'is-invalid' : '' %>"
+                                                                        rows="4"
+                                                                        placeholder="Enter brand description"><%= e(editDescription || '') %></textarea>
+
+                                                                    <% if (isEditValidation && descriptionError) { %>
+                                                                        <div class="validation-message"><i
+                                                                                class="bi bi-exclamation-circle me-1"></i><%= e(descriptionError) %>
+                                                                        </div>
+                                                                    <% } %>
+                                                                </div>
+
+                                                                <div class="col-12">
+                                                                    <hr>
+                                                                    <div class="row g-3">
+                                                                        <div class="col-12 col-md-6">
+                                                                            <label class="form-label text-muted">Created By</label>
+                                                                            <input type="text" class="form-control"
+                                                                                value="<%= e(row.created_by_name || row.created_by || '') %>" readonly>
+                                                                        </div>
+                                                                        <div class="col-12 col-md-6">
+                                                                            <label class="form-label text-muted">Created At</label>
+                                                                            <input type="text" class="form-control"
+                                                                                value="<%= e(row.created_at) %>" readonly>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                                                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- CREATE MODAL -->
+<div class="modal fade" id="createBrandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="manage_brand.php">
+                <div class="modal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="modal-title mb-0 fw-bold">Create Brand</h5>
+                        <small class="text-muted">Add a new product brand</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" name="form_action" value="create">
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-check form-switch m-0 d-flex align-items-center gap-2 justify-content-end">
+                                <input class="form-check-input" type="checkbox" name="status" id="createStatus" <%= (validationAction === 'create' && formData.status === 0) ? '' : 'checked' %>>
+                                <label class="form-check-label mb-0 fw-semibold" for="createStatus" id="createStatusLabel">
+                                    <%= (validationAction === 'create' && formData.status === 0) ? 'Inactive' : 'Active' %>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Brand Name <span class="text-danger">*</span></label>
+                            <input type="text" name="brand_name"
+                                class="form-control <%= (validationAction === 'create' && (brandNameError || duplicateNameError)) ? 'is-invalid' : '' %>"
+                                value="<%= validationAction === 'create' ? e(formData.brand_name || '') : '' %>"
+                                placeholder="Enter brand name">
+
+                            <% if (validationAction === 'create' && brandNameError) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= e(brandNameError) %></div>
+                            <% } else if (validationAction === 'create' && duplicateNameError) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= e(duplicateNameError) %></div>
+                            <% } %>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <label class="form-label">Description</label>
+                                <small class="text-muted" id="createDescriptionCount">
+                                    <%= validationAction === 'create' ? (formData.description || '').length : 0 %> / 200
+                                </small>
+                            </div>
+
+                            <textarea name="description" id="createDescription"
+                                class="form-control <%= (validationAction === 'create' && descriptionError) ? 'is-invalid' : '' %>"
+                                rows="4"
+                                placeholder="Enter brand description"><%= validationAction === 'create' ? e(formData.description || '') : '' %></textarea>
+
+                            <% if (validationAction === 'create' && descriptionError) { %>
+                                <div class="validation-message"><i class="bi bi-exclamation-circle me-1"></i><%= e(descriptionError) %></div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const validationAction = <%- JSON.stringify(validationAction || '') %>;
+        const validationId = <%= parseInt(validationId || 0) %>;
+
+        if (validationAction === 'create') {
+            const modal = document.getElementById('createBrandModal');
+            if (modal) {
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            }
+        }
+
+        if (validationAction === 'edit' && validationId > 0) {
+            const modal = document.getElementById('editBrandModal' + validationId);
+            if (modal) {
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            }
+        }
+    });
+</script>
+
+<%- include('includes/footer') %>

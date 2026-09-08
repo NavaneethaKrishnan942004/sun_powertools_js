@@ -1,0 +1,171 @@
+<%- include('includes/header') %>
+
+<main class="main-content">
+    <div class="container-fluid px-3 px-lg-4 py-4">
+
+        <!-- Breadcrumb Navigation -->
+        <%- renderBreadcrumbs([
+            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: 'Settings' }
+        ]) %>
+
+        <!-- Page Heading -->
+        <div class="page-heading d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title mb-1">Settings & Preferences</h1>
+                <p class="text-muted mb-0">Manage system settings, theme appearance, and account preferences.</p>
+            </div>
+            <a href="index.php" class="btn btn-light">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- Left Column: Settings Navigation / Overview -->
+            <div class="col-12 col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-body text-center py-4">
+                        <div class="avatar-wrapper mx-auto mb-3 position-relative" style="width: 80px; height: 80px;">
+                            <img src="<%= e(loggedInAvatar) %>" alt="<%= e(loggedInUsername) %>" 
+                                 class="rounded-circle w-100 h-100 object-fit-cover shadow-sm border border-2 border-primary"
+                                 onerror="this.src='/sun_powertools/assets/images/avatar/avatar.jpg';">
+                            <span class="status-indicator online position-absolute bottom-0 end-0" style="width: 14px; height: 14px;"></span>
+                        </div>
+                        <h4 class="fw-bold mb-1"><%= e(loggedInUsername) %></h4>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill mb-3">
+                            <%= e(loggedInRole) %> Administrator
+                        </span>
+                        <div class="text-muted small">
+                            Sun PowerTools ERP System
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Navigation Links -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title h6 mb-0 fw-bold">Configuration Areas</h5>
+                    </div>
+                    <div class="list-group list-group-flush rounded-bottom-4">
+                        <a href="masters.php" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-grid-fill text-primary"></i>
+                                <span class="fw-semibold">Master Records</span>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </a>
+                        <a href="manage_product.php" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-box-seam-fill text-success"></i>
+                                <span class="fw-semibold">Product Catalog</span>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </a>
+                        <a href="manage_user.php" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-people-fill text-warning"></i>
+                                <span class="fw-semibold">User Management</span>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </a>
+                        <a href="profile.php" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-person-badge-fill text-info"></i>
+                                <span class="fw-semibold">Account Profile</span>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Settings Content -->
+            <div class="col-12 col-lg-8">
+
+                <!-- Theme & Appearance -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-palette-fill text-primary"></i>
+                            <h5 class="h6 mb-0 fw-bold">Appearance & Theme</h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-4">
+                            Customize the application visual theme. Changes apply across all pages instantly and persist on your device.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <div class="p-3 border rounded-3 text-center cursor-pointer theme-select-card" 
+                                     onclick="window.setTheme('light')" style="cursor: pointer;">
+                                    <div class="p-3 bg-light rounded-2 border mb-3 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-sun-fill text-warning fs-2"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">Light Mode</h6>
+                                    <p class="text-muted small mb-0">Clean, high-contrast slate appearance</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="p-3 border rounded-3 text-center cursor-pointer theme-select-card" 
+                                     onclick="window.setTheme('dark')" style="cursor: pointer;">
+                                    <div class="p-3 rounded-2 border mb-3 d-flex align-items-center justify-content-center" style="background: #090d16;">
+                                        <i class="bi bi-moon-stars-fill text-info fs-2"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">Dark Mode</h6>
+                                    <p class="text-muted small mb-0">Deep navy, comfortable in low light</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Info Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-info"></i>
+                            <h5 class="h6 mb-0 fw-bold">System Information</h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-body-tertiary">
+                                    <div class="text-muted small">Application</div>
+                                    <div class="fw-bold fs-6">Sun PowerTools ERP</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-body-tertiary">
+                                    <div class="text-muted small">Environment</div>
+                                    <div class="fw-bold fs-6">Production / Localhost</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-body-tertiary">
+                                    <div class="text-muted small">Backend Engine</div>
+                                    <div class="fw-bold fs-6">Node.js <%= process.version %> / Express</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-body-tertiary">
+                                    <div class="text-muted small">Status</div>
+                                    <div class="fw-bold fs-6 text-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i> All Services Operational
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<%- include('includes/footer') %>
