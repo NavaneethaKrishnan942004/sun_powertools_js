@@ -50,43 +50,54 @@
 
                     <!-- 1. CUSTOMER & NOTE META CARD -->
                     <div class="card border-0 shadow-sm rounded-4 mb-4">
-                        <div class="card-header bg-surface py-3 px-4 border-bottom">
+                        <div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <h5 class="fw-bold mb-0 text-primary">
                                 <i class="bi bi-person-badge me-2"></i>1. Customer & Sales Info
                             </h5>
+                            <button type="button" class="btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#quickAddCustomerModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Customer
+                            </button>
                         </div>
                         <div class="card-body p-4">
                             <div class="row g-3">
                                 <!-- Note Number (Auto-generated) -->
-                                <div class="col-12 col-sm-6 col-md-4">
+                                <!-- <div class="col-12 col-sm-6 col-md-4">
                                     <label class="form-label small fw-semibold">Sales Note #</label>
                                     <input type="text" class="form-control bg-surface-soft fw-bold text-primary" value="<%= salesNoteNo %>" readonly>
                                     <small class="text-muted">Auto-generated</small>
-                                </div>
+                                </div> -->
 
-                                <!-- Date -->
-                                <div class="col-6 col-sm-6 col-md-4">
-                                    <label class="form-label small fw-semibold">Sales Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="sales_date" id="salesDate" class="form-control" value="<%= salesDate %>" required>
-                                </div>
-
-                                <!-- Time -->
-                                <div class="col-6 col-sm-6 col-md-4">
-                                    <label class="form-label small fw-semibold">Sales Time</label>
-                                    <input type="time" name="sales_time" id="salesTime" class="form-control" value="<%= salesTime %>" required>
+                                <!-- Single Sales Date & Time Field -->
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small fw-semibold">Sales Date & Time <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-surface"><i class="bi bi-calendar-event text-primary"></i></span>
+                                        <input type="datetime-local" name="sales_datetime" id="salesDateTime" class="form-control" value="<%= typeof currentSalesDateTime !== 'undefined' ? currentSalesDateTime : `${salesDate}T${salesTime}` %>" required>
+                                    </div>
+                                    <small class="text-muted">Defaults to current date & time</small>
                                 </div>
 
                                 <!-- Customer Selection -->
-                                <div class="col-12">
-                                    <label class="form-label small fw-semibold">Select Customer <span class="text-danger">*</span></label>
-                                    <select name="customer_id" id="customerSelect" class="form-select select2-customer" required>
-                                        <option value="">-- Choose Customer from Master --</option>
+                                <div class="col-12 col-md-7">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label small fw-semibold mb-0">
+                                            Select Customer <span id="customerRequiredStar" class="text-danger <%= (typeof saleType !== 'undefined' && saleType === 'credit') ? '' : 'd-none' %>">*</span>
+                                        </label>
+                                        <span class="badge <%= (typeof saleType !== 'undefined' && saleType === 'credit') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-light text-secondary border' %> small" id="customerOptionalBadge">
+                                            <%= (typeof saleType !== 'undefined' && saleType === 'credit') ? 'Required for Credit Sale' : 'Optional for Normal Sale' %>
+                                        </span>
+                                    </div>
+                                    <select name="customer_id" id="customerSelect" class="form-select select2-customer">
+                                        <option value="">-- Walk-in / Retail Customer (No Customer) --</option>
                                         <% customersList.forEach(c => { %>
                                             <option value="<%= c.id %>" <%= Number(selectedCustomerId) === Number(c.id) ? 'selected' : '' %>>
                                                 <%= c.customer_code %> - <%= c.customer_name %> (<%= c.mobile_number %>)
                                             </option>
                                         <% }) %>
                                     </select>
+                                    <div id="customerValidationFeedback" class="text-danger small mt-1 d-none">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Customer selection is required for Credit Sale.
+                                    </div>
                                 </div>
                             </div>
 
@@ -205,7 +216,7 @@
                                 <table class="table table-bordered align-middle mb-0" id="itemsTable">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 35%;">Product</th>
+                                            <th class="product-col-readable" style="min-width: 220px; width: 35%;">Product</th>
                                             <th class="text-center" style="width: 12%;">Qty</th>
                                             <th class="text-end" style="width: 15%;">Rate (₹)</th>
                                             <th class="text-end" style="width: 12%;">Disc (₹)</th>
@@ -265,51 +276,142 @@
 
                             <hr class="my-3">
 
-                            <!-- Grand Total -->
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <span class="fs-5 fw-bold text-body">Grand Total:</span>
-                                <span class="fs-4 fw-extrabold text-primary" id="summaryGrandTotal">₹0.00</span>
+                            <!-- Calculated Grand Total -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-3 bg-surface-soft rounded-3 border">
+                                <div>
+                                    <span class="fs-6 fw-bold text-muted d-block">Calculated Grand Total:</span>
+                                    <small class="text-muted">Based on items, tax & charges</small>
+                                </div>
+                                <span class="fs-4 fw-bold text-body" id="summaryGrandTotal">₹0.00</span>
                             </div>
 
-                            <!-- Payment Type Selection -->
+                            <!-- Adjusted / Final Grand Total (Editable) -->
+                            <div class="p-3 bg-surface rounded-3 border border-primary mb-3 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-primary mb-0" for="finalGrandTotalInput">
+                                        <i class="bi bi-pencil-square me-1"></i>Adjusted / Final Grand Total <span class="text-danger">*</span>
+                                    </label>
+                                    <span id="discountPercentBadge" class="badge bg-light text-secondary border px-2 py-1 small">
+                                        Discount: 0% (₹0.00)
+                                    </span>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-primary text-white fw-bold">₹</span>
+                                    <input type="number" name="final_grand_total" id="finalGrandTotalInput" class="form-control form-control-lg fw-extrabold text-primary" step="0.01" min="0.01" placeholder="0.00" value="<%= typeof finalGrandTotal !== 'undefined' ? finalGrandTotal : '' %>" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="resetFinalTotalBtn" title="Reset to calculated grand total">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </div>
+                                <div id="finalTotalError" class="text-danger small mt-1 d-none fw-semibold">
+                                    <i class="bi bi-exclamation-circle me-1"></i><span id="finalTotalErrorText"></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                                    <span>Discount Amount: <strong class="text-success" id="effectiveDiscountAmount">₹0.00</strong></span>
+                                    <span>Discount Applied: <strong class="text-success" id="effectiveDiscountRate">0%</strong></span>
+                                </div>
+                            </div>
+
+                            <% const currentSaleType = (typeof saleType !== 'undefined' && saleType) ? saleType : 'sale'; %>
+                            <!-- SALE VS CREDIT SALE SELECTION (Placed after Grand Total) -->
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Payment Type <span class="text-danger">*</span></label>
-                                <select name="payment_type" id="paymentTypeSelect" class="form-select fw-semibold" required>
+                                <label class="form-label small fw-semibold d-block">Sale Type <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group" aria-label="Sale Type Selection">
+                                    <input type="radio" class="btn-check" name="sale_type" id="saleTypeNormal" value="sale" <%= (currentSaleType === 'sale') ? 'checked' : '' %> autocomplete="off">
+                                    <label class="btn btn-outline-success fw-bold py-2 text-center" for="saleTypeNormal">
+                                        <i class="bi bi-cash-stack me-1"></i> Normal Sale
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="sale_type" id="saleTypeCredit" value="credit" <%= (currentSaleType === 'credit') ? 'checked' : '' %> autocomplete="off">
+                                    <label class="btn btn-outline-primary fw-bold py-2 text-center" for="saleTypeCredit">
+                                        <i class="bi bi-credit-card-2-front me-1"></i> Credit Sale
+                                    </label>
+                                </div>
+                                <div class="small text-muted mt-1" id="saleTypeNote">
+                                    <i class="bi bi-info-circle me-1"></i>Standard selling price workflow with full payment. Customer selection is optional.
+                                </div>
+                            </div>
+
+                            <!-- NORMAL SALE PAYMENT METHOD -->
+                            <div id="normalSalePaymentBox" class="mb-3 <%= (currentSaleType === 'credit') ? 'd-none' : '' %>">
+                                <label class="form-label small fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                                <select name="payment_type" id="paymentTypeSelect" class="form-select fw-semibold">
                                     <option value="Cash" <%= paymentType === 'Cash' ? 'selected' : '' %>>Cash (Full Payment)</option>
-                                    <option value="UPI" <%= paymentType === 'UPI' ? 'selected' : '' %>>UPI (Full Payment)</option>
-                                    <option value="Card" <%= paymentType === 'Card' ? 'selected' : '' %>>Card (Full Payment)</option>
-                                    <option value="Bank Transfer" <%= paymentType === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer (Full Payment)</option>
-                                    <option value="Credit" id="optCredit" <%= paymentType === 'Credit' ? 'selected' : '' %>>Credit (Full Credit)</option>
-                                    <option value="Mixed" id="optMixed" <%= paymentType === 'Mixed' ? 'selected' : '' %>>Mixed / Partial Payment</option>
+                                    <option value="UPI" <%= paymentType === 'UPI' ? 'selected' : '' %>>UPI / QR Code</option>
+                                    <option value="Card" <%= paymentType === 'Card' ? 'selected' : '' %>>Credit / Debit Card</option>
+                                    <option value="Bank Transfer" <%= paymentType === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer / NEFT</option>
                                 </select>
                             </div>
 
-                            <!-- Partial / Mixed Payment Input -->
-                            <div id="mixedPaymentBox" class="mb-3 p-3 bg-surface-soft rounded-3 border d-none">
-                                <div class="mb-2">
-                                    <label class="form-label small fw-semibold">Amount Paid Now (₹)</label>
-                                    <input type="number" name="paid_amount" id="paidAmountInput" class="form-control fw-bold text-success" value="0.00" min="0" step="0.01">
+                            <!-- CREDIT SALE DETAILS BOX -->
+                            <div id="creditSaleDetailsBox" class="mb-3 p-3 bg-surface-soft rounded-3 border border-primary-subtle <%= (currentSaleType === 'credit') ? '' : 'd-none' %>">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <span class="fw-bold text-primary small"><i class="bi bi-credit-card me-1"></i> Credit Sale Terms</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Customer Required</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted">
-                                    <span>Remaining Credit:</span>
-                                    <strong class="text-danger" id="dispCreditPortion">₹0.00</strong>
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Amount Received Now (₹)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-surface">₹</span>
+                                        <input type="number" name="amount_received" id="amountReceivedInput" class="form-control fw-bold text-success" value="<%= typeof amountReceived !== 'undefined' ? amountReceived : '0.00' %>" min="0" step="0.01" placeholder="0.00">
+                                    </div>
+                                    <div id="amountReceivedError" class="text-danger small mt-1 d-none">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Amount Received cannot exceed Final Grand Total.
+                                    </div>
+                                    <small class="text-muted d-block mt-0.5">Enter 0 for full credit, or partial amount received.</small>
+                                </div>
+
+                                <div class="mb-2" id="creditPaymentMethodGroup">
+                                    <label class="form-label small fw-semibold">Payment Method for Received Amount</label>
+                                    <select name="payment_method" id="creditPaymentMethod" class="form-select form-select-sm">
+                                        <option value="Cash">Cash</option>
+                                        <option value="UPI">UPI / QR Code</option>
+                                        <option value="Card">Card</option>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+
+                                <!-- Prominent Balance to Pay Warning Panel -->
+                                <div class="balance-highlight-card my-3" id="balanceHighlightBox">
+                                    <div class="balance-title">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Balance to Pay
+                                    </div>
+                                    <div class="balance-value" id="prominentBalanceToPay">
+                                        ₹0.00
+                                    </div>
+                                    <div class="balance-desc">
+                                        Customer needs to pay this remaining amount.
+                                    </div>
+                                </div>
+
+                                <div class="p-2 bg-surface rounded border d-flex justify-content-between align-items-center mt-2">
+                                    <span class="text-muted small">Credit Amount (Balance):</span>
+                                    <strong class="fs-6 text-danger" id="dispCreditAmount">₹0.00</strong>
                                 </div>
                             </div>
 
                             <!-- Customer Balance Impact Preview -->
-                            <div class="p-3 bg-surface-soft rounded-3 border mb-3 small">
-                                <div class="fw-bold mb-2 text-body">Customer Outstanding Impact:</div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Previous Balance:</span>
-                                    <strong id="sidePrevBal">₹0.00</strong>
+                            <div class="p-3 bg-surface-soft rounded-3 border mb-3 small" id="customerImpactCard">
+                                <div class="fw-bold mb-2 text-body d-flex justify-content-between">
+                                    <span>Customer Balance Impact:</span>
+                                    <span id="custImpactStatus" class="badge bg-secondary-subtle text-secondary">Walk-in</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="text-muted">+ New Credit Portion:</span>
-                                    <strong class="text-danger" id="sideCreditAdded">₹0.00</strong>
+                                <div id="custImpactDetails">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted">Previous Outstanding:</span>
+                                        <strong id="sidePrevBal">₹0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted">+ Credit from this Sale:</span>
+                                        <strong class="text-danger" id="sideCreditAdded">₹0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between border-top pt-1 mt-1">
+                                        <span class="fw-bold">New Total Outstanding:</span>
+                                        <strong class="text-primary fw-bold" id="sideNewBal">₹0.00</strong>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between border-top pt-1 mt-1">
-                                    <span class="fw-bold">New Total Balance:</span>
-                                    <strong class="text-primary fw-bold" id="sideNewBal">₹0.00</strong>
+                                <div id="custImpactWalkinNotice" class="text-muted small d-none">
+                                    <i class="bi bi-info-circle me-1"></i>Walk-in customer sale. No customer ledger entry created.
                                 </div>
                             </div>
 
@@ -352,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentCustomer = null;
     let items = []; // Line items array
 
+    const salesNoteForm = document.getElementById('salesNoteForm');
     const customerSelect = document.getElementById('customerSelect');
     const customerProfileBox = document.getElementById('customerProfileBox');
     const dispCustName = document.getElementById('dispCustName');
@@ -381,25 +484,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryTax = document.getElementById('summaryTax');
     const otherChargesInput = document.getElementById('otherChargesInput');
     const summaryGrandTotal = document.getElementById('summaryGrandTotal');
+
+    // Final Grand Total & Discount Elements
+    const finalGrandTotalInput = document.getElementById('finalGrandTotalInput');
+    const resetFinalTotalBtn = document.getElementById('resetFinalTotalBtn');
+    const discountPercentBadge = document.getElementById('discountPercentBadge');
+    const finalTotalError = document.getElementById('finalTotalError');
+    const finalTotalErrorText = document.getElementById('finalTotalErrorText');
+    const effectiveDiscountAmount = document.getElementById('effectiveDiscountAmount');
+    const effectiveDiscountRate = document.getElementById('effectiveDiscountRate');
+    const prominentBalanceToPay = document.getElementById('prominentBalanceToPay');
+    const balanceHighlightBox = document.getElementById('balanceHighlightBox');
+
+    let isFinalTotalManuallyEdited = Boolean(finalGrandTotalInput && finalGrandTotalInput.value.trim() !== '');
+
+    // Sale Type & Payment Elements
+    const saleTypeNormal = document.getElementById('saleTypeNormal');
+    const saleTypeCredit = document.getElementById('saleTypeCredit');
+    const saleTypeNote = document.getElementById('saleTypeNote');
+    const normalSalePaymentBox = document.getElementById('normalSalePaymentBox');
+    const creditSaleDetailsBox = document.getElementById('creditSaleDetailsBox');
     const paymentTypeSelect = document.getElementById('paymentTypeSelect');
-    const mixedPaymentBox = document.getElementById('mixedPaymentBox');
-    const paidAmountInput = document.getElementById('paidAmountInput');
-    const dispCreditPortion = document.getElementById('dispCreditPortion');
+    const amountReceivedInput = document.getElementById('amountReceivedInput');
+    const amountReceivedError = document.getElementById('amountReceivedError');
+    const dispCreditAmount = document.getElementById('dispCreditAmount');
+
+    // Customer Validation & Impact Elements
+    const customerRequiredStar = document.getElementById('customerRequiredStar');
+    const customerOptionalBadge = document.getElementById('customerOptionalBadge');
+    const customerValidationFeedback = document.getElementById('customerValidationFeedback');
+    const custImpactStatus = document.getElementById('custImpactStatus');
+    const custImpactDetails = document.getElementById('custImpactDetails');
+    const custImpactWalkinNotice = document.getElementById('custImpactWalkinNotice');
     const sidePrevBal = document.getElementById('sidePrevBal');
     const sideCreditAdded = document.getElementById('sideCreditAdded');
     const sideNewBal = document.getElementById('sideNewBal');
     const overrideBox = document.getElementById('overrideBox');
-    const optCredit = document.getElementById('optCredit');
-    const optMixed = document.getElementById('optMixed');
 
     // 1. CUSTOMER SELECTION & AJAX FETCH
     function loadCustomerDetails(customerId) {
         if (!customerId) {
             customerProfileBox.classList.add('d-none');
             currentCustomer = null;
+            if (saleTypeCredit && saleTypeCredit.checked) {
+                customerValidationFeedback.classList.remove('d-none');
+            }
             recalculateAll();
             return;
         }
+
+        customerValidationFeedback.classList.add('d-none');
 
         fetch('ajax_sales_note.php?action=get_customer&customer_id=' + customerId)
             .then(res => res.json())
@@ -418,15 +552,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Credit allowed toggle
                     if (parseInt(currentCustomer.credit_allowed) === 1) {
                         dispCreditBadge.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle">Credit Allowed</span>';
-                        if (optCredit) optCredit.disabled = false;
-                        if (optMixed) optMixed.disabled = false;
                     } else {
                         dispCreditBadge.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">No Credit Allowed</span>';
-                        if (optCredit) optCredit.disabled = true;
-                        if (optMixed) optMixed.disabled = true;
-                        if (paymentTypeSelect.value === 'Credit' || paymentTypeSelect.value === 'Mixed') {
-                            paymentTypeSelect.value = 'Cash';
-                        }
                     }
 
                     customerProfileBox.classList.remove('d-none');
@@ -446,7 +573,46 @@ document.addEventListener('DOMContentLoaded', function() {
         loadCustomerDetails(customerSelect.value);
     }
 
-    // 2. PRODUCT SELECTOR CHANGE
+    // 2. SALE TYPE TOGGLE (Normal Sale vs Credit Sale)
+    function updateSaleTypeUI() {
+        const isCredit = saleTypeCredit && saleTypeCredit.checked;
+        if (isCredit) {
+            creditSaleDetailsBox.classList.remove('d-none');
+            normalSalePaymentBox.classList.add('d-none');
+            if (customerRequiredStar) customerRequiredStar.classList.remove('d-none');
+            if (customerOptionalBadge) {
+                customerOptionalBadge.textContent = 'Required for Credit Sale';
+                customerOptionalBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle small';
+            }
+            if (saleTypeNote) {
+                saleTypeNote.innerHTML = '<i class="bi bi-info-circle me-1"></i>Credit sale. Enter amount received now (if any); remaining balance becomes customer credit. Customer is required.';
+            }
+            if (!customerSelect.value) {
+                customerValidationFeedback.classList.remove('d-none');
+            } else {
+                customerValidationFeedback.classList.add('d-none');
+            }
+        } else {
+            creditSaleDetailsBox.classList.add('d-none');
+            normalSalePaymentBox.classList.remove('d-none');
+            if (customerRequiredStar) customerRequiredStar.classList.add('d-none');
+            if (customerOptionalBadge) {
+                customerOptionalBadge.textContent = 'Optional for Unknown Customer Sale';
+                customerOptionalBadge.className = 'badge bg-light text-secondary border small';
+            }
+            if (saleTypeNote) {
+                saleTypeNote.innerHTML = '<i class="bi bi-info-circle me-1"></i>Standard selling price workflow with full payment. Customer selection is optional.';
+            }
+            if (customerValidationFeedback) customerValidationFeedback.classList.add('d-none');
+            if (amountReceivedError) amountReceivedError.classList.add('d-none');
+        }
+        recalculateAll();
+    }
+
+    if (saleTypeNormal) saleTypeNormal.addEventListener('change', updateSaleTypeUI);
+    if (saleTypeCredit) saleTypeCredit.addEventListener('change', updateSaleTypeUI);
+
+    // 3. PRODUCT SELECTOR CHANGE
     quickProductSelect.addEventListener('change', function() {
         stockErrorAlert.classList.add('d-none');
         const opt = this.options[this.selectedIndex];
@@ -459,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
         quickQuantityInput.max = stock;
     });
 
-    // 3. ADD PRODUCT TO ITEMS TABLE
+    // 4. ADD PRODUCT TO ITEMS TABLE
     addProductBtn.addEventListener('click', function() {
         stockErrorAlert.classList.add('d-none');
         const opt = quickProductSelect.options[quickProductSelect.selectedIndex];
@@ -514,7 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
         recalculateAll();
     });
 
-    // 4. RENDER ITEMS TABLE
+    // 5. RENDER ITEMS TABLE
     function renderItemsTable() {
         if (items.length === 0) {
             itemsTableBody.innerHTML = `
@@ -539,7 +705,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             html += `
                 <tr data-index="${idx}">
-                    <td>
+                    <td class="product-col-readable" style="min-width: 220px;">
                         <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id}">
                         <span class="badge bg-secondary-subtle text-secondary me-1">${escapeHtml(item.product_code)}</span>
                         <strong class="text-body">${escapeHtml(item.product_name)}</strong>
@@ -625,7 +791,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 5. RECALCULATE FINANCIALS & CREDIT LOGIC
+    // 6. RECALCULATE FINANCIALS & REAL-TIME CREDIT LOGIC
     function recalculateAll() {
         let subtotal = 0;
         let totalDiscount = 0;
@@ -643,54 +809,129 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const otherCharges = Math.max(0, parseFloat(otherChargesInput.value) || 0);
-        const grandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
+        const calculatedGrandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
 
         summarySubtotal.textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryDiscount.textContent = '- ₹' + totalDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryTax.textContent = '+ ₹' + totalTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        summaryGrandTotal.textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        summaryGrandTotal.textContent = '₹' + calculatedGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-        // Payment Mode Handling
-        const pType = paymentTypeSelect.value;
-        let paidAmount = 0;
-        let creditAmount = 0;
+        // Determine Final Grand Total
+        let finalTotal;
+        const rawFinalValue = (finalGrandTotalInput && finalGrandTotalInput.value !== undefined) ? finalGrandTotalInput.value.trim() : '';
 
-        if (pType === 'Cash' || pType === 'UPI' || pType === 'Card' || pType === 'Bank Transfer') {
-            mixedPaymentBox.classList.add('d-none');
-            paidAmount = grandTotal;
-            creditAmount = 0;
-        } else if (pType === 'Credit') {
-            mixedPaymentBox.classList.add('d-none');
-            paidAmount = 0;
-            creditAmount = grandTotal;
-        } else if (pType === 'Mixed') {
-            mixedPaymentBox.classList.remove('d-none');
-            let inputPaid = parseFloat(paidAmountInput.value) || 0;
-            if (inputPaid > grandTotal) {
-                inputPaid = grandTotal;
-                paidAmountInput.value = inputPaid.toFixed(2);
+        // If not manually edited by user or empty, automatically sync with calculatedGrandTotal
+        if (!isFinalTotalManuallyEdited || rawFinalValue === '') {
+            finalTotal = calculatedGrandTotal;
+            if (finalGrandTotalInput) {
+                finalGrandTotalInput.value = calculatedGrandTotal > 0 ? calculatedGrandTotal.toFixed(2) : '0.00';
             }
-            paidAmount = inputPaid;
-            creditAmount = Math.max(0, grandTotal - paidAmount);
-            dispCreditPortion.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        } else {
+            finalTotal = parseFloat(rawFinalValue);
+            if (isNaN(finalTotal)) finalTotal = calculatedGrandTotal;
         }
 
-        // Outstanding & Credit Validation
-        const prevBal = currentCustomer ? parseFloat(currentCustomer.current_outstanding) : 0;
-        const creditLimit = currentCustomer ? parseFloat(currentCustomer.credit_limit) : 0;
-        const creditAllowed = currentCustomer ? parseInt(currentCustomer.credit_allowed) : 0;
-        const newBal = prevBal + creditAmount;
-        const availCredit = (creditAllowed && creditLimit > 0) ? Math.max(0, creditLimit - newBal) : 0;
+        // Validate Final Grand Total & Calculate Effective Discount Percentage
+        if (finalTotal <= 0 && items.length > 0) {
+            if (finalTotalError && finalTotalErrorText) {
+                finalTotalErrorText.textContent = 'Final Grand Total must be greater than ₹0.00.';
+                finalTotalError.classList.remove('d-none');
+            }
+            if (discountPercentBadge) {
+                discountPercentBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 small';
+                discountPercentBadge.textContent = 'Invalid Total';
+            }
+            if (effectiveDiscountAmount) effectiveDiscountAmount.textContent = '₹0.00';
+            if (effectiveDiscountRate) effectiveDiscountRate.textContent = '0%';
+        } else if (finalTotal > calculatedGrandTotal + 0.01) {
+            if (finalTotalError && finalTotalErrorText) {
+                finalTotalErrorText.textContent = `Final Grand Total (₹${finalTotal.toFixed(2)}) cannot exceed calculated Grand Total (₹${calculatedGrandTotal.toFixed(2)}).`;
+                finalTotalError.classList.remove('d-none');
+            }
+            if (discountPercentBadge) {
+                discountPercentBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 small';
+                discountPercentBadge.textContent = 'Invalid (Negative Discount)';
+            }
+            if (effectiveDiscountAmount) effectiveDiscountAmount.textContent = '₹0.00';
+            if (effectiveDiscountRate) effectiveDiscountRate.textContent = '0%';
+        } else {
+            if (finalTotalError) finalTotalError.classList.add('d-none');
+            const discountAmt = Math.max(0, calculatedGrandTotal - finalTotal);
+            const discountPct = calculatedGrandTotal > 0 ? (discountAmt / calculatedGrandTotal) * 100 : 0;
 
-        sidePrevBal.textContent = '₹' + prevBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        sideCreditAdded.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        sideNewBal.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (effectiveDiscountAmount) {
+                effectiveDiscountAmount.textContent = '₹' + discountAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (effectiveDiscountRate) {
+                effectiveDiscountRate.textContent = discountPct.toFixed(2) + '%';
+            }
 
+            if (discountPercentBadge) {
+                if (discountAmt > 0.001) {
+                    discountPercentBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small';
+                    discountPercentBadge.textContent = `Discount: ${discountPct.toFixed(1)}% (₹${discountAmt.toFixed(2)})`;
+                } else {
+                    discountPercentBadge.className = 'badge bg-light text-secondary border px-2 py-1 small';
+                    discountPercentBadge.textContent = 'Discount: 0% (₹0.00)';
+                }
+            }
+        }
+
+        const isCredit = saleTypeCredit && saleTypeCredit.checked;
+        let paidAmount = 0.00;
+        let creditAmount = 0.00;
+
+        if (!isCredit) {
+            paidAmount = finalTotal;
+            creditAmount = 0.00;
+            if (amountReceivedError) amountReceivedError.classList.add('d-none');
+        } else {
+            let received = parseFloat(amountReceivedInput.value);
+            if (isNaN(received) || received < 0) {
+                received = 0.00;
+            }
+            if (received > finalTotal + 0.01) {
+                if (amountReceivedError) {
+                    amountReceivedError.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>Amount Received (₹${received.toFixed(2)}) cannot exceed Final Grand Total (₹${finalTotal.toFixed(2)}).`;
+                    amountReceivedError.classList.remove('d-none');
+                }
+                paidAmount = finalTotal;
+                creditAmount = 0.00;
+            } else {
+                if (amountReceivedError) amountReceivedError.classList.add('d-none');
+                paidAmount = received;
+                creditAmount = Math.max(0.00, finalTotal - paidAmount);
+            }
+            if (dispCreditAmount) {
+                dispCreditAmount.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (prominentBalanceToPay) {
+                prominentBalanceToPay.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        }
+
+        // Customer Balance Impact & Outstanding
         if (currentCustomer) {
+            const prevBal = parseFloat(currentCustomer.current_outstanding || 0);
+            const creditLimit = parseFloat(currentCustomer.credit_limit || 0);
+            const creditAllowed = parseInt(currentCustomer.credit_allowed || 0, 10);
+            const newBal = prevBal + creditAmount;
+            const availCredit = (creditAllowed && creditLimit > 0) ? Math.max(0, creditLimit - newBal) : 0;
+
+            if (custImpactStatus) {
+                custImpactStatus.textContent = currentCustomer.customer_code;
+                custImpactStatus.className = 'badge bg-primary-subtle text-primary';
+            }
+            if (custImpactDetails) custImpactDetails.classList.remove('d-none');
+            if (custImpactWalkinNotice) custImpactWalkinNotice.classList.add('d-none');
+
+            sidePrevBal.textContent = '₹' + prevBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            sideCreditAdded.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            sideNewBal.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
             dispNewOutstanding.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             dispAvailableCredit.textContent = '₹' + availCredit.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-            // Evaluate Alert Banner
             if (creditAmount > 0) {
                 if (creditAllowed === 0) {
                     creditAlertBanner.className = 'alert alert-danger d-flex align-items-center gap-2 mt-3 mb-0';
@@ -716,13 +957,184 @@ document.addEventListener('DOMContentLoaded', function() {
                 creditAlertBanner.classList.add('d-none');
                 overrideBox.classList.add('d-none');
             }
+        } else {
+            // No customer selected
+            if (isCredit) {
+                if (custImpactStatus) {
+                    custImpactStatus.textContent = 'Customer Required';
+                    custImpactStatus.className = 'badge bg-danger-subtle text-danger';
+                }
+                if (custImpactDetails) custImpactDetails.classList.add('d-none');
+                if (custImpactWalkinNotice) {
+                    custImpactWalkinNotice.classList.remove('d-none');
+                    custImpactWalkinNotice.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i><strong>Customer required for Credit Sale!</strong> Please select customer from master list.</span>';
+                }
+            } else {
+                if (custImpactStatus) {
+                    custImpactStatus.textContent = 'Walk-in';
+                    custImpactStatus.className = 'badge bg-secondary-subtle text-secondary';
+                }
+                if (custImpactDetails) custImpactDetails.classList.add('d-none');
+                if (custImpactWalkinNotice) {
+                    custImpactWalkinNotice.classList.remove('d-none');
+                    custImpactWalkinNotice.innerHTML = '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Walk-in customer sale. No customer ledger entry created.</span>';
+                }
+            }
+            creditAlertBanner.classList.add('d-none');
+            overrideBox.classList.add('d-none');
         }
     }
 
     // Input event listeners
     otherChargesInput.addEventListener('input', recalculateAll);
-    paymentTypeSelect.addEventListener('change', recalculateAll);
-    paidAmountInput.addEventListener('input', recalculateAll);
+    if (paymentTypeSelect) paymentTypeSelect.addEventListener('change', recalculateAll);
+    if (amountReceivedInput) amountReceivedInput.addEventListener('input', recalculateAll);
+
+    if (resetFinalTotalBtn) {
+        resetFinalTotalBtn.addEventListener('click', function() {
+            isFinalTotalManuallyEdited = false;
+            recalculateAll();
+        });
+    }
+
+    if (finalGrandTotalInput) {
+        finalGrandTotalInput.addEventListener('input', function() {
+            isFinalTotalManuallyEdited = true;
+            recalculateAll();
+        });
+    }
+
+    // Form submission validation
+    salesNoteForm.addEventListener('submit', function(e) {
+        if (items.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one product to the sales note.');
+            return false;
+        }
+
+        const rawFinal = parseFloat(finalGrandTotalInput.value);
+        if (isNaN(rawFinal) || rawFinal <= 0) {
+            e.preventDefault();
+            finalTotalErrorText.textContent = 'Final Grand Total must be greater than ₹0.00.';
+            finalTotalError.classList.remove('d-none');
+            finalGrandTotalInput.focus();
+            alert('Please enter a valid Final Grand Total greater than ₹0.00.');
+            return false;
+        }
+
+        const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price) - Math.min(item.quantity * item.unit_price, item.discount || 0) + ((item.quantity * item.unit_price - Math.min(item.quantity * item.unit_price, item.discount || 0)) * (item.tax_percent || 0) / 100), 0);
+        const other = parseFloat(otherChargesInput.value) || 0;
+        const calcTotal = subtotal + other;
+
+        if (rawFinal > calcTotal + 0.01) {
+            e.preventDefault();
+            finalTotalErrorText.textContent = `Final Grand Total (₹${rawFinal.toFixed(2)}) cannot exceed calculated Grand Total (₹${calcTotal.toFixed(2)}).`;
+            finalTotalError.classList.remove('d-none');
+            finalGrandTotalInput.focus();
+            alert(`Adjusted / Final Grand Total cannot exceed calculated Grand Total (₹${calcTotal.toFixed(2)}).`);
+            return false;
+        }
+
+        const isCredit = saleTypeCredit && saleTypeCredit.checked;
+        if (isCredit) {
+            if (!customerSelect.value) {
+                e.preventDefault();
+                customerValidationFeedback.classList.remove('d-none');
+                customerSelect.focus();
+                alert('Customer selection is required for Credit Sale. Please select a customer.');
+                return false;
+            }
+
+            const received = parseFloat(amountReceivedInput.value) || 0;
+            if (received > rawFinal + 0.01) {
+                e.preventDefault();
+                amountReceivedError.classList.remove('d-none');
+                amountReceivedInput.focus();
+                alert(`Amount Received (₹${received.toFixed(2)}) cannot exceed Final Grand Total (₹${rawFinal.toFixed(2)}).`);
+                return false;
+            }
+        }
+    });
+
+    // Quick Add Customer AJAX submission
+    const quickAddCustomerForm = document.getElementById('quickAddCustomerForm');
+    const quickCustomerModalAlert = document.getElementById('quickCustomerModalAlert');
+    const quickSaveCustomerBtn = document.getElementById('quickSaveCustomerBtn');
+
+    if (quickAddCustomerForm) {
+        quickAddCustomerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            quickCustomerModalAlert.classList.add('d-none');
+            quickCustomerModalAlert.textContent = '';
+
+            const name = document.getElementById('quickCustName').value.trim();
+            const mobile = document.getElementById('quickCustMobile').value.trim();
+            if (!name || !mobile) {
+                quickCustomerModalAlert.textContent = 'Please provide both Customer Name and Mobile Number.';
+                quickCustomerModalAlert.classList.remove('d-none');
+                return;
+            }
+
+            quickSaveCustomerBtn.disabled = true;
+            quickSaveCustomerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+            const payload = {
+                ajax: '1',
+                customer_name: name,
+                customer_type: document.getElementById('quickCustType').value,
+                company_name: document.getElementById('quickCustCompany').value.trim(),
+                mobile_number: mobile,
+                credit_allowed: document.getElementById('quickCustCreditAllowed').checked ? 1 : 0,
+                credit_limit: document.getElementById('quickCustCreditLimit').value,
+                address: document.getElementById('quickCustAddress').value.trim(),
+                opening_balance: '0.00',
+                opening_balance_type: 'Debit',
+                status: 1
+            };
+
+            fetch('create_customer.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                quickSaveCustomerBtn.disabled = false;
+                quickSaveCustomerBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save & Select Customer';
+
+                if (data.success && data.customer) {
+                    const c = data.customer;
+                    // Add option to customerSelect
+                    const newOpt = new Option(`${c.customer_code} - ${c.customer_name} (${c.mobile_number})`, c.id, true, true);
+                    customerSelect.add(newOpt);
+                    customerSelect.value = c.id;
+
+                    // Trigger change and load details
+                    loadCustomerDetails(c.id);
+
+                    // Close modal
+                    const modalEl = document.getElementById('quickAddCustomerModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInstance.hide();
+                    quickAddCustomerForm.reset();
+
+                    alert(`Customer ${c.customer_name} (${c.customer_code}) created and selected successfully!`);
+                } else {
+                    quickCustomerModalAlert.textContent = data.message || (data.errors ? data.errors.join(', ') : 'Failed to create customer.');
+                    quickCustomerModalAlert.classList.remove('d-none');
+                }
+            })
+            .catch(err => {
+                quickSaveCustomerBtn.disabled = false;
+                quickSaveCustomerBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save & Select Customer';
+                quickCustomerModalAlert.textContent = 'Network or server error while creating customer: ' + err.message;
+                quickCustomerModalAlert.classList.remove('d-none');
+            });
+        });
+    }
 
     // Escape HTML helper
     function escapeHtml(text) {
@@ -731,7 +1143,75 @@ document.addEventListener('DOMContentLoaded', function() {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // Initialize UI on page load
+    updateSaleTypeUI();
 });
 </script>
+
+<!-- QUICK ADD CUSTOMER MODAL -->
+<div class="modal fade" id="quickAddCustomerModal" tabindex="-1" aria-labelledby="quickAddCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-surface border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-primary" id="quickAddCustomerModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Quick Add Customer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickAddCustomerForm" novalidate>
+                <div class="modal-body p-4">
+                    <div id="quickCustomerModalAlert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold">Customer Name <span class="text-danger">*</span></label>
+                            <input type="text" name="customer_name" id="quickCustName" class="form-control" required placeholder="e.g. Ramesh Kumar">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold">Customer Type <span class="text-danger">*</span></label>
+                            <select name="customer_type" id="quickCustType" class="form-select">
+                                <option value="Individual" selected>Individual</option>
+                                <option value="Business">Business</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold">Company / Business Name</label>
+                            <input type="text" name="company_name" id="quickCustCompany" class="form-control" placeholder="Optional for individual">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="tel" name="mobile_number" id="quickCustMobile" class="form-control" required placeholder="10-digit mobile" maxlength="15">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="credit_allowed" id="quickCustCreditAllowed" value="1" checked>
+                                <label class="form-check-label small fw-semibold" for="quickCustCreditAllowed">Credit Allowed for this Customer</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold">Credit Limit (₹)</label>
+                            <input type="number" name="credit_limit" id="quickCustCreditLimit" class="form-control" value="10000.00" min="0" step="0.01">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Address</label>
+                            <textarea name="address" id="quickCustAddress" class="form-control" rows="2" placeholder="Street, area, city"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-surface-soft border-top py-3 px-4 d-flex justify-content-between">
+                    <a href="create_customer.php" target="_blank" class="btn btn-sm btn-link text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Customer Form
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="quickSaveCustomerBtn" class="btn btn-primary fw-bold">
+                            <i class="bi bi-check2-circle me-1"></i> Save & Select Customer
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <%- include('includes/footer') %>

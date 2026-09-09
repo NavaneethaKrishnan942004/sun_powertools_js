@@ -381,14 +381,15 @@
                             <th class="ps-4">Sales Note No</th>
                             <th>Date & Time</th>
                             <th>Customer Info</th>
-                            <th class="text-end">Total Amount</th>
-                            <th class="text-end">Paid Amount</th>
-                            <th class="text-end">Credit Amount</th>
+                            <th class="text-center">Sale Type</th>
+                            <th class="text-end">Grand Total</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Balance</th>
+                            <th class="text-center">Payment Status</th>
                             <th class="text-end">New Outstanding</th>
                             <th class="text-center">Credit Status</th>
-                            <th class="text-center">Payment</th>
                             <th>Created By</th>
-                            <th class="text-end pe-4">Actions</th>
+                            <th class="action-column action-column-wide text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -404,6 +405,7 @@
                                 } else if (sn.credit_status === 'Limit Reached') {
                                     rowHighlight = 'table-warning-subtle';
                                 }
+                                const balAmt = (sn.balance_amount !== undefined) ? Number(sn.balance_amount) : Math.max(0, Number(sn.total_amount) - Number(sn.paid_amount));
                                 %>
                                 <tr class="<%= rowHighlight %>">
                                     <!-- Sales Note Number -->
@@ -427,14 +429,25 @@
 
                                     <!-- Customer Details -->
                                     <td>
-                                        <div class="fw-bold text-body"><%= sn.customer_name || 'N/A' %></div>
+                                        <div class="fw-bold text-body cell-truncate" title="<%= sn.customer_name || 'Walk-in Customer' %>">
+                                            <%= sn.customer_name || 'Walk-in Customer' %>
+                                        </div>
                                         <div class="text-muted small d-flex align-items-center gap-1">
-                                            <span class="badge bg-light text-dark border"><%= sn.customer_code || 'N/A' %></span>
+                                            <% if (sn.customer_code) { %>
+                                                <span class="badge bg-light text-dark border"><%= sn.customer_code %></span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary-subtle text-secondary">Walk-in</span>
+                                            <% } %>
                                             <span><%= sn.mobile_number || '' %></span>
                                         </div>
                                     </td>
 
-                                    <!-- Total Amount -->
+                                    <!-- Sale Type -->
+                                    <td class="text-center">
+                                        <%- sn.sale_type_badge || getSaleTypeInfo(sn.sale_type, sn.credit_amount, sn.payment_type).badge_html %>
+                                    </td>
+
+                                    <!-- Grand Total -->
                                     <td class="text-end fw-bold text-body">
                                         ₹<%= numberFormat(sn.total_amount, 2) %>
                                     </td>
@@ -444,9 +457,17 @@
                                         ₹<%= numberFormat(sn.paid_amount, 2) %>
                                     </td>
 
-                                    <!-- Credit Amount -->
-                                    <td class="text-end fw-semibold text-danger">
-                                        ₹<%= numberFormat(sn.credit_amount, 2) %>
+                                    <!-- Balance Amount -->
+                                    <td class="text-end">
+                                        <span class="<%= balAmt > 0.001 ? 'fw-bold text-danger' : 'text-muted' %>">
+                                            ₹<%= numberFormat(balAmt, 2) %>
+                                        </span>
+                                    </td>
+
+                                    <!-- Payment Status -->
+                                    <td class="text-center">
+                                        <div><%- sn.payment_status_badge || getPaymentStatusInfo(sn.paid_amount, sn.total_amount).badge_html %></div>
+                                        <div class="mt-1"><%- getPaymentTypeBadge(sn.payment_type) %></div>
                                     </td>
 
                                     <!-- New Outstanding -->
@@ -465,11 +486,6 @@
                                         </span>
                                     </td>
 
-                                    <!-- Payment Type -->
-                                    <td class="text-center">
-                                        <%- getPaymentTypeBadge(sn.payment_type) %>
-                                    </td>
-
                                     <!-- Created By -->
                                     <td>
                                         <div class="small fw-semibold"><%= sn.created_by_name || 'System' %></div>
@@ -477,7 +493,7 @@
                                     </td>
 
                                     <!-- Actions -->
-                                    <td class="text-end pe-4">
+                                    <td class="action-column action-column-wide text-end pe-4">
                                         <div class="btn-group btn-group-sm">
                                             <a href="view_sales_note.php?id=<%= sn.id %>" class="btn btn-outline-primary" title="View Sales Note">
                                                 <i class="bi bi-eye"></i>
@@ -499,7 +515,7 @@
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="11" class="text-center py-5 text-muted">
+                                <td colspan="12" class="text-center py-5 text-muted">
                                     <i class="bi bi-receipt fs-1 d-block mb-2 text-muted"></i>
                                     <p class="mb-2 fw-medium">No Sales Notes found matching criteria.</p>
                                     <a href="create_sales_note.php" class="btn btn-sm btn-primary">

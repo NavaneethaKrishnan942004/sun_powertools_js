@@ -112,11 +112,13 @@
                     <div class="text-primary fw-bold fs-5"><%= sale.sales_note_no %></div>
                     <div class="text-muted small">Date: <%= new Date(sale.sales_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %></div>
                     <div class="text-muted small">Time: <%= sale.sales_time %></div>
-                    <div class="mt-2">
+                    <div class="mt-2 d-flex flex-wrap gap-1 justify-content-sm-end">
+                        <%- saleTypeInfo.badge_html %>
+                        <%- paymentStatusInfo.badge_html %>
                         <%- getPaymentTypeBadge(sale.payment_type) %>
-                        <span class="badge <%= evalCredit.badge_class %> ms-1"><%= sale.credit_status %></span>
+                        <span class="badge <%= evalCredit.badge_class %>"><%= sale.credit_status %></span>
                         <% if (sale.credit_override) { %>
-                            <span class="badge bg-danger text-white ms-1">Override</span>
+                            <span class="badge bg-danger text-white" title="Manager Override Applied">Override</span>
                         <% } %>
                     </div>
                 </div>
@@ -128,11 +130,12 @@
                 <div class="col-12 col-md-6">
                     <h6 class="fw-bold text-muted text-uppercase small mb-2">Customer Details:</h6>
                     <h5 class="fw-bold text-body mb-1">
-                        <%= sale.customer_name %>
+                        <%= sale.customer_name || 'Walk-in / Retail Customer' %>
                         <% if (sale.company_name) { %>
                             <span class="text-muted fs-6 fw-normal">(<%= sale.company_name %>)</span>
                         <% } %>
                     </h5>
+                    <% if (sale.customer_id) { %>
                     <div class="small text-muted mb-1">
                         <span class="badge bg-light text-dark border me-1"><%= sale.customer_code %></span>
                         <i class="bi bi-telephone me-1"></i><%= sale.mobile_number %>
@@ -147,12 +150,18 @@
                         <i class="bi bi-geo-alt me-1"></i>
                         <%= [sale.address, sale.area, sale.city, sale.state, sale.pincode].filter(Boolean).join(', ') || 'N/A' %>
                     </div>
+                    <% } else { %>
+                    <div class="text-muted small mt-1">
+                        <i class="bi bi-person-check me-1"></i>Direct over-the-counter sale (Walk-in customer)
+                    </div>
+                    <% } %>
                 </div>
 
                 <!-- Credit & Audit Info -->
                 <div class="col-12 col-md-6">
                     <div class="p-3 bg-surface-soft rounded-3 border small">
                         <h6 class="fw-bold text-primary mb-2"><i class="bi bi-credit-card-2-front me-1"></i> Customer Financial & Credit Ledger</h6>
+                        <% if (sale.customer_id) { %>
                         <div class="row g-2 text-center">
                             <div class="col-6 col-sm-3">
                                 <span class="text-muted d-block small">Credit Limit</span>
@@ -175,6 +184,11 @@
                             <span>Remaining Avail Credit: <strong class="text-success">₹<%= numberFormat(Math.max(0.00, Number(sale.credit_limit) - Number(sale.new_outstanding)), 2) %></strong></span>
                             <span>Payment Terms: <strong><%= sale.payment_terms || 'Immediate' %></strong></span>
                         </div>
+                        <% } else { %>
+                        <div class="text-muted py-2">
+                            <i class="bi bi-check2-circle text-success me-1"></i>No customer credit account needed for walk-in retail transactions.
+                        </div>
+                        <% } %>
                     </div>
                 </div>
             </div>
@@ -275,13 +289,25 @@
                             <span class="fs-4 fw-extrabold text-primary">₹<%= numberFormat(sale.total_amount, 2) %></span>
                         </div>
 
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <span class="text-muted small">Sale Type:</span>
+                            <%- saleTypeInfo.badge_html %>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <span class="text-muted small">Payment Status:</span>
+                            <%- paymentStatusInfo.badge_html %>
+                        </div>
+
                         <div class="d-flex justify-content-between mb-1 small">
                             <span class="text-success fw-semibold">Amount Paid:</span>
                             <strong class="text-success">₹<%= numberFormat(sale.paid_amount, 2) %></strong>
                         </div>
                         <div class="d-flex justify-content-between small">
-                            <span class="text-danger fw-semibold">Credit Balance Added:</span>
-                            <strong class="text-danger">₹<%= numberFormat(sale.credit_amount, 2) %></strong>
+                            <span class="text-danger fw-semibold">Balance to Pay:</span>
+                            <strong class="<%= Number(paymentStatusInfo.balance) > 0.001 ? 'text-danger fw-bold' : 'text-muted' %>">
+                                ₹<%= numberFormat(paymentStatusInfo.balance, 2) %>
+                            </strong>
                         </div>
                     </div>
                 </div>

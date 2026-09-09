@@ -275,13 +275,23 @@ CREATE TABLE `rentals` (
   `product_id` int(11) NOT NULL,
   `rental_period_type` enum('hourly','daily','weekly','monthly','custom') NOT NULL DEFAULT 'daily',
   `rental_rate` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `estimated_duration` decimal(10,2) NOT NULL DEFAULT 1.00,
   `security_deposit` decimal(12,2) NOT NULL DEFAULT 0.00,
   `check_in_datetime` datetime NOT NULL,
   `expected_checkout_datetime` datetime NOT NULL,
   `actual_return_datetime` datetime DEFAULT NULL,
+  `actual_duration` varchar(100) DEFAULT NULL,
+  `overdue_duration` varchar(100) DEFAULT NULL,
+  `overdue_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `advance_rental_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `total_rental_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `additional_charges` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `deposit_returned` tinyint(1) NOT NULL DEFAULT 0,
+  `deposit_return_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `deposit_return_datetime` datetime DEFAULT NULL,
+  `deposit_deduction_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `deposit_deduction_reason` text DEFAULT NULL,
+  `remaining_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `refund_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `payment_method` varchar(50) NOT NULL DEFAULT 'Cash',
   `rental_status` enum('Active','Returned','Overdue','Cancelled') NOT NULL DEFAULT 'Active',
@@ -297,6 +307,72 @@ CREATE TABLE `rentals` (
   KEY `idx_rentals_dates` (`check_in_datetime`, `expected_checkout_datetime`),
   CONSTRAINT `fk_rentals_customer` FOREIGN KEY (`customer_id`) REFERENCES `customer_master` (`id`),
   CONSTRAINT `fk_rentals_product` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sales_notes`
+--
+
+CREATE TABLE `sales_notes` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `sales_note_no` varchar(50) NOT NULL,
+  `customer_id` int(10) unsigned DEFAULT NULL,
+  `sales_date` date NOT NULL,
+  `sales_time` time NOT NULL,
+  `sale_type` enum('sale','credit') NOT NULL DEFAULT 'sale',
+  `payment_type` enum('Cash','UPI','Card','Bank Transfer','Credit','Mixed') NOT NULL DEFAULT 'Cash',
+  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `discount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `tax` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `other_charges` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `paid_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `credit_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `previous_outstanding` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `new_outstanding` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `credit_limit` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `credit_status` varchar(50) NOT NULL DEFAULT 'Within Limit',
+  `credit_override` tinyint(1) NOT NULL DEFAULT 0,
+  `notes` text DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_by` int(10) unsigned DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_by` int(10) unsigned DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sales_note_no` (`sales_note_no`),
+  KEY `idx_sn_customer` (`customer_id`),
+  KEY `idx_sn_date` (`sales_date`),
+  KEY `idx_sn_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sales_note_items`
+--
+
+CREATE TABLE `sales_note_items` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `sales_note_id` int(10) unsigned NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `product_code` varchar(30) NOT NULL,
+  `product_name` varchar(255) NOT NULL,
+  `unit_name` varchar(50) DEFAULT NULL,
+  `quantity` decimal(10,2) NOT NULL DEFAULT 1.00,
+  `unit_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `discount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `tax_percent` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `tax_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `line_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_sni_sales_note` (`sales_note_id`),
+  KEY `idx_sni_product` (`product_id`),
+  CONSTRAINT `fk_sni_sales_note` FOREIGN KEY (`sales_note_id`) REFERENCES `sales_notes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

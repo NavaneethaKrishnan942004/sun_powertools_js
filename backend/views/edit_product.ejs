@@ -137,8 +137,11 @@
             <div class="border rounded p-2">
                 <img
                     src="<%= image.image_path %>"
-                    class="img-fluid rounded"
-                    style="height:150px;width:100%;object-fit:cover"
+                    class="img-fluid rounded existing-image-thumb"
+                    data-previewable
+                    alt="Product Image"
+                    title="Click to view full preview"
+                    style="height:150px;width:100%;object-fit:cover;cursor:pointer;"
                 >
                 <% if (Number(image.is_primary) === 1) { %>
                 <span class="badge bg-primary mt-2">Primary</span>

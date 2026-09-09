@@ -2,38 +2,17 @@ const pool = require('../config/db');
 const { getCustomerFinancialSummary } = require('../utils/customerHelper');
 const { evaluateCreditStatus } = require('../utils/salesNoteHelper');
 const {
+    formatDatetimeLocal,
+    formatMysqlDatetime,
     generateRentalNumber,
     getEffectiveRentalStatus,
     getRentalStatusBadge,
+    calculateExpectedReturn,
+    formatDuration,
     calculateRentalEstimate,
+    calculateRentalSettlement,
     getRentalAnalytics
 } = require('../utils/rentalHelper');
-
-/**
- * Format Date to Local ISO String for <input type="datetime-local">
- * e.g. YYYY-MM-DDTHH:mm
- */
-function formatDatetimeLocal(date = new Date()) {
-    const pad = (n) => String(n).padStart(2, '0');
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-/**
- * Format Datetime string for MySQL DATETIME column: YYYY-MM-DD HH:mm:ss
- */
-function formatMysqlDatetime(dtString) {
-    if (!dtString) return null;
-    const cleanStr = String(dtString).replace('T', ' ');
-    if (cleanStr.length === 16) {
-        return cleanStr + ':00';
-    }
-    return cleanStr;
-}
 
 /**
  * List / Manage Rentals
@@ -127,9 +106,14 @@ exports.manageRentals = async (req, res) => {
 
         const [rentals] = await pool.query(dataSql, [...params, limit, offset]);
 
-        // Compute effective statuses
+        // Compute effective statuses and duration previews
         rentals.forEach(r => {
             r.effective_status = getEffectiveRentalStatus(r.rental_status, r.expected_checkout_datetime);
+            if (r.actual_return_datetime) {
+                r.calculated_duration = r.actual_duration || formatDuration(r.check_in_datetime, r.actual_return_datetime);
+            } else {
+                r.calculated_duration = formatDuration(r.check_in_datetime, new Date());
+            }
         });
 
         // Compute analytics
@@ -198,10 +182,9 @@ exports.createRentalForm = async (req, res) => {
 
         const now = new Date();
         const defaultCheckIn = formatDatetimeLocal(now);
-
-        // Default expected return: +1 day at the same time
-        const nextDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        const defaultCheckOut = formatDatetimeLocal(nextDay);
+        const defaultDuration = 1;
+        const defaultPeriod = 'daily';
+        const defaultCheckOut = calculateExpectedReturn(defaultCheckIn, defaultPeriod, defaultDuration);
 
         res.render('create_rental', {
             pageTitle: 'Rental Checkout',
@@ -211,6 +194,8 @@ exports.createRentalForm = async (req, res) => {
             rentalRates,
             defaultCheckIn,
             defaultCheckOut,
+            defaultEstimatedDuration: defaultDuration,
+            defaultPeriod,
             old: req.body || {},
             errors: []
         });
@@ -230,13 +215,20 @@ exports.createRental = async (req, res) => {
         const body = req.body || {};
         const customerId = parseInt(body.customer_id || 0, 10);
         const productId = parseInt(body.product_id || 0, 10);
-        const checkInDatetimeStr = (body.check_in_datetime || '').trim();
-        const expectedCheckoutDatetimeStr = (body.expected_checkout_datetime || '').trim();
-        const rentalPeriodType = (body.rental_period_type || 'daily').trim();
-        const rentalRate = parseFloat(body.rental_rate || 0);
-        const securityDeposit = parseFloat(body.security_deposit || 0);
+        const checkInDatetimeStr = (body.check_in_datetime || '').trim() || formatDatetimeLocal();
+        const rentalPeriodType = (body.rental_period_type || 'daily').trim().toLowerCase();
+        const estimatedDuration = Math.max(1, parseInt(body.estimated_duration || 1, 10));
+
+        // Expected Checkout Datetime is OPTIONAL: auto-calculate if omitted or blank
+        let expectedCheckoutDatetimeStr = (body.expected_checkout_datetime || '').trim();
+        if (!expectedCheckoutDatetimeStr) {
+            expectedCheckoutDatetimeStr = calculateExpectedReturn(checkInDatetimeStr, rentalPeriodType, estimatedDuration);
+        }
+
+        const rentalRate = Math.max(0, parseFloat(body.rental_rate || 0));
+        const securityDeposit = Math.max(0, parseFloat(body.security_deposit || 0));
         const advanceRentalAmount = parseFloat(body.advance_rental_amount !== undefined && body.advance_rental_amount !== '' ? body.advance_rental_amount : 0);
-        const totalEstimatedAmount = parseFloat(body.total_rental_amount || 0);
+        const totalEstimatedAmount = (estimatedDuration * rentalRate);
         const paymentMethod = (body.payment_method || 'Cash').trim();
         const notes = (body.notes || '').trim();
         const userId = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
@@ -274,13 +266,6 @@ exports.createRental = async (req, res) => {
         }
 
         // 3. Datetime Validation
-        if (!checkInDatetimeStr) {
-            errors.push('Check-In Date & Time is required.');
-        }
-        if (!expectedCheckoutDatetimeStr) {
-            errors.push('Check-Out (Expected Return) Date & Time is required.');
-        }
-
         const checkInDate = new Date(checkInDatetimeStr);
         const checkOutDate = new Date(expectedCheckoutDatetimeStr);
 
@@ -288,7 +273,7 @@ exports.createRental = async (req, res) => {
             errors.push('Invalid Check-In Date & Time.');
         }
         if (isNaN(checkOutDate.getTime())) {
-            errors.push('Invalid Check-Out Date & Time.');
+            errors.push('Invalid Check-Out (Expected Return) Date & Time.');
         }
         if (!isNaN(checkInDate.getTime()) && !isNaN(checkOutDate.getTime())) {
             if (checkOutDate <= checkInDate) {
@@ -296,11 +281,14 @@ exports.createRental = async (req, res) => {
             }
         }
 
-        // 4. Advance Rental Amount Validation
+        // 4. Advance Rental Amount & Duration Validation
         if (isNaN(advanceRentalAmount)) {
             errors.push('Advance Rental Amount must be a valid number.');
         } else if (advanceRentalAmount < 0) {
             errors.push('Advance Rental Amount cannot be negative.');
+        }
+        if (estimatedDuration < 1) {
+            errors.push('Estimated Rental Duration must be at least 1.');
         }
 
         // Return with errors if any
@@ -316,8 +304,10 @@ exports.createRental = async (req, res) => {
                 customers,
                 products,
                 rentalRates,
-                defaultCheckIn: checkInDatetimeStr || formatDatetimeLocal(),
-                defaultCheckOut: expectedCheckoutDatetimeStr || formatDatetimeLocal(),
+                defaultCheckIn: checkInDatetimeStr,
+                defaultCheckOut: expectedCheckoutDatetimeStr,
+                defaultEstimatedDuration: estimatedDuration,
+                defaultPeriod: rentalPeriodType,
                 old: body,
                 errors
             });
@@ -347,6 +337,8 @@ exports.createRental = async (req, res) => {
                 rentalRates,
                 defaultCheckIn: checkInDatetimeStr,
                 defaultCheckOut: expectedCheckoutDatetimeStr,
+                defaultEstimatedDuration: estimatedDuration,
+                defaultPeriod: rentalPeriodType,
                 old: body,
                 errors: ['Product became unavailable during checkout. Please choose another product.']
             });
@@ -365,6 +357,7 @@ exports.createRental = async (req, res) => {
                 customer_id,
                 product_id,
                 rental_period_type,
+                estimated_duration,
                 rental_rate,
                 security_deposit,
                 check_in_datetime,
@@ -376,12 +369,13 @@ exports.createRental = async (req, res) => {
                 notes,
                 created_by,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, NOW())`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, NOW())`,
             [
                 rentalNo,
                 customerId,
                 productId,
                 rentalPeriodType,
+                estimatedDuration,
                 rentalRate,
                 securityDeposit,
                 mysqlCheckIn,
@@ -429,7 +423,7 @@ exports.createRental = async (req, res) => {
                 customerId,
                 rentalNo,
                 mysqlCheckIn,
-                mysqlCheckOut.split(' ')[0], // Date part
+                mysqlCheckOut.split(' ')[0],
                 effectiveTotal,
                 advanceRentalAmount,
                 debitAmount,
@@ -462,6 +456,8 @@ exports.createRental = async (req, res) => {
             rentalRates,
             defaultCheckIn: req.body?.check_in_datetime || formatDatetimeLocal(),
             defaultCheckOut: req.body?.expected_checkout_datetime || formatDatetimeLocal(),
+            defaultEstimatedDuration: parseInt(req.body?.estimated_duration || 1, 10),
+            defaultPeriod: req.body?.rental_period_type || 'daily',
             old: req.body || {},
             errors: ['An unexpected error occurred: ' + err.message]
         });
@@ -521,6 +517,21 @@ exports.viewRental = async (req, res) => {
         const rental = rows[0];
         rental.effective_status = getEffectiveRentalStatus(rental.rental_status, rental.expected_checkout_datetime);
 
+        // Pre-compute settlement simulation for modal & views
+        const liveSettlement = calculateRentalSettlement({
+            checkInDatetime: rental.check_in_datetime,
+            expectedCheckoutDatetime: rental.expected_checkout_datetime,
+            actualReturnDatetime: rental.actual_return_datetime || new Date(),
+            periodType: rental.rental_period_type,
+            estimatedDuration: rental.estimated_duration || 1,
+            rentalRate: rental.rental_rate,
+            securityDeposit: rental.security_deposit,
+            advanceRentalAmount: rental.advance_rental_amount,
+            additionalCharges: rental.additional_charges,
+            depositDeductions: rental.deposit_deduction_amount || 0,
+            depositDeductionReason: rental.deposit_deduction_reason || ''
+        });
+
         // Fetch primary product image
         const [images] = await pool.query(
             'SELECT image_path, is_primary FROM product_images WHERE product_id = ? ORDER BY is_primary DESC LIMIT 1',
@@ -534,6 +545,7 @@ exports.viewRental = async (req, res) => {
         res.render('view_rental', {
             pageTitle: `Rental ${rental.rental_no}`,
             rental,
+            liveSettlement,
             productImage,
             customerSummary,
             getRentalStatusBadge,
@@ -575,25 +587,47 @@ exports.returnRental = async (req, res) => {
         }
 
         const actualReturnDatetimeStr = (req.body.actual_return_datetime || '').trim() || formatDatetimeLocal();
-        const totalRentalAmount = req.body.total_rental_amount !== undefined && req.body.total_rental_amount !== ''
-            ? parseFloat(req.body.total_rental_amount)
-            : parseFloat(rental.total_rental_amount || 0);
-        const additionalCharges = parseFloat(req.body.additional_charges || 0);
-        const refundAmount = parseFloat(req.body.refund_amount || 0);
+        const additionalCharges = Math.max(0, parseFloat(req.body.additional_charges || 0));
+        const depositDeductionAmount = Math.max(0, parseFloat(req.body.deposit_deduction_amount || req.body.deduction_amount || 0));
+        const depositDeductionReason = (req.body.deposit_deduction_reason || req.body.deduction_reason || '').trim();
         const notes = (req.body.notes || '').trim();
         const userId = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
+
+        // Perform backend accurate recalculation
+        const settlement = calculateRentalSettlement({
+            checkInDatetime: rental.check_in_datetime,
+            expectedCheckoutDatetime: rental.expected_checkout_datetime,
+            actualReturnDatetime: actualReturnDatetimeStr,
+            periodType: rental.rental_period_type,
+            estimatedDuration: rental.estimated_duration || 1,
+            rentalRate: rental.rental_rate,
+            securityDeposit: rental.security_deposit,
+            advanceRentalAmount: rental.advance_rental_amount,
+            additionalCharges: additionalCharges,
+            depositDeductions: depositDeductionAmount,
+            depositDeductionReason: depositDeductionReason
+        });
 
         const mysqlReturnDatetime = formatMysqlDatetime(actualReturnDatetimeStr);
 
         await conn.beginTransaction();
 
-        // 1. Update Rental Status to Returned
+        // 1. Update Rental Status to Returned with full calculation metadata
         await conn.query(
             `UPDATE rentals SET
                 actual_return_datetime = ?,
+                actual_duration = ?,
+                overdue_duration = ?,
+                overdue_amount = ?,
                 total_rental_amount = ?,
                 additional_charges = ?,
                 refund_amount = ?,
+                deposit_returned = ?,
+                deposit_return_amount = ?,
+                deposit_return_datetime = NOW(),
+                deposit_deduction_amount = ?,
+                deposit_deduction_reason = ?,
+                remaining_amount = ?,
                 rental_status = 'Returned',
                 notes = CASE WHEN ? != '' THEN CONCAT(COALESCE(notes, ''), '\n[Return Note]: ', ?) ELSE notes END,
                 updated_by = ?,
@@ -601,9 +635,17 @@ exports.returnRental = async (req, res) => {
             WHERE id = ?`,
             [
                 mysqlReturnDatetime,
-                totalRentalAmount,
-                additionalCharges,
-                refundAmount,
+                settlement.actualDurationText,
+                settlement.overdueDurationText,
+                settlement.overdueAmount,
+                settlement.totalRentalAmount,
+                settlement.additionalCharges,
+                settlement.depositReturnAmount,
+                settlement.depositReturned,
+                settlement.depositReturnAmount,
+                depositDeductionAmount,
+                depositDeductionReason || null,
+                settlement.remainingAmountDue,
                 notes,
                 notes,
                 userId,
@@ -618,10 +660,10 @@ exports.returnRental = async (req, res) => {
         );
 
         // 3. Update customer transaction ledger to reflect settlement
-        const finalNetDue = totalRentalAmount + additionalCharges - refundAmount;
-        const advancePaid = parseFloat(rental.advance_rental_amount || 0);
-        const remainingBalance = Math.max(0, finalNetDue - advancePaid);
-        const paymentStatus = (remainingBalance <= 0.001) ? 'Settled' : 'Partial';
+        const ledgerTotal = settlement.grossTotalPayable;
+        const ledgerPaid = settlement.advanceRentalAmount + settlement.depositUsed;
+        const ledgerDebit = settlement.remainingAmountDue;
+        const paymentStatus = (ledgerDebit <= 0.001) ? 'Settled' : 'Partial';
 
         await conn.query(
             `UPDATE customer_transactions SET
@@ -629,14 +671,17 @@ exports.returnRental = async (req, res) => {
                 paid_amount = ?,
                 debit_amount = ?,
                 payment_status = ?,
-                notes = CONCAT(COALESCE(notes, ''), ' | Returned on ', ?)
+                notes = CONCAT(COALESCE(notes, ''), ' | Returned on ', ?, ' (Duration: ', ?, ', Overdue Fee: ₹', ?, ', Deposit Refund: ₹', ?, ')')
             WHERE reference_number = ? AND transaction_type = 'rental'`,
             [
-                finalNetDue,
-                advancePaid,
-                remainingBalance,
+                ledgerTotal,
+                ledgerPaid,
+                ledgerDebit,
                 paymentStatus,
                 actualReturnDatetimeStr,
+                settlement.actualDurationText,
+                settlement.overdueAmount.toFixed(2),
+                settlement.depositReturnAmount.toFixed(2),
                 rental.rental_no
             ]
         );
@@ -644,7 +689,7 @@ exports.returnRental = async (req, res) => {
         await conn.commit();
         conn.release();
 
-        return res.redirect(`/view_rental.php?id=${id}&success=${encodeURIComponent(`Product for Rental ${rental.rental_no} returned successfully. Product stock restored to inventory.`)}`);
+        return res.redirect(`/view_rental.php?id=${id}&success=${encodeURIComponent(`Product for Rental ${rental.rental_no} returned successfully. Actual Duration: ${settlement.actualDurationText}. Product stock restored to inventory.`)}`);
     } catch (err) {
         await conn.rollback();
         conn.release();
@@ -842,16 +887,77 @@ exports.ajaxRental = async (req, res) => {
                 });
             }
 
+            case 'calculate_expected_return': {
+                const checkIn = req.query.check_in || req.body.check_in || formatDatetimeLocal();
+                const periodType = (req.query.period_type || req.body.period_type || 'daily').trim();
+                const duration = parseInt(req.query.duration || req.body.duration || 1, 10);
+
+                const expectedReturn = calculateExpectedReturn(checkIn, periodType, duration);
+                return res.json({
+                    success: true,
+                    expected_checkout: expectedReturn
+                });
+            }
+
             case 'calculate_estimate': {
                 const periodType = (req.query.period_type || req.body.period_type || 'daily').trim();
                 const rate = parseFloat(req.query.rate || req.body.rate || 0);
                 const checkIn = req.query.check_in || req.body.check_in;
                 const checkOut = req.query.check_out || req.body.check_out;
+                const duration = req.query.duration || req.body.duration;
 
-                const estimate = calculateRentalEstimate(periodType, rate, checkIn, checkOut);
+                const estimate = calculateRentalEstimate(periodType, rate, checkIn, checkOut, duration);
                 return res.json({
                     success: true,
                     estimate
+                });
+            }
+
+            case 'calculate_return_settlement': {
+                const rentalId = parseInt(req.query.rental_id || req.body.rental_id || 0, 10);
+                let checkIn = req.query.check_in || req.body.check_in;
+                let expectedCheckout = req.query.expected_checkout || req.body.expected_checkout;
+                let actualReturn = req.query.actual_return || req.body.actual_return || formatDatetimeLocal();
+                let periodType = req.query.period_type || req.body.period_type || 'daily';
+                let estimatedDuration = parseInt(req.query.estimated_duration || req.body.estimated_duration || 1, 10);
+                let rate = parseFloat(req.query.rate || req.body.rate || 0);
+                let deposit = parseFloat(req.query.deposit || req.body.deposit || 0);
+                let advance = parseFloat(req.query.advance || req.body.advance || 0);
+                let additionalCharges = parseFloat(req.query.additional_charges || req.body.additional_charges || 0);
+                let depositDeductions = parseFloat(req.query.deposit_deductions || req.body.deposit_deductions || 0);
+                let depositDeductionReason = req.query.deposit_deduction_reason || req.body.deposit_deduction_reason || '';
+
+                if (rentalId > 0) {
+                    const [rRows] = await pool.query('SELECT * FROM rentals WHERE id = ? LIMIT 1', [rentalId]);
+                    if (rRows.length > 0) {
+                        const r = rRows[0];
+                        checkIn = r.check_in_datetime;
+                        expectedCheckout = r.expected_checkout_datetime;
+                        periodType = r.rental_period_type;
+                        estimatedDuration = r.estimated_duration || 1;
+                        rate = r.rental_rate;
+                        deposit = r.security_deposit;
+                        advance = r.advance_rental_amount;
+                    }
+                }
+
+                const settlement = calculateRentalSettlement({
+                    checkInDatetime: checkIn,
+                    expectedCheckoutDatetime: expectedCheckout,
+                    actualReturnDatetime: actualReturn,
+                    periodType,
+                    estimatedDuration,
+                    rentalRate: rate,
+                    securityDeposit: deposit,
+                    advanceRentalAmount: advance,
+                    additionalCharges,
+                    depositDeductions,
+                    depositDeductionReason
+                });
+
+                return res.json({
+                    success: true,
+                    settlement
                 });
             }
 
@@ -863,3 +969,4 @@ exports.ajaxRental = async (req, res) => {
         return res.status(400).json({ success: false, message: err.message });
     }
 };
+

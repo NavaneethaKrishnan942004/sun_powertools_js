@@ -241,6 +241,10 @@ exports.createCustomer = async (req, res) => {
         }
 
         if (errors.length > 0) {
+            const isAjax = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || body.ajax === '1';
+            if (isAjax) {
+                return res.status(400).json({ success: false, errors, message: errors.join(', ') });
+            }
             return res.render('create_customer', {
                 pageTitle: 'Create Customer',
                 formData,
@@ -261,7 +265,7 @@ exports.createCustomer = async (req, res) => {
         const createdBy = req.session.user_id ? parseInt(req.session.user_id, 10) : 1;
         const createdAt = new Date();
 
-        await pool.query(
+        const [insertResult] = await pool.query(
             `INSERT INTO customer_master (
                 customer_code,
                 customer_name,
@@ -317,6 +321,28 @@ exports.createCustomer = async (req, res) => {
         );
 
         const successMsg = `Customer ${customerCode} created successfully.`;
+
+        const isAjax = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || body.ajax === '1';
+        if (isAjax) {
+            const newCustId = insertResult.insertId;
+            return res.json({
+                success: true,
+                message: successMsg,
+                customer: {
+                    id: newCustId,
+                    customer_code: customerCode,
+                    customer_name: formData.customer_name,
+                    company_name: formData.company_name || '',
+                    mobile_number: formData.mobile_number,
+                    credit_allowed: formData.credit_allowed,
+                    credit_limit: parseFloat(formData.credit_limit || 0),
+                    current_outstanding: parseFloat(formData.opening_balance || 0),
+                    available_credit: formData.credit_allowed ? Math.max(0, parseFloat(formData.credit_limit || 0) - parseFloat(formData.opening_balance || 0)) : 0,
+                    address: formData.address || '',
+                    payment_terms: formData.payment_terms || 'Immediate'
+                }
+            });
+        }
 
         if (submitAction === 'save_and_add') {
             return res.redirect(`/create_customer.php?success=${encodeURIComponent(successMsg)}`);

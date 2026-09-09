@@ -15,7 +15,6 @@
                 <h1 class="page-title mb-1">
                     <i class="bi bi-clock-history text-primary me-2"></i>Rental Management
                 </h1>
-                <p class="text-muted mb-0">Track equipment rentals, return schedules, customer advance amounts & tool availability.</p>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a href="create_rental.php" class="btn btn-primary shadow-sm">
@@ -202,11 +201,11 @@
                                 <th class="ps-4">Rental ID</th>
                                 <th>Customer</th>
                                 <th>Product</th>
-                                <th>Check-In (Issued)</th>
-                                <th>Expected Check-Out</th>
-                                <th>Advance Amount</th>
+                                <th>Start & Rate</th>
+                                <th>Duration & Expected Return</th>
+                                <th>Advance & Deposit</th>
                                 <th>Status</th>
-                                <th class="text-end pe-4">Actions</th>
+                                <th class="action-column action-column-wide text-end pe-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -214,7 +213,7 @@
                                 <tr>
                                     <td colspan="8" class="text-center py-5 text-muted">
                                         <div class="my-4">
-                                            <i class="bi bi-clock-history display-4 text-muted d-block mb-3"></i>
+                                             <i class="bi bi-clock-history display-4 text-muted d-block mb-3"></i>
                                             <h5 class="fw-semibold text-body">No Rental Records Found</h5>
                                             <p class="text-muted mb-3">Start renting power tools by creating a new rental transaction.</p>
                                             <a href="create_rental.php" class="btn btn-primary">
@@ -264,32 +263,37 @@
                                             </div>
                                         </td>
 
-                                        <!-- CHECK-IN -->
+                                        <!-- CHECK-IN & RATE -->
                                         <td class="text-nowrap">
                                             <div class="fw-medium">
                                                 <i class="bi bi-box-arrow-right text-success me-1"></i>
                                                 <%= row.check_in_datetime ? String(row.check_in_datetime).replace('T', ' ').slice(0, 16) : '-' %>
                                             </div>
-                                            <small class="text-muted text-capitalize"><%= row.rental_period_type || 'Daily' %> Rate: ₹<%= numberFormat(row.rental_rate, 2) %></small>
+                                            <small class="text-muted text-capitalize"><%= row.rental_period_type || 'Daily' %> @ ₹<%= numberFormat(row.rental_rate, 2) %></small>
                                         </td>
 
-                                        <!-- EXPECTED CHECK-OUT -->
+                                        <!-- DURATION & EXPECTED CHECK-OUT -->
                                         <td class="text-nowrap">
                                             <div class="fw-medium <%= row.effective_status === 'Overdue' ? 'text-danger fw-bold' : '' %>">
                                                 <i class="bi bi-box-arrow-in-left <%= row.effective_status === 'Overdue' ? 'text-danger' : 'text-primary' %> me-1"></i>
                                                 <%= row.expected_checkout_datetime ? String(row.expected_checkout_datetime).replace('T', ' ').slice(0, 16) : '-' %>
                                             </div>
-                                            <% if (row.effective_status === 'Returned' && row.actual_return_datetime) { %>
-                                                <small class="text-success d-block">Returned: <%= String(row.actual_return_datetime).replace('T', ' ').slice(0, 16) %></small>
-                                            <% } else if (row.effective_status === 'Overdue') { %>
-                                                <small class="text-danger fw-semibold d-block"><i class="bi bi-exclamation-circle me-1"></i>Past Expected Return</small>
-                                            <% } %>
+                                            <div class="small">
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                    <%= row.estimated_duration || 1 %> <%= (row.rental_period_type || 'day').replace(/s$/, '') %>(s)
+                                                </span>
+                                                <% if (row.effective_status === 'Returned' && row.actual_return_datetime) { %>
+                                                    <span class="text-success ms-1"><i class="bi bi-check2-circle"></i> <%= row.actual_duration || 'Returned' %></span>
+                                                <% } else if (row.effective_status === 'Overdue') { %>
+                                                    <span class="text-danger fw-semibold ms-1"><i class="bi bi-exclamation-circle"></i> Overdue</span>
+                                                <% } %>
+                                            </div>
                                         </td>
 
-                                        <!-- ADVANCE AMOUNT -->
+                                        <!-- ADVANCE & DEPOSIT AMOUNT -->
                                         <td class="text-nowrap">
                                             <div class="fw-bold text-success">
-                                                ₹<%= numberFormat(row.advance_rental_amount, 2) %>
+                                                Advance: ₹<%= numberFormat(row.advance_rental_amount, 2) %>
                                             </div>
                                             <% if (Number(row.security_deposit) > 0) { %>
                                                 <small class="text-muted d-block">Deposit: ₹<%= numberFormat(row.security_deposit, 2) %></small>
@@ -302,7 +306,7 @@
                                         </td>
 
                                         <!-- ACTIONS -->
-                                        <td class="text-end pe-4 text-nowrap">
+                                        <td class="action-column action-column-wide text-end pe-4 text-nowrap">
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <!-- View -->
                                                 <a href="view_rental.php?id=<%= row.id %>" class="btn btn-outline-secondary" title="View Rental Details">
@@ -320,10 +324,15 @@
                                                         data-rental-id="<%= row.id %>"
                                                         data-rental-no="<%= row.rental_no %>"
                                                         data-customer="<%= row.customer_name %>"
+                                                        data-customer-code="<%= row.customer_code %>"
                                                         data-product="<%= row.product_name %>"
-                                                        data-advance="<%= row.advance_rental_amount %>"
+                                                        data-period="<%= row.rental_period_type || 'Daily' %>"
                                                         data-rate="<%= row.rental_rate %>"
-                                                        data-total="<%= row.total_rental_amount %>"
+                                                        data-duration="<%= row.estimated_duration || 1 %>"
+                                                        data-advance="<%= row.advance_rental_amount %>"
+                                                        data-deposit="<%= row.security_deposit || 0 %>"
+                                                        data-checkin="<%= row.check_in_datetime ? String(row.check_in_datetime).replace('T', ' ').slice(0, 16) : '' %>"
+                                                        data-expected="<%= row.expected_checkout_datetime ? String(row.expected_checkout_datetime).replace('T', ' ').slice(0, 16) : '' %>"
                                                     >
                                                         <i class="bi bi-arrow-counterclockwise me-1"></i> Return
                                                     </button>
@@ -360,41 +369,48 @@
     </div>
 </main>
 
-<!-- RETURN PRODUCT MODAL -->
+<!-- RETURN PRODUCT MODAL WITH LIVE CALCULATION -->
 <div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
             <form method="POST" action="return_rental.php" id="returnForm">
                 <input type="hidden" name="id" id="returnRentalId">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-success" id="returnModalLabel">
-                        <i class="bi bi-arrow-counterclockwise me-2"></i>Return Rental Product
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Return Rental Product & Settlement
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <!-- CONTRACT OVERVIEW -->
                     <div class="p-3 bg-surface-soft rounded-3 border mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted small">Rental Number:</span>
-                            <strong class="text-primary" id="modalRentalNo">-</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted small">Customer:</span>
-                            <strong id="modalCustomer">-</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted small">Product:</span>
-                            <strong id="modalProduct">-</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted small">Advance Paid:</span>
-                            <strong class="text-success" id="modalAdvance">₹0.00</strong>
+                        <div class="row g-2">
+                            <div class="col-12 col-sm-6">
+                                <span class="text-muted small">Rental Number:</span>
+                                <strong class="text-primary d-block" id="modalRentalNo">-</strong>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <span class="text-muted small">Customer:</span>
+                                <strong class="d-block" id="modalCustomer">-</strong>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <span class="text-muted small">Product:</span>
+                                <strong class="d-block" id="modalProduct">-</strong>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted small">Advance Paid:</span>
+                                <strong class="text-success d-block" id="modalAdvance">₹0.00</strong>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted small">Deposit Held:</span>
+                                <strong class="text-body d-block" id="modalDeposit">₹0.00</strong>
+                            </div>
                         </div>
                     </div>
 
                     <div class="row g-3">
                         <!-- Actual Return Date & Time -->
-                        <div class="col-12">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label small fw-semibold">Actual Return Date & Time <span class="text-danger">*</span></label>
                             <input
                                 type="datetime-local"
@@ -406,23 +422,9 @@
                             >
                         </div>
 
-                        <!-- Final Total Rental Amount -->
+                        <!-- Additional Charges / Late Fee -->
                         <div class="col-12 col-sm-6">
-                            <label class="form-label small fw-semibold">Final Rental Amount (₹)</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                name="total_rental_amount"
-                                id="modalTotalAmount"
-                                class="form-control"
-                                placeholder="0.00"
-                            >
-                        </div>
-
-                        <!-- Additional Charges -->
-                        <div class="col-12 col-sm-6">
-                            <label class="form-label small fw-semibold">Additional Charges / Late Fee (₹)</label>
+                            <label class="form-label small fw-semibold">Additional Charges / Late Penalty (₹)</label>
                             <input
                                 type="number"
                                 step="0.01"
@@ -434,17 +436,29 @@
                             >
                         </div>
 
-                        <!-- Refund Amount -->
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Security Deposit Refund (₹)</label>
+                        <!-- Deposit Deductions -->
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold">Deposit Deductions (Damage / Loss) (₹)</label>
                             <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                name="refund_amount"
-                                id="modalRefundAmount"
+                                name="deposit_deduction_amount"
+                                id="modalDepositDeduction"
                                 class="form-control"
                                 value="0.00"
+                            >
+                        </div>
+
+                        <!-- Deposit Deduction Reason -->
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold">Reason for Deposit Deduction</label>
+                            <input
+                                type="text"
+                                name="deposit_deduction_reason"
+                                id="modalDeductionReason"
+                                class="form-control"
+                                placeholder="e.g., Broken blade, missing accessories..."
                             >
                         </div>
 
@@ -454,11 +468,73 @@
                             <textarea name="notes" class="form-control" rows="2" placeholder="Tool returned in good condition..."></textarea>
                         </div>
                     </div>
+
+                    <!-- LIVE SETTLEMENT CALCULATION SUMMARY CARD -->
+                    <div class="mt-4 p-3 bg-light border rounded-3">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-receipt me-1"></i>Live Return Settlement Summary
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted">Rental Start:</td>
+                                        <td class="text-end fw-semibold" id="modalDispStart">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Expected Return:</td>
+                                        <td class="text-end fw-semibold" id="modalDispExpected">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Actual Duration:</td>
+                                        <td class="text-end fw-bold text-primary" id="modalDispActualDuration">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Overdue Duration:</td>
+                                        <td class="text-end fw-bold" id="modalDispOverdueDuration">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Original Rental Amount:</td>
+                                        <td class="text-end fw-semibold" id="modalDispOriginalAmount">₹0.00</td>
+                                    </tr>
+                                    <tr id="modalOverdueRow">
+                                        <td class="text-muted text-danger">Additional Overdue Fee:</td>
+                                        <td class="text-end fw-bold text-danger" id="modalDispOverdueAmount">₹0.00</td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td class="fw-bold text-body">Total Rental Amount:</td>
+                                        <td class="text-end fw-bold text-primary fs-6" id="modalDispTotalAmount">₹0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Advance Paid:</td>
+                                        <td class="text-end text-success fw-semibold" id="modalDispAdvance">₹0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Security Deposit Held:</td>
+                                        <td class="text-end fw-semibold" id="modalDispDeposit">₹0.00</td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td class="fw-bold text-success">Security Deposit Returned to Customer:</td>
+                                        <td class="text-end fw-bold text-success fs-6" id="modalDispDepositReturned">₹0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Deposit Applied Toward Outstanding Charges:</td>
+                                        <td class="text-end text-warning-emphasis fw-semibold" id="modalDispDepositUsed">₹0.00</td>
+                                    </tr>
+                                    <tr class="border-top bg-surface-soft">
+                                        <td class="fw-bold text-danger fs-6">Remaining Amount Due from Customer:</td>
+                                        <td class="text-end fw-bold text-danger fs-5" id="modalDispRemainingDue">₹0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer border-top py-3">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg me-1"></i> Confirm Product Return
+                    <button type="submit" class="btn btn-success fw-bold">
+                        <i class="bi bi-check-lg me-1"></i> Confirm Product Return & Settle
                     </button>
                 </div>
             </form>
@@ -500,8 +576,46 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Return Modal Population
     const returnModal = document.getElementById('returnModal');
+    const returnDatetimeInput = document.getElementById('modalReturnDatetime');
+    const additionalChargesInput = document.getElementById('modalAdditionalCharges');
+    const depositDeductionInput = document.getElementById('modalDepositDeduction');
+    const deductionReasonInput = document.getElementById('modalDeductionReason');
+
+    function formatINR(val) {
+        const num = parseFloat(val) || 0;
+        return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function refreshReturnSettlement() {
+        const rentalId = document.getElementById('returnRentalId').value;
+        if (!rentalId) return;
+
+        const actualReturn = returnDatetimeInput.value;
+        const addCharges = additionalChargesInput.value || 0;
+        const deductions = depositDeductionInput.value || 0;
+        const reason = deductionReasonInput.value || '';
+
+        fetch(`/ajax_rental.php?action=calculate_return_settlement&rental_id=${rentalId}&actual_return=${encodeURIComponent(actualReturn)}&additional_charges=${encodeURIComponent(addCharges)}&deposit_deductions=${encodeURIComponent(deductions)}&deposit_deduction_reason=${encodeURIComponent(reason)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.settlement) {
+                    const s = data.settlement;
+                    document.getElementById('modalDispActualDuration').textContent = s.actualDurationText;
+                    document.getElementById('modalDispOverdueDuration').textContent = s.overdueDurationText;
+                    document.getElementById('modalDispOriginalAmount').textContent = formatINR(s.originalRentalAmount);
+                    document.getElementById('modalDispOverdueAmount').textContent = formatINR(s.overdueAmount);
+                    document.getElementById('modalDispTotalAmount').textContent = formatINR(s.totalRentalAmount);
+                    document.getElementById('modalDispAdvance').textContent = formatINR(s.advanceRentalAmount);
+                    document.getElementById('modalDispDeposit').textContent = formatINR(s.securityDeposit);
+                    document.getElementById('modalDispDepositReturned').textContent = formatINR(s.depositReturnAmount);
+                    document.getElementById('modalDispDepositUsed').textContent = formatINR(s.depositUsed);
+                    document.getElementById('modalDispRemainingDue').textContent = formatINR(s.remainingAmountDue);
+                }
+            })
+            .catch(err => console.error('Settlement fetch error:', err));
+    }
+
     if (returnModal) {
         returnModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
@@ -512,15 +626,36 @@ document.addEventListener('DOMContentLoaded', function () {
             const customer = button.getAttribute('data-customer');
             const product = button.getAttribute('data-product');
             const advance = parseFloat(button.getAttribute('data-advance') || 0);
-            const total = parseFloat(button.getAttribute('data-total') || 0);
+            const deposit = parseFloat(button.getAttribute('data-deposit') || 0);
+            const checkin = button.getAttribute('data-checkin') || '-';
+            const expected = button.getAttribute('data-expected') || '-';
 
             document.getElementById('returnRentalId').value = id;
             document.getElementById('modalRentalNo').textContent = rentalNo;
             document.getElementById('modalCustomer').textContent = customer;
             document.getElementById('modalProduct').textContent = product;
-            document.getElementById('modalAdvance').textContent = '₹' + advance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-            document.getElementById('modalTotalAmount').value = total > 0 ? total.toFixed(2) : advance.toFixed(2);
+            document.getElementById('modalAdvance').textContent = formatINR(advance);
+            document.getElementById('modalDeposit').textContent = formatINR(deposit);
+            document.getElementById('modalDispStart').textContent = checkin;
+            document.getElementById('modalDispExpected').textContent = expected;
+
+            // Reset inputs
+            additionalChargesInput.value = '0.00';
+            depositDeductionInput.value = '0.00';
+            deductionReasonInput.value = '';
+
+            refreshReturnSettlement();
         });
+    }
+
+    if (returnDatetimeInput) {
+        returnDatetimeInput.addEventListener('change', refreshReturnSettlement);
+    }
+    if (additionalChargesInput) {
+        additionalChargesInput.addEventListener('input', refreshReturnSettlement);
+    }
+    if (depositDeductionInput) {
+        depositDeductionInput.addEventListener('input', refreshReturnSettlement);
     }
 
     // Cancel Modal Population

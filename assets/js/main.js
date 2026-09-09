@@ -400,5 +400,152 @@
         mediaQuery.addListener(handleBreakpointChange);
       }
     }
+
+    // =========================================================================
+    // Universal File & Image Upload Preview & Modal Viewer
+    // =========================================================================
+    function formatBytes(bytes) {
+      if (bytes === 0 || !bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function openFilePreview(source, fileName, fileSize, isImage) {
+      const modalEl = document.getElementById('filePreviewModal');
+      if (!modalEl) return;
+
+      const titleEl = document.getElementById('filePreviewModalLabel');
+      const contentEl = document.getElementById('filePreviewModalContent');
+      const metaEl = document.getElementById('filePreviewModalMeta');
+
+      if (titleEl) {
+        titleEl.innerHTML = '<i class="bi bi-eye me-1 text-primary"></i> ' + (fileName ? escapeHTML(fileName) : 'File Preview');
+      }
+
+      if (metaEl) {
+        metaEl.textContent = fileSize ? 'Size: ' + fileSize : '';
+      }
+
+      if (contentEl) {
+        if (isImage && source) {
+          contentEl.innerHTML = '<img src="' + source + '" class="modal-preview-img shadow-sm" alt="' + (fileName ? escapeHTML(fileName) : 'Preview') + '">';
+        } else {
+          contentEl.innerHTML = `
+            <div class="py-4 text-center">
+              <i class="bi bi-file-earmark-text text-primary" style="font-size: 4rem;"></i>
+              <h5 class="fw-bold mt-3 mb-1 text-body">${fileName ? escapeHTML(fileName) : 'Attached Document'}</h5>
+              <div class="text-muted small">${fileSize ? fileSize : ''}</div>
+              ${source ? `<div class="mt-3"><a href="${source}" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-box-arrow-up-right me-1"></i> Open Document</a></div>` : ''}
+            </div>
+          `;
+        }
+      }
+
+      if (window.bootstrap && window.bootstrap.Modal) {
+        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+      }
+    }
+
+    window.openFilePreview = openFilePreview;
+
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Attach listener to all file inputs (existing & dynamically created)
+    document.addEventListener('change', function (e) {
+      const target = e.target;
+      if (target && target.matches('input[type="file"]')) {
+        // Find or create preview zone
+        let parentContainer = target.closest('.col-12, .mb-3, .form-group') || target.parentElement;
+        let previewZone = parentContainer.querySelector('.file-preview-zone');
+
+        if (!previewZone) {
+          previewZone = document.createElement('div');
+          previewZone.className = 'file-preview-zone';
+          target.insertAdjacentElement('afterend', previewZone);
+        }
+
+        previewZone.innerHTML = '';
+
+        if (!target.files || target.files.length === 0) return;
+
+        Array.from(target.files).forEach(function (file) {
+          const card = document.createElement('div');
+          card.className = 'file-preview-card';
+          const formattedSize = formatBytes(file.size);
+
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function (readEvent) {
+              const dataUrl = readEvent.target.result;
+              card.innerHTML = `
+                <img src="${dataUrl}" class="file-preview-thumb" alt="${escapeHTML(file.name)}">
+                <span class="file-preview-zoom-hint"><i class="bi bi-zoom-in"></i></span>
+                <div class="file-preview-meta">
+                  <span class="file-preview-name" title="${escapeHTML(file.name)}">${escapeHTML(file.name)}</span>
+                  <span class="file-preview-size">${formattedSize}</span>
+                </div>
+              `;
+              card.addEventListener('click', function () {
+                openFilePreview(dataUrl, file.name, formattedSize, true);
+              });
+            };
+            reader.readAsDataURL(file);
+          } else {
+            let iconClass = 'bi-file-earmark-text';
+            if (file.type.includes('pdf')) iconClass = 'bi-file-earmark-pdf text-danger';
+            else if (file.type.includes('zip') || file.type.includes('rar')) iconClass = 'bi-file-earmark-zip text-warning';
+
+            card.innerHTML = `
+              <div class="file-preview-doc">
+                <i class="bi ${iconClass} fs-2"></i>
+              </div>
+              <span class="file-preview-zoom-hint"><i class="bi bi-eye"></i></span>
+              <div class="file-preview-meta">
+                <span class="file-preview-name" title="${escapeHTML(file.name)}">${escapeHTML(file.name)}</span>
+                <span class="file-preview-size">${formattedSize}</span>
+              </div>
+            `;
+            card.addEventListener('click', function () {
+              openFilePreview(null, file.name, formattedSize, false);
+            });
+          }
+
+          previewZone.appendChild(card);
+        });
+      }
+    });
+
+    // Make existing images clickable for preview if marked or within product image cards
+    document.addEventListener('click', function (e) {
+      const target = e.target;
+      if (target && target.matches('img[data-previewable], .existing-image-thumb, .product-image-preview')) {
+        const src = target.getAttribute('src');
+        const alt = target.getAttribute('alt') || 'Image Preview';
+        if (src) {
+          openFilePreview(src, alt, '', true);
+        }
+      }
+    });
+
+    // Global Tooltip initialization supporting hover, focus, and touch tap
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+      const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"], .cell-truncate[title], [data-tooltip]');
+      tooltipElements.forEach(function (el) {
+        new bootstrap.Tooltip(el, {
+          trigger: 'hover focus click',
+          boundary: 'window'
+        });
+      });
+    }
   });
 })();

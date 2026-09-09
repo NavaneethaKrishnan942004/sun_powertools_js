@@ -13,6 +13,29 @@
 </div>
 <!-- /.admin-shell -->
 
+<!-- Universal File & Image Preview Modal -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom py-2.5 px-3">
+                <h6 class="modal-title fw-bold text-truncate" id="filePreviewModalLabel">
+                    <i class="bi bi-eye me-1 text-primary"></i> File Preview
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 text-center bg-surface-soft d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                <div id="filePreviewModalContent" class="w-100">
+                    <!-- Populated dynamically: <img> or doc card -->
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2 px-3 d-flex justify-content-between">
+                <div class="small text-muted text-truncate" id="filePreviewModalMeta"></div>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap Bundle JS -->
 <script src="/sun_powertools/assets/js/bootstrap.bundle.min.js"></script>
 

@@ -178,6 +178,78 @@ function getPaymentTypeBadge(type) {
 }
 
 /**
+ * Determine Payment Status based on financial values:
+ * - FULL PAYMENT: Amount Paid >= Grand Total
+ * - PARTIALLY PAID: Amount Paid > 0 and Amount Paid < Grand Total
+ * - UNPAID: Amount Paid = 0 and Grand Total > 0
+ */
+function getPaymentStatusInfo(paidAmount, totalAmount) {
+    const paid = Math.max(0.00, parseFloat(paidAmount || 0));
+    const total = Math.max(0.00, parseFloat(totalAmount || 0));
+    const balance = Math.max(0.00, total - paid);
+
+    if (total <= 0.001) {
+        return {
+            status: 'FULL PAYMENT',
+            code: 'FULL_PAYMENT',
+            badge_class: 'bg-success-subtle text-success border border-success-subtle fw-bold',
+            balance: 0.00,
+            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">FULL PAYMENT</span>'
+        };
+    }
+
+    if (paid >= total - 0.001) {
+        return {
+            status: 'FULL PAYMENT',
+            code: 'FULL_PAYMENT',
+            badge_class: 'bg-success-subtle text-success border border-success-subtle fw-bold',
+            balance: 0.00,
+            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">FULL PAYMENT</span>'
+        };
+    } else if (paid > 0.001) {
+        return {
+            status: 'PARTIALLY PAID',
+            code: 'PARTIALLY_PAID',
+            badge_class: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold',
+            balance: balance,
+            badge_html: '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold px-2.5 py-1 rounded-pill">PARTIALLY PAID</span>'
+        };
+    } else {
+        return {
+            status: 'UNPAID',
+            code: 'UNPAID',
+            badge_class: 'bg-danger-subtle text-danger border border-danger-subtle fw-bold',
+            balance: balance,
+            badge_html: '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2.5 py-1 rounded-pill">UNPAID</span>'
+        };
+    }
+}
+
+/**
+ * Determine Sale Type (SALE vs CREDIT SALE)
+ * Supports backward-compatibility for historical sales notes where sale_type was not set
+ */
+function getSaleTypeInfo(saleType, creditAmount = 0, paymentType = '') {
+    const isCredit = (String(saleType).toLowerCase() === 'credit') || parseFloat(creditAmount || 0) > 0.001 || paymentType === 'Credit';
+
+    if (isCredit) {
+        return {
+            type: 'credit',
+            label: 'CREDIT SALE',
+            badge_class: 'bg-primary-subtle text-primary border border-primary-subtle fw-bold',
+            badge_html: '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-2.5 py-1 rounded-pill">CREDIT SALE</span>'
+        };
+    }
+
+    return {
+        type: 'sale',
+        label: 'SALE',
+        badge_class: 'bg-secondary-subtle text-secondary border border-secondary-subtle fw-bold',
+        badge_html: '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-bold px-2.5 py-1 rounded-pill">SALE</span>'
+    };
+}
+
+/**
  * Fetch Comprehensive Sales & Business Analytics Summary
  */
 async function getSalesAnalytics(conn) {
@@ -365,5 +437,7 @@ module.exports = {
     generateSalesNoteNumber,
     evaluateCreditStatus,
     getPaymentTypeBadge,
+    getPaymentStatusInfo,
+    getSaleTypeInfo,
     getSalesAnalytics
 };

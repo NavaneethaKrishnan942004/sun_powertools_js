@@ -256,34 +256,116 @@
 
                             <hr class="my-3">
 
-                            <!-- Grand Total -->
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <span class="fs-5 fw-bold text-body">Grand Total:</span>
-                                <span class="fs-4 fw-extrabold text-primary" id="summaryGrandTotal">₹0.00</span>
+                            <!-- Calculated Grand Total -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-3 bg-surface-soft rounded-3 border">
+                                <div>
+                                    <span class="fs-6 fw-bold text-muted d-block">Calculated Grand Total:</span>
+                                    <small class="text-muted">Based on items, tax & charges</small>
+                                </div>
+                                <span class="fs-4 fw-bold text-body" id="summaryGrandTotal">₹0.00</span>
                             </div>
 
-                            <!-- Payment Type Selection -->
+                            <!-- Adjusted / Final Grand Total (Editable) -->
+                            <div class="p-3 bg-surface rounded-3 border border-primary mb-3 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-primary mb-0" for="finalGrandTotalInput">
+                                        <i class="bi bi-pencil-square me-1"></i>Adjusted / Final Grand Total <span class="text-danger">*</span>
+                                    </label>
+                                    <span id="discountPercentBadge" class="badge bg-light text-secondary border px-2 py-1 small">
+                                        Discount: 0% (₹0.00)
+                                    </span>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-primary text-white fw-bold">₹</span>
+                                    <input type="number" name="final_grand_total" id="finalGrandTotalInput" class="form-control form-control-lg fw-extrabold text-primary" step="0.01" min="0.01" placeholder="0.00" value="<%= typeof finalGrandTotal !== 'undefined' ? finalGrandTotal : Number(sale.total_amount).toFixed(2) %>" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="resetFinalTotalBtn" title="Reset to calculated grand total">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </div>
+                                <div id="finalTotalError" class="text-danger small mt-1 d-none fw-semibold">
+                                    <i class="bi bi-exclamation-circle me-1"></i><span id="finalTotalErrorText"></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                                    <span>Discount Amount: <strong class="text-success" id="effectiveDiscountAmount">₹0.00</strong></span>
+                                    <span>Discount Applied: <strong class="text-success" id="effectiveDiscountRate">0%</strong></span>
+                                </div>
+                            </div>
+
+                            <% const currentSaleType = (typeof saleType !== 'undefined' && saleType) ? saleType : ((sale.sale_type === 'credit' || Number(sale.credit_amount) > 0) ? 'credit' : 'sale'); %>
+                            <!-- SALE VS CREDIT SALE SELECTION -->
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Payment Type <span class="text-danger">*</span></label>
-                                <select name="payment_type" id="paymentTypeSelect" class="form-select fw-semibold" required>
+                                <label class="form-label small fw-semibold d-block">Sale Type <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group" aria-label="Sale Type Selection">
+                                    <input type="radio" class="btn-check" name="sale_type" id="saleTypeNormal" value="sale" <%= (currentSaleType === 'sale') ? 'checked' : '' %> autocomplete="off">
+                                    <label class="btn btn-outline-success fw-bold py-2 text-center" for="saleTypeNormal">
+                                        <i class="bi bi-cash-stack me-1"></i> Normal Sale
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="sale_type" id="saleTypeCredit" value="credit" <%= (currentSaleType === 'credit') ? 'checked' : '' %> autocomplete="off">
+                                    <label class="btn btn-outline-primary fw-bold py-2 text-center" for="saleTypeCredit">
+                                        <i class="bi bi-credit-card-2-front me-1"></i> Credit Sale
+                                    </label>
+                                </div>
+                                <div class="small text-muted mt-1" id="saleTypeNote">
+                                    <% if (currentSaleType === 'credit') { %>
+                                        <i class="bi bi-info-circle me-1"></i>Credit sale transaction. Unpaid balance updates customer outstanding ledger.
+                                    <% } else { %>
+                                        <i class="bi bi-info-circle me-1"></i>Standard selling price workflow with full payment.
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <!-- NORMAL SALE PAYMENT METHOD -->
+                            <div id="normalSalePaymentBox" class="mb-3 <%= (currentSaleType === 'credit') ? 'd-none' : '' %>">
+                                <label class="form-label small fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                                <select name="payment_type" id="paymentTypeSelect" class="form-select fw-semibold">
                                     <option value="Cash" <%= sale.payment_type === 'Cash' ? 'selected' : '' %>>Cash (Full Payment)</option>
-                                    <option value="UPI" <%= sale.payment_type === 'UPI' ? 'selected' : '' %>>UPI (Full Payment)</option>
-                                    <option value="Card" <%= sale.payment_type === 'Card' ? 'selected' : '' %>>Card (Full Payment)</option>
-                                    <option value="Bank Transfer" <%= sale.payment_type === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer (Full Payment)</option>
-                                    <option value="Credit" id="optCredit" <%= sale.payment_type === 'Credit' ? 'selected' : '' %>>Credit (Full Credit)</option>
-                                    <option value="Mixed" id="optMixed" <%= sale.payment_type === 'Mixed' ? 'selected' : '' %>>Mixed / Partial Payment</option>
+                                    <option value="UPI" <%= sale.payment_type === 'UPI' ? 'selected' : '' %>>UPI / QR Code</option>
+                                    <option value="Card" <%= sale.payment_type === 'Card' ? 'selected' : '' %>>Credit / Debit Card</option>
+                                    <option value="Bank Transfer" <%= sale.payment_type === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer / NEFT</option>
                                 </select>
                             </div>
 
-                            <!-- Partial / Mixed Payment Input -->
-                            <div id="mixedPaymentBox" class="mb-3 p-3 bg-surface-soft rounded-3 border <%= sale.payment_type === 'Mixed' ? '' : 'd-none' %>">
-                                <div class="mb-2">
-                                    <label class="form-label small fw-semibold">Amount Paid Now (₹)</label>
-                                    <input type="number" name="paid_amount" id="paidAmountInput" class="form-control fw-bold text-success" value="<%= Number(sale.paid_amount).toFixed(2) %>" min="0" step="0.01">
+                            <!-- CREDIT SALE DETAILS BOX -->
+                            <div id="creditSaleDetailsBox" class="mb-3 p-3 bg-surface-soft rounded-3 border border-primary-subtle <%= (currentSaleType === 'credit') ? '' : 'd-none' %>">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <span class="fw-bold text-primary small"><i class="bi bi-credit-card me-1"></i> Credit Sale Terms</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Customer Required</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted">
-                                    <span>Remaining Credit:</span>
-                                    <strong class="text-danger" id="dispCreditPortion">₹0.00</strong>
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Amount Received / Paid (₹)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-surface">₹</span>
+                                        <input type="number" name="amount_received" id="amountReceivedInput" class="form-control fw-bold text-success" value="<%= typeof amountReceived !== 'undefined' ? amountReceived : Number(sale.paid_amount).toFixed(2) %>" min="0" step="0.01" placeholder="0.00">
+                                    </div>
+                                    <div id="amountReceivedError" class="text-danger small mt-1 d-none">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Amount Received cannot exceed Final Grand Total.
+                                    </div>
+                                    <small class="text-muted d-block mt-0.5">Enter 0 for full credit, or partial amount received.</small>
+                                </div>
+
+                                <div class="mb-2" id="creditPaymentMethodGroup">
+                                    <label class="form-label small fw-semibold">Payment Method for Received Amount</label>
+                                    <select name="payment_method" id="creditPaymentMethod" class="form-select form-select-sm">
+                                        <option value="Cash" <%= sale.payment_type === 'Cash' ? 'selected' : '' %>>Cash</option>
+                                        <option value="UPI" <%= sale.payment_type === 'UPI' ? 'selected' : '' %>>UPI / QR Code</option>
+                                        <option value="Card" <%= sale.payment_type === 'Card' ? 'selected' : '' %>>Card</option>
+                                        <option value="Bank Transfer" <%= sale.payment_type === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer</option>
+                                    </select>
+                                </div>
+
+                                <!-- Prominent Balance to Pay Warning Panel -->
+                                <div class="balance-highlight-card my-3" id="balanceHighlightBox">
+                                    <div class="balance-title">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Balance to Pay
+                                    </div>
+                                    <div class="balance-value" id="prominentBalanceToPay">
+                                        ₹<%= (typeof balanceAmount !== 'undefined' ? Number(balanceAmount) : Math.max(0, Number(sale.total_amount) - Number(sale.paid_amount))).toFixed(2) %>
+                                    </div>
+                                    <div class="balance-helper" id="balanceHelperText">
+                                        Outstanding balance charged to customer account.
+                                    </div>
                                 </div>
                             </div>
 
@@ -371,16 +453,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryTax = document.getElementById('summaryTax');
     const otherChargesInput = document.getElementById('otherChargesInput');
     const summaryGrandTotal = document.getElementById('summaryGrandTotal');
+    const finalGrandTotalInput = document.getElementById('finalGrandTotalInput');
+    const resetFinalTotalBtn = document.getElementById('resetFinalTotalBtn');
+    const discountPercentBadge = document.getElementById('discountPercentBadge');
+    const effectiveDiscountAmount = document.getElementById('effectiveDiscountAmount');
+    const effectiveDiscountRate = document.getElementById('effectiveDiscountRate');
+    const finalTotalError = document.getElementById('finalTotalError');
+    const finalTotalErrorText = document.getElementById('finalTotalErrorText');
+
+    const saleTypeNormal = document.getElementById('saleTypeNormal');
+    const saleTypeCredit = document.getElementById('saleTypeCredit');
+    const saleTypeNote = document.getElementById('saleTypeNote');
+    const normalSalePaymentBox = document.getElementById('normalSalePaymentBox');
+    const creditSaleDetailsBox = document.getElementById('creditSaleDetailsBox');
+    const amountReceivedInput = document.getElementById('amountReceivedInput');
+    const amountReceivedError = document.getElementById('amountReceivedError');
+    const prominentBalanceToPay = document.getElementById('prominentBalanceToPay');
     const paymentTypeSelect = document.getElementById('paymentTypeSelect');
-    const mixedPaymentBox = document.getElementById('mixedPaymentBox');
-    const paidAmountInput = document.getElementById('paidAmountInput');
-    const dispCreditPortion = document.getElementById('dispCreditPortion');
+
     const sidePrevBal = document.getElementById('sidePrevBal');
     const sideCreditAdded = document.getElementById('sideCreditAdded');
     const sideNewBal = document.getElementById('sideNewBal');
     const overrideBox = document.getElementById('overrideBox');
-    const optCredit = document.getElementById('optCredit');
-    const optMixed = document.getElementById('optMixed');
 
     function loadCustomerDetails(customerId) {
         if (!customerId) return;
@@ -596,6 +690,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    let lastCalculatedTotal = 0;
+    let isFinalTotalValid = true;
+
+    function handleSaleTypeChange() {
+        const isCredit = saleTypeCredit && saleTypeCredit.checked;
+        if (isCredit) {
+            if (normalSalePaymentBox) normalSalePaymentBox.classList.add('d-none');
+            if (creditSaleDetailsBox) creditSaleDetailsBox.classList.remove('d-none');
+            if (saleTypeNote) saleTypeNote.innerHTML = '<i class="bi bi-info-circle me-1"></i>Credit sale transaction. Unpaid balance updates customer outstanding ledger.';
+        } else {
+            if (normalSalePaymentBox) normalSalePaymentBox.classList.remove('d-none');
+            if (creditSaleDetailsBox) creditSaleDetailsBox.classList.add('d-none');
+            if (saleTypeNote) saleTypeNote.innerHTML = '<i class="bi bi-info-circle me-1"></i>Standard selling price workflow with full payment.';
+        }
+        recalculateAll();
+    }
+
+    if (saleTypeNormal) saleTypeNormal.addEventListener('change', handleSaleTypeChange);
+    if (saleTypeCredit) saleTypeCredit.addEventListener('change', handleSaleTypeChange);
+
+    if (resetFinalTotalBtn) {
+        resetFinalTotalBtn.addEventListener('click', function() {
+            if (finalGrandTotalInput) {
+                finalGrandTotalInput.value = lastCalculatedTotal.toFixed(2);
+                recalculateAll();
+            }
+        });
+    }
+
     function recalculateAll() {
         let subtotal = 0;
         let totalDiscount = 0;
@@ -613,35 +736,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const otherCharges = Math.max(0, parseFloat(otherChargesInput.value) || 0);
-        const grandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
+        const calculatedGrandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
+        lastCalculatedTotal = calculatedGrandTotal;
 
         summarySubtotal.textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryDiscount.textContent = '- ₹' + totalDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryTax.textContent = '+ ₹' + totalTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        summaryGrandTotal.textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        summaryGrandTotal.textContent = '₹' + calculatedGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-        const pType = paymentTypeSelect.value;
+        let finalTotal = calculatedGrandTotal;
+        if (finalGrandTotalInput && finalGrandTotalInput.value !== '') {
+            const parsed = parseFloat(finalGrandTotalInput.value);
+            if (!isNaN(parsed)) {
+                finalTotal = parsed;
+            }
+        }
+
+        isFinalTotalValid = true;
+        if (finalTotal <= 0) {
+            if (finalTotalErrorText) finalTotalErrorText.textContent = 'Final Grand Total must be greater than zero.';
+            if (finalTotalError) finalTotalError.classList.remove('d-none');
+            isFinalTotalValid = false;
+        } else if (finalTotal > calculatedGrandTotal + 0.01) {
+            if (finalTotalErrorText) finalTotalErrorText.textContent = `Final Grand Total (₹${finalTotal.toFixed(2)}) cannot exceed calculated Grand Total (₹${calculatedGrandTotal.toFixed(2)}).`;
+            if (finalTotalError) finalTotalError.classList.remove('d-none');
+            isFinalTotalValid = false;
+        } else {
+            if (finalTotalError) finalTotalError.classList.add('d-none');
+        }
+
+        const effectiveDiscount = Math.max(0, calculatedGrandTotal - finalTotal);
+        const effectiveRate = (calculatedGrandTotal > 0.001) ? (effectiveDiscount / calculatedGrandTotal) * 100 : 0;
+        if (effectiveDiscountAmount) effectiveDiscountAmount.textContent = '₹' + effectiveDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (effectiveDiscountRate) effectiveDiscountRate.textContent = effectiveRate.toFixed(2) + '%';
+        if (discountPercentBadge) discountPercentBadge.textContent = `Discount: ${effectiveRate.toFixed(2)}% (₹${effectiveDiscount.toFixed(2)})`;
+
+        const isCredit = saleTypeCredit && saleTypeCredit.checked;
         let paidAmount = 0;
         let creditAmount = 0;
 
-        if (pType === 'Cash' || pType === 'UPI' || pType === 'Card' || pType === 'Bank Transfer') {
-            mixedPaymentBox.classList.add('d-none');
-            paidAmount = grandTotal;
-            creditAmount = 0;
-        } else if (pType === 'Credit') {
-            mixedPaymentBox.classList.add('d-none');
-            paidAmount = 0;
-            creditAmount = grandTotal;
-        } else if (pType === 'Mixed') {
-            mixedPaymentBox.classList.remove('d-none');
-            let inputPaid = parseFloat(paidAmountInput.value) || 0;
-            if (inputPaid > grandTotal) {
-                inputPaid = grandTotal;
-                paidAmountInput.value = inputPaid.toFixed(2);
+        if (isCredit) {
+            let inputReceived = parseFloat(amountReceivedInput ? amountReceivedInput.value : 0);
+            if (isNaN(inputReceived) || inputReceived < 0) {
+                inputReceived = 0;
             }
-            paidAmount = inputPaid;
-            creditAmount = Math.max(0, grandTotal - paidAmount);
-            dispCreditPortion.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (inputReceived > finalTotal + 0.01) {
+                if (amountReceivedError) amountReceivedError.classList.remove('d-none');
+            } else {
+                if (amountReceivedError) amountReceivedError.classList.add('d-none');
+            }
+            paidAmount = Math.min(finalTotal, inputReceived);
+            creditAmount = Math.max(0, finalTotal - paidAmount);
+            if (prominentBalanceToPay) {
+                prominentBalanceToPay.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        } else {
+            paidAmount = finalTotal;
+            creditAmount = 0;
         }
 
         const prevBal = currentCustomer ? parseFloat(currentCustomer.current_outstanding) : 0;
@@ -650,9 +801,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const newBal = prevBal + creditAmount;
         const availCredit = (creditAllowed && creditLimit > 0) ? Math.max(0, creditLimit - newBal) : 0;
 
-        sidePrevBal.textContent = '₹' + prevBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        sideCreditAdded.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        sideNewBal.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (sidePrevBal) sidePrevBal.textContent = '₹' + prevBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (sideCreditAdded) sideCreditAdded.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (sideNewBal) sideNewBal.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         if (currentCustomer) {
             dispNewOutstanding.textContent = '₹' + newBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -686,12 +837,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    otherChargesInput.addEventListener('input', recalculateAll);
-    paymentTypeSelect.addEventListener('change', recalculateAll);
-    paidAmountInput.addEventListener('input', recalculateAll);
+    if (otherChargesInput) otherChargesInput.addEventListener('input', recalculateAll);
+    if (finalGrandTotalInput) finalGrandTotalInput.addEventListener('input', recalculateAll);
+    if (amountReceivedInput) amountReceivedInput.addEventListener('input', recalculateAll);
+    if (paymentTypeSelect) paymentTypeSelect.addEventListener('change', recalculateAll);
+
+    // Initial load customer profile if present
+    if (customerSelect && customerSelect.value) {
+        loadCustomerDetails(customerSelect.value);
+    }
+
+    // Form submit validation
+    const salesNoteForm = document.getElementById('salesNoteForm');
+    if (salesNoteForm) {
+        salesNoteForm.addEventListener('submit', function(e) {
+            const isCredit = saleTypeCredit && saleTypeCredit.checked;
+            if (isCredit && (!customerSelect.value || customerSelect.value === '0')) {
+                e.preventDefault();
+                alert('Customer selection is required for Credit Sale.');
+                customerSelect.focus();
+                return false;
+            }
+            if (!isFinalTotalValid) {
+                e.preventDefault();
+                alert('Please correct the Adjusted / Final Grand Total before updating.');
+                finalGrandTotalInput.focus();
+                return false;
+            }
+        });
+    }
 
     renderItemsTable();
-    recalculateAll();
+    handleSaleTypeChange();
 
     function escapeHtml(text) {
         if (!text) return '';
