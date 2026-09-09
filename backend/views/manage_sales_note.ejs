@@ -385,6 +385,7 @@
                             <th class="text-end">Grand Total</th>
                             <th class="text-end">Paid</th>
                             <th class="text-end">Balance</th>
+                            <th class="text-center">Pay Type</th>
                             <th class="text-center">Payment Status</th>
                             <th class="text-end">New Outstanding</th>
                             <th class="text-center">Credit Status</th>
@@ -463,11 +464,13 @@
                                             ₹<%= numberFormat(balAmt, 2) %>
                                         </span>
                                     </td>
-
+                                    <td class="text-center">
+                                        <div class="mt-1"><%- getPaymentTypeBadge(sn.payment_type) %></div>
+                                    </td>
                                     <!-- Payment Status -->
                                     <td class="text-center">
                                         <div><%- sn.payment_status_badge || getPaymentStatusInfo(sn.paid_amount, sn.total_amount).badge_html %></div>
-                                        <div class="mt-1"><%- getPaymentTypeBadge(sn.payment_type) %></div>
+                                       
                                     </td>
 
                                     <!-- New Outstanding -->
