@@ -21,6 +21,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const productRoutes = require('./routes/productRoutes');
 const salesNoteRoutes = require('./routes/salesNoteRoutes');
 const rentalRoutes = require('./routes/rentalRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,6 +82,7 @@ app.use('/', customerRoutes);
 app.use('/', productRoutes);
 app.use('/', salesNoteRoutes);
 app.use('/', rentalRoutes);
+app.use('/', reportRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -3,6 +3,7 @@ const salesPages = ['manage_sales_note.php', 'create_sales_note.php', 'edit_sale
 const rentalPages = ['manage_rental.php', 'create_rental.php', 'edit_rental.php', 'view_rental.php', 'manage_rental', 'create_rental', 'view_rental'];
 const productPages = ['manage_product.php', 'create_product.php', 'edit_product.php', 'view_product.php', 'manage_product', 'create_product', 'edit_product', 'view_product'];
 const customerPages = ['manage_customer.php', 'create_customer.php', 'edit_customer.php', 'view_customer.php', 'manage_customer', 'create_customer', 'edit_customer', 'view_customer'];
+const reportPages = ['reports.php', 'reports'];
 const userPages = ['manage_user.php', 'create_user.php', 'edit_user.php', 'view_user.php', 'manage_user', 'create_user', 'edit_user', 'view_user'];
 
 const cur = typeof currentPath !== 'undefined' ? currentPath : '';
@@ -37,6 +38,12 @@ const menuItems = [
         icon: 'bi-people',
         link: '/customers',
         active: (cur.startsWith('/customers') || customerPages.includes(currentPage))
+    },
+    {
+        title: 'Reports',
+        icon: 'bi-file-earmark-bar-graph',
+        link: '/reports',
+        active: (cur.startsWith('/reports') || reportPages.includes(currentPage))
     },
     {
         title: 'Users',

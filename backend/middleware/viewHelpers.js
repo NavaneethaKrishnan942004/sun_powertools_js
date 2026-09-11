@@ -36,6 +36,19 @@ function numberFormat(number, decimals = 2) {
 }
 
 /**
+ * Formats a date object or string into localized human-readable format
+ */
+function formatDate(date, format = 'DD MMM YYYY') {
+    if (!date) return '-';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return String(date);
+    if (format === 'hh:mm A') {
+        return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/**
  * Renders Breadcrumbs HTML
  */
 function renderBreadcrumbs(items) {
@@ -178,6 +191,7 @@ function viewHelpers(req, res, next) {
     res.locals.e = e;
     res.locals.nl2br = nl2br;
     res.locals.numberFormat = numberFormat;
+    res.locals.formatDate = formatDate;
     res.locals.renderBreadcrumbs = renderBreadcrumbs;
     res.locals.renderPagination = renderPagination;
     res.locals.formatCustomerBalance = formatCustomerBalance;
@@ -200,6 +214,7 @@ module.exports = {
     e,
     nl2br,
     numberFormat,
+    formatDate,
     renderBreadcrumbs,
     renderPagination,
     formatCustomerBalance,
