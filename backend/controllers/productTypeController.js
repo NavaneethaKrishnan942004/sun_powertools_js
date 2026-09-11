@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 
 async function generateProductTypeCode(conn) {
     const [rows] = await conn.query("SELECT product_type_code FROM product_type_master ORDER BY id DESC LIMIT 1");
@@ -126,11 +127,13 @@ const productTypeController = {
                 if (errors.length === 0) {
                     const typeCode = await generateProductTypeCode(db);
                     const createdBy = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
+                    const nextId = await getNextId(db, 'product_type_master');
 
                     await db.query(`
-                        INSERT INTO product_type_master (product_type_code, product_type_name, description, status, created_by, created_at)
-                        VALUES (:product_type_code, :product_type_name, :description, :status, :created_by, NOW())
+                        INSERT INTO product_type_master (id, product_type_code, product_type_name, description, status, created_by, created_at)
+                        VALUES (:id, :product_type_code, :product_type_name, :description, :status, :created_by, NOW())
                     `, {
+                        id: nextId,
                         product_type_code: typeCode,
                         product_type_name: productTypeName,
                         description: description || null,
@@ -242,7 +245,7 @@ const productTypeController = {
             res.redirect('/product-types');
         } catch (err) {
             console.error('[ProductTypeController.save] Error:', err);
-            res.status(500).send('Internal Server Error');
+            res.status(500).send('Internal Server Error: ' + err.message);
         }
     },
 

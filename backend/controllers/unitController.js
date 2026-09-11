@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 
 async function generateUnitCode(conn) {
     const [rows] = await conn.query("SELECT unit_code FROM unit_master ORDER BY id DESC LIMIT 1");
@@ -126,11 +127,13 @@ const unitController = {
                 if (errors.length === 0) {
                     const unitCode = await generateUnitCode(db);
                     const createdBy = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
+                    const nextId = await getNextId(db, 'unit_master');
 
                     await db.query(`
-                        INSERT INTO unit_master (unit_code, unit_name, description, status, created_by, created_at)
-                        VALUES (:unit_code, :unit_name, :description, :status, :created_by, NOW())
+                        INSERT INTO unit_master (id, unit_code, unit_name, description, status, created_by, created_at)
+                        VALUES (:id, :unit_code, :unit_name, :description, :status, :created_by, NOW())
                     `, {
+                        id: nextId,
                         unit_code: unitCode,
                         unit_name: unitName,
                         description: description || null,
@@ -242,7 +245,7 @@ const unitController = {
             res.redirect('/units');
         } catch (err) {
             console.error('[UnitController.save] Error:', err);
-            res.status(500).send('Internal Server Error');
+            res.status(500).send('Internal Server Error: ' + err.message);
         }
     },
 

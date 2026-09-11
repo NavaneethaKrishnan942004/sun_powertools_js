@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 const { getCustomerFinancialSummary } = require('../utils/customerHelper');
 const { evaluateCreditStatus } = require('../utils/salesNoteHelper');
 const {
@@ -348,6 +349,7 @@ exports.createRental = async (req, res) => {
 
         // 2. Generate unique rental number
         const rentalNo = await generateRentalNumber(conn);
+        const nextRentalId = await getNextId(conn, 'rentals');
 
         // 3. Insert into rentals table
         const mysqlCheckIn = formatMysqlDatetime(checkInDatetimeStr);
@@ -355,6 +357,7 @@ exports.createRental = async (req, res) => {
 
         const [rentalInsert] = await conn.query(
             `INSERT INTO rentals (
+                id,
                 rental_no,
                 customer_id,
                 product_id,
@@ -371,8 +374,9 @@ exports.createRental = async (req, res) => {
                 notes,
                 created_by,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, NOW())`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, NOW())`,
             [
+                nextRentalId,
                 rentalNo,
                 customerId,
                 productId,
@@ -402,9 +406,11 @@ exports.createRental = async (req, res) => {
         const effectiveTotal = totalEstimatedAmount > 0 ? totalEstimatedAmount : (advanceRentalAmount > 0 ? advanceRentalAmount : rentalRate);
         const debitAmount = Math.max(0, effectiveTotal - advanceRentalAmount);
         const paymentStatus = (advanceRentalAmount >= effectiveTotal && effectiveTotal > 0) ? 'Paid' : ((advanceRentalAmount > 0.001) ? 'Partial' : 'Unpaid');
+        const nextTxId = await getNextId(conn, 'customer_transactions');
 
         await conn.query(
             `INSERT INTO customer_transactions (
+                id,
                 customer_id,
                 transaction_type,
                 reference_number,
@@ -420,8 +426,9 @@ exports.createRental = async (req, res) => {
                 notes,
                 created_by,
                 created_at
-            ) VALUES (?, 'rental', ?, ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
+            ) VALUES (?, ?, 'rental', ?, ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
             [
+                nextTxId,
                 customerId,
                 rentalNo,
                 mysqlCheckIn,

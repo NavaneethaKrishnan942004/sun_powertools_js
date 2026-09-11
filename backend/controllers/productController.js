@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 
 async function generateProductCode() {
     const [rows] = await pool.query(`
@@ -311,9 +312,11 @@ exports.createProduct = async (req, res) => {
             const productCode = await generateProductCode();
             const createdBy = req.session.user_id ? parseInt(req.session.user_id, 10) : 1;
             const createdAt = new Date();
+            const nextProductId = await getNextId(conn, 'product_master');
 
             const [insertResult] = await conn.query(
                 `INSERT INTO product_master (
+                    id,
                     product_code,
                     product_name,
                     short_name,
@@ -339,8 +342,9 @@ exports.createProduct = async (req, res) => {
                     status,
                     created_by,
                     created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
+                    nextProductId,
                     productCode,
                     productName,
                     shortName,
@@ -369,7 +373,7 @@ exports.createProduct = async (req, res) => {
                 ]
             );
 
-            const productId = insertResult.insertId;
+            const productId = insertResult.insertId || nextProductId;
 
             // Rental Rates
             if (rentalAvailable === 1) {
@@ -379,17 +383,20 @@ exports.createProduct = async (req, res) => {
                     const rentalUnitId = (body.rental_unit_id && body.rental_unit_id[period]) ? parseInt(body.rental_unit_id[period], 10) : null;
                     const securityDeposit = (body.security_deposit && body.security_deposit[period]) ? body.security_deposit[period].trim() : '';
                     const rentalRate = (body.rental_rate && body.rental_rate[period]) ? body.rental_rate[period].trim() : '';
+                    const nextPrrId = await getNextId(conn, 'product_rental_rates');
 
                     await conn.query(
                         `INSERT INTO product_rental_rates (
+                            id,
                             product_id,
                             rental_period,
                             available,
                             rental_unit_id,
                             security_deposit,
                             rental_rate
-                        ) VALUES (?, ?, ?, ?, ?, ?)`,
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                         [
+                            nextPrrId,
                             productId,
                             period,
                             available,
@@ -406,15 +413,18 @@ exports.createProduct = async (req, res) => {
                 const file = files[i];
                 const imagePath = 'uploads/products/' + file.filename;
                 const isPrimary = (i === 0) ? 1 : 0;
+                const nextImgId = await getNextId(conn, 'product_images');
 
                 await conn.query(
                     `INSERT INTO product_images (
+                        id,
                         product_id,
                         image_name,
                         image_path,
                         is_primary
-                    ) VALUES (?, ?, ?, ?)`,
+                    ) VALUES (?, ?, ?, ?, ?)`,
                     [
+                        nextImgId,
                         productId,
                         file.originalname,
                         imagePath,
@@ -659,22 +669,25 @@ exports.editProduct = async (req, res) => {
                     const rentalUnitId = (body.rental_unit_id && body.rental_unit_id[period]) ? parseInt(body.rental_unit_id[period], 10) : null;
                     const securityDeposit = (body.security_deposit && body.security_deposit[period]) ? body.security_deposit[period].trim() : '';
                     const rentalRate = (body.rental_rate && body.rental_rate[period]) ? body.rental_rate[period].trim() : '';
+                    const nextPrrId = await getNextId(conn, 'product_rental_rates');
 
                     await conn.query(
                         `INSERT INTO product_rental_rates (
+                            id,
                             product_id,
                             rental_period,
                             available,
                             rental_unit_id,
                             security_deposit,
                             rental_rate
-                        ) VALUES (?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
                             available = VALUES(available),
                             rental_unit_id = VALUES(rental_unit_id),
                             security_deposit = VALUES(security_deposit),
                             rental_rate = VALUES(rental_rate)`,
                         [
+                            nextPrrId,
                             id,
                             period,
                             available,
@@ -693,14 +706,17 @@ exports.editProduct = async (req, res) => {
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     const imagePath = 'uploads/products/' + file.filename;
+                    const nextImgId = await getNextId(conn, 'product_images');
                     await conn.query(
                         `INSERT INTO product_images (
+                            id,
                             product_id,
                             image_name,
                             image_path,
                             is_primary
-                        ) VALUES (?, ?, ?, 0)`,
+                        ) VALUES (?, ?, ?, ?, 0)`,
                         [
+                            nextImgId,
                             id,
                             file.originalname,
                             imagePath

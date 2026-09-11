@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 
 async function generateBrandCode(conn) {
     const [rows] = await conn.query("SELECT brand_code FROM brand_master ORDER BY id DESC LIMIT 1");
@@ -126,11 +127,13 @@ const brandController = {
                 if (errors.length === 0) {
                     const brandCode = await generateBrandCode(db);
                     const createdBy = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
+                    const nextId = await getNextId(db, 'brand_master');
 
                     await db.query(`
-                        INSERT INTO brand_master (brand_code, brand_name, description, status, created_by, created_at)
-                        VALUES (:brand_code, :brand_name, :description, :status, :created_by, NOW())
+                        INSERT INTO brand_master (id, brand_code, brand_name, description, status, created_by, created_at)
+                        VALUES (:id, :brand_code, :brand_name, :description, :status, :created_by, NOW())
                     `, {
+                        id: nextId,
                         brand_code: brandCode,
                         brand_name: brandName,
                         description: description || null,
@@ -242,7 +245,7 @@ const brandController = {
             res.redirect('/brands');
         } catch (err) {
             console.error('[BrandController.save] Error:', err);
-            res.status(500).send('Internal Server Error');
+            res.status(500).send('Internal Server Error: ' + err.message);
         }
     },
 

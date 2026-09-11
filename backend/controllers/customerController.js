@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 const { generateCustomerCode, getCustomerFinancialSummary, customerHasTransactions } = require('../utils/customerHelper');
 
 // List customers
@@ -264,9 +265,11 @@ exports.createCustomer = async (req, res) => {
         const customerCode = await generateCustomerCode();
         const createdBy = req.session.user_id ? parseInt(req.session.user_id, 10) : 1;
         const createdAt = new Date();
+        const nextId = await getNextId(pool, 'customer_master');
 
         const [insertResult] = await pool.query(
             `INSERT INTO customer_master (
+                id,
                 customer_code,
                 customer_name,
                 customer_type,
@@ -291,8 +294,9 @@ exports.createCustomer = async (req, res) => {
                 status,
                 created_by,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
+                nextId,
                 customerCode,
                 formData.customer_name,
                 formData.customer_type,
@@ -324,7 +328,7 @@ exports.createCustomer = async (req, res) => {
 
         const isAjax = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || body.ajax === '1';
         if (isAjax) {
-            const newCustId = insertResult.insertId;
+            const newCustId = insertResult.insertId || nextId;
             return res.json({
                 success: true,
                 message: successMsg,

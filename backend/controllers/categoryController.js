@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 
 async function generateCategoryCode(conn) {
     const [rows] = await conn.query("SELECT category_code FROM category_master ORDER BY id DESC LIMIT 1");
@@ -126,11 +127,13 @@ const categoryController = {
                 if (errors.length === 0) {
                     const categoryCode = await generateCategoryCode(db);
                     const createdBy = req.session?.user_id ? parseInt(req.session.user_id, 10) : 1;
+                    const nextId = await getNextId(db, 'category_master');
 
                     await db.query(`
-                        INSERT INTO category_master (category_code, category_name, description, status, created_by, created_at)
-                        VALUES (:category_code, :category_name, :description, :status, :created_by, NOW())
+                        INSERT INTO category_master (id, category_code, category_name, description, status, created_by, created_at)
+                        VALUES (:id, :category_code, :category_name, :description, :status, :created_by, NOW())
                     `, {
+                        id: nextId,
                         category_code: categoryCode,
                         category_name: categoryName,
                         description: description || null,
@@ -244,7 +247,7 @@ const categoryController = {
             res.redirect('/categories');
         } catch (err) {
             console.error('[CategoryController.save] Error:', err);
-            res.status(500).send('Internal Server Error');
+            res.status(500).send('Internal Server Error: ' + err.message);
         }
     },
 

@@ -6,6 +6,7 @@ const path = require('path');
 // Middlewares
 const { attachUserContext } = require('./middleware/auth');
 const { viewHelpers } = require('./middleware/viewHelpers');
+const { ensureSchema } = require('./config/ensureSchema');
 
 // Route Modules
 const authRoutes = require('./routes/authRoutes');
@@ -89,6 +90,21 @@ app.use('/', salesNoteRoutes);
 app.use('/', rentalRoutes);
 app.use('/', reportRoutes);
 
+// Admin / Schema Fix Endpoint
+app.get('/api/fix-schema', async (req, res) => {
+    try {
+        const isAdmin = req.session && req.session.role === 'admin';
+        const validKey = req.query.secret && req.query.secret === (process.env.SESSION_SECRET || 'sun_powertools_secret_key_123');
+        if (!isAdmin && !validKey) {
+            return res.status(403).json({ success: false, message: 'Unauthorized. Admin login or secret required.' });
+        }
+        await ensureSchema();
+        return res.json({ success: true, message: 'Database schema verified and updated successfully.' });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // 404 Handler
 app.use((req, res) => {
     if (req.xhr || req.headers.accept?.includes('application/json')) {
@@ -117,6 +133,11 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`  Sun PowerTools Node.js Backend Server  `);
     console.log(`  Running on: http://${HOST}:${PORT}   `);
     console.log(`=========================================`);
+    
+    // Automatically verify and repair table schemas (AUTO_INCREMENT compatibility for TiDB Cloud & MySQL)
+    ensureSchema().catch(err => {
+        console.error('[Startup Schema Error]', err.message);
+    });
 });
 
 server.on('error', (err) => {

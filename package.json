@@ -8,7 +8,9 @@
     "dev": "node --watch backend/server.js",
     "test": "node backend/test_integration.js",
     "test:workflow": "node backend/test_full_workflow.js",
-    "test:rental": "node backend/test_rental_workflow.js"
+    "test:rental": "node backend/test_rental_workflow.js",
+    "test:autoid": "node backend/test_auto_id_and_masters.js",
+    "fix-schema": "node backend/scripts/fix_schema.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

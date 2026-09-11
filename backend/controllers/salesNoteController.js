@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getNextId } = require('../utils/idHelper');
 const { getCustomerFinancialSummary } = require('../utils/customerHelper');
 const { generateSalesNoteNumber, evaluateCreditStatus, getSalesAnalytics, getPaymentStatusInfo, getSaleTypeInfo, getPaymentTypeBadge, buildPaymentsList } = require('../utils/salesNoteHelper');
 
@@ -720,15 +721,17 @@ exports.createSalesNote = async (req, res) => {
             // Record customer financial transaction ONLY if customer is selected
             if (finalCustomerId) {
                 const paymentStatus = (paidAmount >= grandTotal - 0.001) ? 'Paid' : ((paidAmount > 0.001) ? 'Partial' : 'Unpaid');
+                const nextTxId = await getNextId(conn, 'customer_transactions');
 
                 await conn.query(
                     `INSERT INTO customer_transactions (
-                        customer_id, transaction_type, reference_number, transaction_date,
+                        id, customer_id, transaction_type, reference_number, transaction_date,
                         total_amount, paid_amount, debit_amount, credit_amount,
                         payment_method, payment_status, reason, notes,
                         created_by, created_at
-                    ) VALUES (?, 'sale', ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
+                    ) VALUES (?, ?, 'sale', ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
                     [
+                        nextTxId,
                         finalCustomerId,
                         finalNoteNo,
                         `${salesDate} ${salesTime}:00`,
@@ -1223,15 +1226,17 @@ exports.editSalesNote = async (req, res) => {
             // STEP 7: Re-insert customer_transaction
             if (finalCustomerId) {
                 const paymentStatus = (paidAmount >= grandTotal - 0.001) ? 'Paid' : ((paidAmount > 0.001) ? 'Partial' : 'Unpaid');
+                const nextTxId = await getNextId(conn, 'customer_transactions');
 
                 await conn.query(
                     `INSERT INTO customer_transactions (
-                        customer_id, transaction_type, reference_number, transaction_date,
+                        id, customer_id, transaction_type, reference_number, transaction_date,
                         total_amount, paid_amount, debit_amount, credit_amount,
                         payment_method, payment_status, reason, notes,
                         created_by, created_at
-                    ) VALUES (?, 'sale', ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
+                    ) VALUES (?, ?, 'sale', ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, NOW())`,
                     [
+                        nextTxId,
                         finalCustomerId,
                         sale.sales_note_no,
                         `${salesDate} ${salesTime}:00`,
@@ -1522,15 +1527,17 @@ exports.receivePayment = async (req, res) => {
                 const txDate = paymentDateInput ? `${paymentDateInput} 00:00:00` : defaultDate;
 
                 const paymentStatus = (newPaid >= totalAmount - 0.001) ? 'Paid' : 'Partial';
+                const nextTxId = await getNextId(conn, 'customer_transactions');
 
                 await conn.query(
                     `INSERT INTO customer_transactions (
-                        customer_id, transaction_type, reference_number, transaction_date,
+                        id, customer_id, transaction_type, reference_number, transaction_date,
                         total_amount, paid_amount, debit_amount, credit_amount,
                         payment_method, payment_status, reason, notes,
                         created_by, created_at
-                    ) VALUES (?, 'payment', ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, ?, NOW())`,
+                    ) VALUES (?, ?, 'payment', ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, ?, NOW())`,
                     [
+                        nextTxId,
                         sale.customer_id,
                         sale.sales_note_no,
                         txDate,
@@ -1539,8 +1546,8 @@ exports.receivePayment = async (req, res) => {
                         paymentAmount,
                         actualPaymentMethod,
                         paymentStatus,
-                        defaultPaymentReason,
-                        notes || `Payment ${paymentNumber}`,
+                        `Payment on Credit Sale ${sale.sales_note_no}`,
+                        notes || null,
                         userId
                     ]
                 );

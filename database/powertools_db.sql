@@ -1,25 +1,15 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Aug 29, 2026 at 06:09 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Sun PowerTools Database Dump
+-- Compatible with MySQL, MariaDB, and TiDB Cloud
+-- All tables contain inline AUTO_INCREMENT PRIMARY KEY definitions
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
-
---
--- Database: `powertools_db`
---
 
 -- --------------------------------------------------------
 
@@ -27,8 +17,8 @@ SET time_zone = "+00:00";
 -- Table structure for table `brand_master`
 --
 
-CREATE TABLE `brand_master` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `brand_master` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `brand_code` varchar(20) NOT NULL,
   `brand_name` varchar(100) NOT NULL,
   `description` varchar(200) DEFAULT NULL,
@@ -36,7 +26,10 @@ CREATE TABLE `brand_master` (
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `brand_code` (`brand_code`),
+  UNIQUE KEY `brand_name` (`brand_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -52,8 +45,8 @@ INSERT INTO `brand_master` (`id`, `brand_code`, `brand_name`, `description`, `st
 -- Table structure for table `category_master`
 --
 
-CREATE TABLE `category_master` (
-  `id` int(10) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `category_master` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `category_code` varchar(20) NOT NULL,
   `category_name` varchar(100) NOT NULL,
   `description` varchar(200) DEFAULT NULL,
@@ -61,7 +54,10 @@ CREATE TABLE `category_master` (
   `created_by` int(10) UNSIGNED NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_by` int(10) UNSIGNED DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `category_code` (`category_code`),
+  UNIQUE KEY `uq_category_name` (`category_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -81,8 +77,8 @@ INSERT INTO `category_master` (`id`, `category_code`, `category_name`, `descript
 -- Table structure for table `customer_master`
 --
 
-CREATE TABLE `customer_master` (
-  `id` int(10) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `customer_master` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `customer_code` varchar(20) NOT NULL,
   `customer_name` varchar(150) NOT NULL,
   `customer_type` enum('Individual','Business') NOT NULL DEFAULT 'Individual',
@@ -108,7 +104,11 @@ CREATE TABLE `customer_master` (
   `created_by` int(10) UNSIGNED DEFAULT NULL,
   `created_at` datetime NOT NULL,
   `updated_by` int(10) UNSIGNED DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `customer_code` (`customer_code`),
+  KEY `idx_customer_mobile` (`mobile_number`),
+  KEY `idx_customer_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -124,8 +124,8 @@ INSERT INTO `customer_master` (`id`, `customer_code`, `customer_name`, `customer
 -- Table structure for table `customer_transactions`
 --
 
-CREATE TABLE `customer_transactions` (
-  `id` int(10) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `customer_transactions` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `customer_id` int(10) UNSIGNED NOT NULL,
   `transaction_type` enum('sale','rental','payment','return','adjustment') NOT NULL,
   `reference_number` varchar(50) NOT NULL,
@@ -140,7 +140,11 @@ CREATE TABLE `customer_transactions` (
   `reason` varchar(255) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `created_by` int(10) UNSIGNED DEFAULT NULL,
-  `created_at` datetime NOT NULL
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_cust_trans` (`customer_id`),
+  KEY `idx_trans_type` (`transaction_type`),
+  KEY `idx_trans_date` (`transaction_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -149,13 +153,15 @@ CREATE TABLE `customer_transactions` (
 -- Table structure for table `product_images`
 --
 
-CREATE TABLE `product_images` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `product_images` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
   `image_name` varchar(255) NOT NULL,
   `image_path` varchar(500) NOT NULL,
   `is_primary` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `product_id` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -171,8 +177,8 @@ INSERT INTO `product_images` (`id`, `product_id`, `image_name`, `image_path`, `i
 -- Table structure for table `product_master`
 --
 
-CREATE TABLE `product_master` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `product_master` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `product_code` varchar(20) NOT NULL,
   `product_name` varchar(200) NOT NULL,
   `short_name` varchar(100) NOT NULL,
@@ -200,7 +206,12 @@ CREATE TABLE `product_master` (
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `product_code` (`product_code`),
+  KEY `idx_category_id` (`category_id`),
+  KEY `idx_brand_id` (`brand_id`),
+  KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -216,14 +227,16 @@ INSERT INTO `product_master` (`id`, `product_code`, `product_name`, `short_name`
 -- Table structure for table `product_rental_rates`
 --
 
-CREATE TABLE `product_rental_rates` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `product_rental_rates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
   `rental_period` enum('hourly','daily','weekly','monthly') NOT NULL,
   `available` tinyint(1) NOT NULL DEFAULT 0,
   `rental_unit_id` int(11) DEFAULT NULL,
   `security_deposit` decimal(12,2) DEFAULT NULL,
-  `rental_rate` decimal(12,2) DEFAULT NULL
+  `rental_rate` decimal(12,2) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_product_period` (`product_id`,`rental_period`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -242,8 +255,8 @@ INSERT INTO `product_rental_rates` (`id`, `product_id`, `rental_period`, `availa
 -- Table structure for table `product_type_master`
 --
 
-CREATE TABLE `product_type_master` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `product_type_master` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `product_type_code` varchar(20) NOT NULL,
   `product_type_name` varchar(100) NOT NULL,
   `description` varchar(200) DEFAULT NULL,
@@ -251,7 +264,10 @@ CREATE TABLE `product_type_master` (
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `product_type_code` (`product_type_code`),
+  UNIQUE KEY `product_type_name` (`product_type_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -268,7 +284,7 @@ INSERT INTO `product_type_master` (`id`, `product_type_code`, `product_type_name
 -- Table structure for table `rentals`
 --
 
-CREATE TABLE `rentals` (
+CREATE TABLE IF NOT EXISTS `rentals` (
   `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `rental_no` varchar(50) NOT NULL UNIQUE,
   `customer_id` int(10) UNSIGNED NOT NULL,
@@ -304,9 +320,7 @@ CREATE TABLE `rentals` (
   KEY `idx_rentals_customer` (`customer_id`),
   KEY `idx_rentals_product` (`product_id`),
   KEY `idx_rentals_status` (`rental_status`),
-  KEY `idx_rentals_dates` (`check_in_datetime`, `expected_checkout_datetime`),
-  CONSTRAINT `fk_rentals_customer` FOREIGN KEY (`customer_id`) REFERENCES `customer_master` (`id`),
-  CONSTRAINT `fk_rentals_product` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`)
+  KEY `idx_rentals_dates` (`check_in_datetime`, `expected_checkout_datetime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -315,10 +329,10 @@ CREATE TABLE `rentals` (
 -- Table structure for table `sales_notes`
 --
 
-CREATE TABLE `sales_notes` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `sales_notes` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `sales_note_no` varchar(50) NOT NULL,
-  `customer_id` int(10) unsigned DEFAULT NULL,
+  `customer_id` int(10) UNSIGNED DEFAULT NULL,
   `sales_date` date NOT NULL,
   `sales_time` time NOT NULL,
   `sale_type` enum('sale','credit') NOT NULL DEFAULT 'sale',
@@ -337,9 +351,9 @@ CREATE TABLE `sales_notes` (
   `credit_override` tinyint(1) NOT NULL DEFAULT 0,
   `notes` text DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT 1,
-  `created_by` int(10) unsigned DEFAULT NULL,
+  `created_by` int(10) UNSIGNED DEFAULT NULL,
   `created_at` datetime NOT NULL,
-  `updated_by` int(10) unsigned DEFAULT NULL,
+  `updated_by` int(10) UNSIGNED DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_sales_note_no` (`sales_note_no`),
@@ -354,9 +368,9 @@ CREATE TABLE `sales_notes` (
 -- Table structure for table `sales_note_items`
 --
 
-CREATE TABLE `sales_note_items` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `sales_note_id` int(10) unsigned NOT NULL,
+CREATE TABLE IF NOT EXISTS `sales_note_items` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `sales_note_id` int(10) UNSIGNED NOT NULL,
   `product_id` int(11) NOT NULL,
   `product_code` varchar(30) NOT NULL,
   `product_name` varchar(255) NOT NULL,
@@ -371,8 +385,7 @@ CREATE TABLE `sales_note_items` (
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_sni_sales_note` (`sales_note_id`),
-  KEY `idx_sni_product` (`product_id`),
-  CONSTRAINT `fk_sni_sales_note` FOREIGN KEY (`sales_note_id`) REFERENCES `sales_notes` (`id`) ON DELETE CASCADE
+  KEY `idx_sni_product` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -381,8 +394,8 @@ CREATE TABLE `sales_note_items` (
 -- Table structure for table `unit_master`
 --
 
-CREATE TABLE `unit_master` (
-  `id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `unit_master` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `unit_code` varchar(20) NOT NULL,
   `unit_name` varchar(100) NOT NULL,
   `description` varchar(200) DEFAULT NULL,
@@ -390,7 +403,10 @@ CREATE TABLE `unit_master` (
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unit_code` (`unit_code`),
+  UNIQUE KEY `unit_name` (`unit_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -412,8 +428,8 @@ INSERT INTO `unit_master` (`id`, `unit_code`, `unit_name`, `description`, `statu
 -- Table structure for table `user_master`
 --
 
-CREATE TABLE `user_master` (
-  `id` int(10) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `user_master` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` varchar(20) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
@@ -432,7 +448,11 @@ CREATE TABLE `user_master` (
   `status` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` datetime NOT NULL,
   `updated_at` datetime DEFAULT NULL,
-  `last_login_at` datetime DEFAULT NULL
+  `last_login_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id` (`user_id`),
+  UNIQUE KEY `uk_user_email` (`user_email`),
+  UNIQUE KEY `uk_user_phone` (`user_phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -443,190 +463,25 @@ INSERT INTO `user_master` (`id`, `user_id`, `first_name`, `last_name`, `gender`,
 (1, 'US-001', NULL, NULL, NULL, NULL, 'Admin123', 'admin123@gmail.com', '9345988595', NULL, NULL, NULL, NULL, NULL, '$2y$10$v9olNAjtygmq0ewOxSlQ2.dCmKBKIrfqjcAsMHwhvDfmkiPLqPP2W', 'admin', 1, '2026-08-25 14:20:44', '2026-08-25 14:21:13', NULL),
 (2, 'US-002', 'Navaneetha', 'Krishnan', 'Male', '2004-04-09', 'Navaneetha9345', 'navaneetha123@gmail.com', '9345988594', '', '', '', '', 'US-002_ef37f26a871a54b1.jpg', '$2y$10$BiW22MLUqmhvdZ3GM3cGZ.vZOhwUyH4hYfauXUQTPrXVWpMmjmfAK', 'admin', 1, '2026-08-25 14:56:38', '2026-08-26 10:08:12', '2026-08-28 15:15:01');
 
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `brand_master`
---
-ALTER TABLE `brand_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `brand_code` (`brand_code`),
-  ADD UNIQUE KEY `brand_name` (`brand_name`);
-
---
--- Indexes for table `category_master`
---
-ALTER TABLE `category_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `category_code` (`category_code`),
-  ADD UNIQUE KEY `uq_category_name` (`category_name`);
-
---
--- Indexes for table `customer_master`
---
-ALTER TABLE `customer_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `customer_code` (`customer_code`),
-  ADD KEY `idx_customer_mobile` (`mobile_number`),
-  ADD KEY `idx_customer_status` (`status`);
-
---
--- Indexes for table `customer_transactions`
---
-ALTER TABLE `customer_transactions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_cust_trans` (`customer_id`),
-  ADD KEY `idx_trans_type` (`transaction_type`),
-  ADD KEY `idx_trans_date` (`transaction_date`);
-
---
--- Indexes for table `product_images`
---
-ALTER TABLE `product_images`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `product_id` (`product_id`);
-
---
--- Indexes for table `product_master`
---
-ALTER TABLE `product_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `product_code` (`product_code`),
-  ADD KEY `idx_category_id` (`category_id`),
-  ADD KEY `idx_brand_id` (`brand_id`),
-  ADD KEY `idx_status` (`status`);
-
---
--- Indexes for table `product_rental_rates`
---
-ALTER TABLE `product_rental_rates`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_product_period` (`product_id`,`rental_period`);
-
---
--- Indexes for table `product_type_master`
---
-ALTER TABLE `product_type_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `product_type_code` (`product_type_code`),
-  ADD UNIQUE KEY `product_type_name` (`product_type_name`);
-
---
--- Indexes for table `unit_master`
---
-ALTER TABLE `unit_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unit_code` (`unit_code`),
-  ADD UNIQUE KEY `unit_name` (`unit_name`);
-
---
--- Indexes for table `user_master`
---
-ALTER TABLE `user_master`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_user_id` (`user_id`),
-  ADD UNIQUE KEY `uk_user_email` (`user_email`),
-  ADD UNIQUE KEY `uk_user_phone` (`user_phone`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `brand_master`
---
-ALTER TABLE `brand_master`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `category_master`
---
-ALTER TABLE `category_master`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
-
---
--- AUTO_INCREMENT for table `customer_master`
---
-ALTER TABLE `customer_master`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `customer_transactions`
---
-ALTER TABLE `customer_transactions`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `product_images`
---
-ALTER TABLE `product_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `product_master`
---
-ALTER TABLE `product_master`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `product_rental_rates`
---
-ALTER TABLE `product_rental_rates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `product_type_master`
---
-ALTER TABLE `product_type_master`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `sales_notes`
---
-ALTER TABLE `sales_notes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `sales_note_items`
---
-ALTER TABLE `sales_note_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `unit_master`
---
-ALTER TABLE `unit_master`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `user_master`
---
-ALTER TABLE `user_master`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+-- --------------------------------------------------------
 
 --
 -- Constraints for dumped tables
 --
 
---
--- Constraints for table `product_images`
---
 ALTER TABLE `product_images`
   ADD CONSTRAINT `product_images_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`) ON DELETE CASCADE;
 
---
--- Constraints for table `product_rental_rates`
---
 ALTER TABLE `product_rental_rates`
   ADD CONSTRAINT `product_rental_rates_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`) ON DELETE CASCADE;
 
---
--- Constraints for table `sales_note_items`
---
 ALTER TABLE `sales_note_items`
   ADD CONSTRAINT `fk_sni_sales_note` FOREIGN KEY (`sales_note_id`) REFERENCES `sales_notes` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `rentals`
+  ADD CONSTRAINT `fk_rentals_customer` FOREIGN KEY (`customer_id`) REFERENCES `customer_master` (`id`),
+  ADD CONSTRAINT `fk_rentals_product` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`);
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

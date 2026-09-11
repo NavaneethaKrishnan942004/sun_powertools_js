@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const { getNextId } = require('../utils/idHelper');
 
 const generateUserId = async () => {
     const [rows] = await db.query('SELECT user_id FROM user_master ORDER BY id DESC LIMIT 1');
@@ -175,11 +176,12 @@ const createProcess = async (req, res, next) => {
 
         const uid = await generateUserId();
         const hashedPassword = await bcrypt.hash(password, 10);
+        const nextId = await getNextId(db, 'user_master');
 
         await db.query(
-            `INSERT INTO user_master (user_id, user_name, user_email, user_phone, password, role, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [uid, userName, userEmail, userPhone, hashedPassword, role, status]
+            `INSERT INTO user_master (id, user_id, user_name, user_email, user_phone, password, role, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [nextId, uid, userName, userEmail, userPhone, hashedPassword, role, status]
         );
 
         res.redirect(`manage_user.php?success=${encodeURIComponent(`User ${uid} created successfully.`)}`);
