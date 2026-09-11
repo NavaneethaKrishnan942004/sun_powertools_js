@@ -35,8 +35,10 @@ const sslRequested = process.env.DB_SSL !== undefined
     : (!isLocalhost && process.env.NODE_ENV === 'production');
 
 if (sslRequested && !isLocalhost) {
+    const rejectUnauth = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true;
     poolConfig.ssl = {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true'
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: rejectUnauth
     };
 }
 
