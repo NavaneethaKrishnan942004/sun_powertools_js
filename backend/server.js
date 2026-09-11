@@ -25,6 +25,10 @@ const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Trust reverse proxy for Render / Cloudflare (HTTPS termination & client IP)
+app.set('trust proxy', 1);
 
 // Set View Engine (EJS)
 app.set('views', path.join(__dirname, 'views'));
@@ -42,7 +46,8 @@ app.use(session({
     cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
         httpOnly: true,
-        sameSite: 'lax'
+        sameSite: 'lax',
+        secure: 'auto' // Secure on HTTPS (Render), works on HTTP (localhost)
     }
 }));
 
@@ -98,17 +103,19 @@ app.use((req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error('[Server Error]', err);
+    const isProd = process.env.NODE_ENV === 'production';
+    const clientMessage = isProd ? 'An unexpected error occurred. Please try again later.' : (err.message || 'Internal Server Error');
     if (req.xhr || req.headers.accept?.includes('application/json')) {
-        return res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
+        return res.status(500).json({ success: false, message: clientMessage });
     }
-    res.status(500).send(`<h3>An unexpected error occurred</h3><p>${err.message}</p><a href="/">Return to Dashboard</a>`);
+    res.status(500).send(`<h3>An unexpected error occurred</h3><p>${clientMessage}</p><a href="/">Return to Dashboard</a>`);
 });
 
 // Start Server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, HOST, () => {
     console.log(`=========================================`);
     console.log(`  Sun PowerTools Node.js Backend Server  `);
-    console.log(`  Running on: http://localhost:${PORT}   `);
+    console.log(`  Running on: http://${HOST}:${PORT}   `);
     console.log(`=========================================`);
 });
 

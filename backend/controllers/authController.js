@@ -67,7 +67,24 @@ const processLogin = async (req, res, next) => {
             userName
         });
     } catch (err) {
-        next(err);
+        console.error('[Auth Error] Login processing failed:', err.message, err.code ? `(${err.code})` : '');
+
+        // Handle database connection issues gracefully without exposing raw connection details to browser
+        const isDbConnError = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ER_ACCESS_DENIED_ERROR', 'PROTOCOL_CONNECTION_LOST', 'ER_BAD_DB_ERROR', 'EHOSTUNREACH'].includes(err.code);
+
+        if (isDbConnError) {
+            return res.status(503).render('login', {
+                pageTitle: 'Sign In | Sun PowerTools ERP',
+                error: 'Database connection error. Please verify the database server is running and configured correctly.',
+                userName: (req.body && req.body.user_name) ? req.body.user_name : ''
+            });
+        }
+
+        return res.status(500).render('login', {
+            pageTitle: 'Sign In | Sun PowerTools ERP',
+            error: 'An unexpected authentication error occurred. Please try again.',
+            userName: (req.body && req.body.user_name) ? req.body.user_name : ''
+        });
     }
 };
 
