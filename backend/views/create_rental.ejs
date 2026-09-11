@@ -1,771 +1,1012 @@
 <%- include('includes/header') %>
 
-<main class="main-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
+    <main class="main-content">
+        <div class="container-fluid px-3 px-lg-4 py-4">
 
-        <!-- Breadcrumb Navigation -->
-        <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: '/' },
-            { title: 'Rentals', link: '/rentals' },
-            { title: 'Rental Checkout' }
-        ]) %>
+            <!-- Breadcrumb Navigation -->
+            <%- renderBreadcrumbs([ { title: '' , icon: 'bi bi-house-door' , link: '/' }, { title: 'Rentals' ,
+                link: '/rentals' }, { title: 'Rental Checkout' } ]) %>
 
-        <!-- PAGE TITLE -->
-        <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
-            <div>
-                <h1 class="page-title mb-1">
-                    <i class="bi bi-cart-plus text-primary me-2"></i>Rental Checkout
-                </h1>
-                <p class="text-muted mb-0">Create a new tool rental, calculate expected return schedules, and record security deposits.</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="/rentals" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i> Back to Rentals
-                </a>
-            </div>
+                <!-- PAGE TITLE -->
+                <div
+                    class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+                    <div>
+                        <h1 class="page-title mb-1">
+                            <i class="bi bi-cart-plus text-primary me-2"></i>Rental Checkout
+                        </h1>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/rentals" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Rentals
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VALIDATION ERRORS -->
+                <% if (errors && errors.length> 0) { %>
+                    <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                            <strong class="fs-6">Please correct the following errors:</strong>
+                        </div>
+                        <ul class="mb-0 ps-3">
+                            <% errors.forEach(err=> { %>
+                                <li>
+                                    <%= err %>
+                                </li>
+                                <% }) %>
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <% } %>
+
+                        <!-- MAIN RENTAL FORM -->
+                        <form method="POST" action="/rentals/create" id="rentalCheckoutForm" novalidate>
+                            <div class="row g-4">
+
+                                <!-- LEFT COLUMN: CUSTOMER & PRODUCT SELECTION & TIMING -->
+                                <div class="col-12 col-xl-8">
+
+                                    <!-- 1. CUSTOMER SELECTION CARD -->
+                                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                                        <div
+                                            class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <h5 class="fw-bold mb-0 text-primary">
+                                                <i class="bi bi-person-badge me-2"></i>1. Customer Information
+                                            </h5>
+                                            <button type="button" class="btn btn-sm btn-primary shadow-sm"
+                                                data-bs-toggle="modal" data-bs-target="#quickAddCustomerModal">
+                                                <i class="bi bi-plus-lg me-1"></i> Add Customer
+                                            </button>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="row g-3">
+                                                <!-- Customer Selection -->
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-semibold">Select Customer <span
+                                                            class="text-danger">*</span></label>
+                                                    <select name="customer_id" id="customerSelect" class="form-select"
+                                                        required>
+                                                        <option value="">-- Select Customer from Database --</option>
+                                                        <% customers.forEach(c=> { %>
+                                                            <option value="<%= c.id %>" <%=(old &&
+                                                                String(old.customer_id)===String(c.id)) ? 'selected'
+                                                                : '' %>
+                                                                >
+                                                                <%= c.customer_code %> - <%= c.customer_name %> (<%=
+                                                                            c.mobile_number %>)
+                                                            </option>
+                                                            <% }) %>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- DYNAMIC CUSTOMER PROFILE WIDGET -->
+                                            <div id="customerProfileBox"
+                                                class="mt-3 p-3 rounded-3 border bg-surface-soft d-none">
+                                                <div
+                                                    class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                                                    <div>
+                                                        <h6 class="fw-bold mb-0 text-body" id="dispCustName">Customer
+                                                            Name</h6>
+                                                        <span class="text-muted small" id="dispCustCode">CUS-001</span>
+                                                        &bull;
+                                                        <span class="text-muted small"
+                                                            id="dispCustMobile">9876543210</span>
+                                                    </div>
+                                                    <div id="dispCreditBadge">
+                                                        <span class="badge bg-success-subtle text-success">Active
+                                                            Customer</span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row g-2 text-center">
+                                                    <div class="col-6 col-sm-4">
+                                                        <div class="p-2 bg-surface rounded border">
+                                                            <span class="text-muted small d-block">Credit Limit</span>
+                                                            <strong class="fs-6 text-body"
+                                                                id="dispCreditLimit">₹0.00</strong>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6 col-sm-4">
+                                                        <div class="p-2 bg-surface rounded border">
+                                                            <span class="text-muted small d-block">Current
+                                                                Outstanding</span>
+                                                            <strong class="fs-6 text-danger"
+                                                                id="dispPrevOutstanding">₹0.00</strong>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 col-sm-4">
+                                                        <div class="p-2 bg-surface rounded border text-start">
+                                                            <span class="text-muted small d-block">Address</span>
+                                                            <span class="small text-truncate d-block"
+                                                                id="dispCustAddress">-</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. PRODUCT SELECTION CARD -->
+                                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                                        <div class="card-header bg-surface py-3 px-4 border-bottom">
+                                            <h5 class="fw-bold mb-0 text-primary">
+                                                <i class="bi bi-box-seam me-2"></i>2. Rental Product Selection
+                                            </h5>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="row g-3">
+                                                <!-- Product Select -->
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-semibold">Select Rental Product
+                                                        <span class="text-danger">*</span></label>
+                                                    <select name="product_id" id="productSelect" class="form-select"
+                                                        required>
+                                                        <option value="">-- Choose Rental Equipment --</option>
+                                                        <% products.forEach(p=> { %>
+                                                            <option value="<%= p.id %>" <%=(old &&
+                                                                String(old.product_id)===String(p.id)) ? 'selected' : ''
+                                                                %>
+                                                                >
+                                                                <%= p.product_code %> - <%= p.product_name %> (Available
+                                                                        Stock: <%= p.stock_quantity %>)
+                                                            </option>
+                                                            <% }) %>
+                                                    </select>
+                                                    
+                                                </div>
+                                            </div>
+
+                                            <!-- DYNAMIC PRODUCT PROFILE & RATE MATRIX -->
+                                            <div id="productProfileBox"
+                                                class="mt-3 p-3 rounded-3 border bg-surface-soft d-none">
+                                                <div class="row g-3 align-items-center">
+                                                    <div class="col-12 col-md-8">
+                                                        <h6 class="fw-bold mb-1 text-primary" id="dispProdName">Product
+                                                            Name</h6>
+                                                        <div class="small text-muted mb-2">
+                                                            <span class="badge bg-light text-dark border"
+                                                                id="dispProdCode">PRO-001</span> &bull;
+                                                            <span id="dispProdCategory">Category</span> &bull;
+                                                            <span id="dispProdBrand">Brand</span>
+                                                        </div>
+                                                        <div>
+                                                            <span
+                                                                class="badge bg-success-subtle text-success border border-success-subtle">
+                                                                <i class="bi bi-check2-circle me-1"></i>In Stock:
+                                                                <strong id="dispProdStock">0</strong> units
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 col-md-4 text-md-end"
+                                                        id="dispProdImageContainer">
+                                                        <img src="" id="dispProdImage"
+                                                            class="img-fluid rounded border d-none"
+                                                            style="max-height: 80px; object-fit: cover;" alt="Product">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Available Rental Rates Matrix -->
+                                                <div class="mt-3 pt-3 border-top">
+                                                    <label class="form-label small fw-bold text-muted mb-2">Configured
+                                                        Rental Rates:</label>
+                                                    <div class="row g-2" id="rentalRatesPills">
+                                                        <!-- Populated dynamically via JS -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. RENTAL PERIOD, DURATION & SCHEDULE CARD -->
+                                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                                        <div class="card-header bg-surface py-3 px-4 border-bottom">
+                                            <h5 class="fw-bold mb-0 text-primary">
+                                                <i class="bi bi-calendar2-range me-2"></i>3. Rental Period, Duration &
+                                                Schedule
+                                            </h5>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="row g-3">
+                                                <!-- Billing Period -->
+                                                <div class="col-12 col-sm-6 col-md-4">
+                                                    <label class="form-label small fw-semibold">Billing Period <span
+                                                            class="text-danger">*</span></label>
+                                                    <select name="rental_period_type" id="rentalPeriodType"
+                                                        class="form-select" required>
+                                                        <option value="daily" <%=(old &&
+                                                            (old.rental_period_type==='daily' ||
+                                                            old.rental_period_type==='days' )) ? 'selected' :
+                                                            (!old?.rental_period_type ? 'selected' : '' ) %>>Days
+                                                        </option>
+                                                        <option value="hourly" <%=(old &&
+                                                            (old.rental_period_type==='hourly' ||
+                                                            old.rental_period_type==='hours' )) ? 'selected' : '' %>
+                                                            >Hours</option>
+                                                        <option value="weekly" <%=(old &&
+                                                            (old.rental_period_type==='weekly' ||
+                                                            old.rental_period_type==='weeks' )) ? 'selected' : '' %>
+                                                            >Weeks</option>
+                                                        <option value="monthly" <%=(old &&
+                                                            (old.rental_period_type==='monthly' ||
+                                                            old.rental_period_type==='months' )) ? 'selected' : '' %>
+                                                            >Months</option>
+                                                    </select>
+                                                    <small class="text-muted">Select rental charging cycle.</small>
+                                                </div>
+
+                                                <!-- Estimated Rental Duration -->
+                                                <div class="col-12 col-sm-6 col-md-4">
+                                                    <label class="form-label small fw-semibold" id="durationLabel">
+                                                        Estimated Days <span class="text-danger">*</span>
+                                                    </label>
+                                                    <div class="input-group">
+                                                        <input type="number" name="estimated_duration"
+                                                            id="estimatedDurationInput" class="form-control" min="1"
+                                                            step="1"
+                                                            value="<%= (old && old.estimated_duration) || defaultEstimatedDuration || 1 %>"
+                                                            required>
+                                                        <span class="input-group-text" id="durationUnitText">Days</span>
+                                                    </div>
+                                                    <small class="text-muted" id="durationHelpText">Duration expected
+                                                        for rental.</small>
+                                                </div>
+
+                                                <!-- Rental Rate -->
+                                                <div class="col-12 col-sm-12 col-md-4">
+                                                    <label class="form-label small fw-semibold">Rental Rate (₹) <span
+                                                            class="text-danger">*</span></label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">₹</span>
+                                                        <input type="number" step="0.01" min="0" name="rental_rate"
+                                                            id="rentalRateInput" class="form-control"
+                                                            value="<%= (old && old.rental_rate) || '0.00' %>">
+                                                    </div>
+                                                    <small class="text-muted" id="rateUnitNote">Per chosen billing
+                                                        period.</small>
+                                                </div>
+
+                                                <!-- Check-In Date & Time (Rental Start) -->
+                                                <div class="col-12 col-sm-6">
+                                                    <label class="form-label small fw-semibold">
+                                                        <i class="bi bi-box-arrow-right text-success me-1"></i>Rental
+                                                        Start Date & Time <span class="text-danger">*</span>
+                                                    </label>
+                                                    <input type="datetime-local" name="check_in_datetime"
+                                                        id="checkInDatetime" class="form-control"
+                                                        value="<%= (old && old.check_in_datetime) || defaultCheckIn %>"
+                                                        required>
+                                                    <small class="text-muted">Defaults to current date & time.</small>
+                                                </div>
+
+                                                <!-- Check-Out Date & Time (Expected Return - Optional & Auto-calculated) -->
+                                                <div class="col-12 col-sm-6">
+                                                    <label class="form-label small fw-semibold">
+                                                        <i
+                                                            class="bi bi-box-arrow-in-left text-primary me-1"></i>Check-Out
+                                                        Date & Time (Expected Return)
+                                                    </label>
+                                                    <input type="datetime-local" name="expected_checkout_datetime"
+                                                        id="expectedCheckoutDatetime" class="form-control"
+                                                        value="<%= (old && old.expected_checkout_datetime) || defaultCheckOut %>">
+                                                    <small class="text-muted">Auto-calculated from Start Time +
+                                                        Duration. Can be manually adjusted if needed.</small>
+                                                </div>
+                                            </div>
+
+                                            <!-- DURATION & ESTIMATE PREVIEW BANNER -->
+                                            <div
+                                                class="mt-4 p-3 bg-primary-subtle border border-primary-subtle rounded-3 text-primary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                <div>
+                                                    <i class="bi bi-stopwatch me-1"></i>
+                                                    Estimated Duration: <strong id="dispDurationText">1 Day</strong>
+                                                </div>
+                                                <div>
+                                                    Estimated Total Rental Fee: <strong class="fs-5"
+                                                        id="dispEstimatedFee">₹0.00</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- RIGHT COLUMN: FINANCIAL SUMMARY & SUBMISSION -->
+                                <div class="col-12 col-xl-4">
+
+                                    <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 2rem;">
+                                        <div class="card-header bg-surface py-3 px-4 border-bottom">
+                                            <h5 class="fw-bold mb-0 text-primary">
+                                                <i class="bi bi-calculator me-2"></i>4. Payment & Checkout
+                                            </h5>
+                                        </div>
+                                        <div class="card-body p-4">
+
+                                            <!-- HIDDEN ESTIMATED TOTAL -->
+                                            <input type="hidden" name="total_rental_amount" id="hiddenTotalAmount"
+                                                value="0.00">
+
+                                            <!-- Financial Breakdown Summary (Sales Note Style) -->
+                                            <div class="bg-surface-soft p-3 rounded-3 border mb-3">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="text-muted small">Billing Duration:</span>
+                                                    <strong class="text-body" id="summaryDurationText">1 Day</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="text-muted small">Rental Rate:</span>
+                                                    <strong class="text-body" id="summaryRateDesc">₹0.00 / day</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="text-muted small fw-semibold">Estimated Rental Amount:</span>
+                                                    <strong class="text-primary fw-bold fs-6" id="summaryRentalFee">₹0.00</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="text-muted small fw-semibold">Advance Rental Amount:</span>
+                                                    <strong class="text-success fw-bold fs-6" id="summaryAdvanceAmountDisplay">₹0.00</strong>
+                                                </div>
+                                                <hr class="my-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fw-bold text-body small">Estimated Remaining Balance on Return:</span>
+                                                    <strong class="fs-5 text-danger fw-bold" id="summaryRemainingBalance">₹0.00</strong>
+                                                </div>
+                                                <div class="mt-2 text-center" id="balanceBadgeBox">
+                                                    <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1" id="balanceStatusBadge">
+                                                        Unpaid Upfront
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- ADVANCE RENTAL AMOUNT -->
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-bold text-body mb-0">
+                                                        Advance Rental Amount (₹) <span class="text-danger">*</span>
+                                                    </label>
+                                                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small text-primary" id="fillFullAdvanceBtn" style="font-size:0.8rem;">
+                                                        Pay Full Advance
+                                                    </button>
+                                                </div>
+                                                <div class="input-group">
+                                                    <span
+                                                        class="input-group-text bg-success-subtle text-success fw-bold">₹</span>
+                                                    <input type="number" step="0.01" min="0"
+                                                        name="advance_rental_amount" id="advanceAmountInput"
+                                                        class="form-control form-control-lg fw-bold text-success"
+                                                        placeholder="0.00"
+                                                        value="<%= (old && old.advance_rental_amount !== undefined) ? old.advance_rental_amount : '0.00' %>"
+                                                        required>
+                                                </div>
+                                                <div class="form-text small text-muted">
+                                                    Amount collected upfront from customer toward rental charges.
+                                                </div>
+                                                <div id="advanceValidationMsg" class="alert alert-danger py-1 px-2 small mt-2 d-none" role="alert">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="advanceValidationText">Advance Rental Amount cannot exceed Estimated Rental Amount.</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- SECURITY DEPOSIT AMOUNT -->
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Security Deposit (₹)</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">₹</span>
+                                                    <input type="number" step="0.01" min="0" name="security_deposit"
+                                                        id="securityDepositInput" class="form-control"
+                                                        placeholder="0.00"
+                                                        value="<%= (old && old.security_deposit) || '0.00' %>">
+                                                </div>
+                                                <div class="form-text small text-muted">
+                                                    Refundable deposit held separately (returned upon product check-in).
+                                                </div>
+                                            </div>
+
+                                            <!-- PAYMENT METHOD -->
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Payment Mode</label>
+                                                <select name="payment_method" class="form-select">
+                                                    <option value="Cash" <%=(old && old.payment_method==='Cash' )
+                                                        ? 'selected' : '' %>>Cash</option>
+                                                    <option value="UPI" <%=(old && old.payment_method==='UPI' )
+                                                        ? 'selected' : '' %>>UPI / GPay / PhonePe</option>
+                                                    <option value="Card" <%=(old && old.payment_method==='Card' )
+                                                        ? 'selected' : '' %>>Credit / Debit Card</option>
+                                                    <option value="Bank Transfer" <%=(old &&
+                                                        old.payment_method==='Bank Transfer' ) ? 'selected' : '' %>>Bank
+                                                        Transfer / NEFT</option>
+                                                    <option value="Credit" <%=(old && old.payment_method==='Credit' )
+                                                        ? 'selected' : '' %>>Customer Ledger Credit</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- NOTES -->
+                                            <div class="mb-4">
+                                                <label class="form-label small fw-semibold">Notes / Equipment
+                                                    Condition</label>
+                                                <textarea name="notes" class="form-control" rows="2"
+                                                    placeholder="Accessories included, condition, serial no..."><%= (old && old.notes) || '' %></textarea>
+                                            </div>
+
+                                            <!-- SUBMIT BUTTON -->
+                                            <button type="submit"
+                                                class="btn btn-primary btn-lg w-100 shadow-sm fw-bold py-2.5"
+                                                id="submitRentalBtn">
+                                                <i class="bi bi-check-circle me-1"></i> Confirm & Submit Rental
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </form>
+
         </div>
+    </main>
 
-        <!-- VALIDATION ERRORS -->
-        <% if (errors && errors.length > 0) { %>
-            <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
-                    <strong class="fs-6">Please correct the following errors:</strong>
-                </div>
-                <ul class="mb-0 ps-3">
-                    <% errors.forEach(err => { %>
-                        <li><%= err %></li>
-                    <% }) %>
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <% } %>
+    <script>
+        // Embedded product rates dataset from server
+        const serverRentalRates = <%- JSON.stringify(rentalRates) %>;
 
-        <!-- MAIN RENTAL FORM -->
-        <form method="POST" action="/rentals/create" id="rentalCheckoutForm" novalidate>
-            <div class="row g-4">
+        document.addEventListener('DOMContentLoaded', function () {
+            const customerSelect = document.getElementById('customerSelect');
+            const productSelect = document.getElementById('productSelect');
+            const rentalPeriodType = document.getElementById('rentalPeriodType');
+            const estimatedDurationInput = document.getElementById('estimatedDurationInput');
+            const durationLabel = document.getElementById('durationLabel');
+            const durationUnitText = document.getElementById('durationUnitText');
+            const durationHelpText = document.getElementById('durationHelpText');
+            const rentalRateInput = document.getElementById('rentalRateInput');
+            const securityDepositInput = document.getElementById('securityDepositInput');
+            const checkInDatetime = document.getElementById('checkInDatetime');
+            const expectedCheckoutDatetime = document.getElementById('expectedCheckoutDatetime');
+            const advanceAmountInput = document.getElementById('advanceAmountInput');
 
-                <!-- LEFT COLUMN: CUSTOMER & PRODUCT SELECTION & TIMING -->
-                <div class="col-12 col-xl-8">
+            let currentProductRates = [];
+            let isUserManuallyEditingReturnDate = false;
 
-                    <!-- 1. CUSTOMER SELECTION CARD -->
-                    <div class="card border-0 shadow-sm rounded-4 mb-4">
-                        <div class="card-header bg-surface py-3 px-4 border-bottom">
-                            <h5 class="fw-bold mb-0 text-primary">
-                                <i class="bi bi-person-badge me-2"></i>1. Customer Information
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row g-3">
-                                <!-- Customer Selection -->
-                                <div class="col-12">
-                                    <label class="form-label small fw-semibold">Select Customer <span class="text-danger">*</span></label>
-                                    <select name="customer_id" id="customerSelect" class="form-select" required>
-                                        <option value="">-- Select Customer from Database --</option>
-                                        <% customers.forEach(c => { %>
-                                            <option
-                                                value="<%= c.id %>"
-                                                <%= (old && String(old.customer_id) === String(c.id)) ? 'selected' : '' %>
-                                            >
-                                                <%= c.customer_code %> - <%= c.customer_name %> (<%= c.mobile_number %>)
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                </div>
-                            </div>
+            // Helper: format currency
+            function formatINR(val) {
+                const num = parseFloat(val) || 0;
+                return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
 
-                            <!-- DYNAMIC CUSTOMER PROFILE WIDGET -->
-                            <div id="customerProfileBox" class="mt-3 p-3 rounded-3 border bg-surface-soft d-none">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
-                                    <div>
-                                        <h6 class="fw-bold mb-0 text-body" id="dispCustName">Customer Name</h6>
-                                        <span class="text-muted small" id="dispCustCode">CUS-001</span> &bull;
-                                        <span class="text-muted small" id="dispCustMobile">9876543210</span>
-                                    </div>
-                                    <div id="dispCreditBadge">
-                                        <span class="badge bg-success-subtle text-success">Active Customer</span>
-                                    </div>
-                                </div>
+            // Helper: pad 2 digits
+            const pad = (n) => String(n).padStart(2, '0');
 
-                                <div class="row g-2 text-center">
-                                    <div class="col-6 col-sm-4">
-                                        <div class="p-2 bg-surface rounded border">
-                                            <span class="text-muted small d-block">Credit Limit</span>
-                                            <strong class="fs-6 text-body" id="dispCreditLimit">₹0.00</strong>
-                                        </div>
-                                    </div>
-                                    <div class="col-6 col-sm-4">
-                                        <div class="p-2 bg-surface rounded border">
-                                            <span class="text-muted small d-block">Current Outstanding</span>
-                                            <strong class="fs-6 text-danger" id="dispPrevOutstanding">₹0.00</strong>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-sm-4">
-                                        <div class="p-2 bg-surface rounded border text-start">
-                                            <span class="text-muted small d-block">Address</span>
-                                            <span class="small text-truncate d-block" id="dispCustAddress">-</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            // Helper: Calculate Expected Return Date & Time
+            function computeExpectedReturn(startStr, period, duration) {
+                const start = startStr ? new Date(startStr) : new Date();
+                if (isNaN(start.getTime())) return '';
 
-                    <!-- 2. PRODUCT SELECTION CARD -->
-                    <div class="card border-0 shadow-sm rounded-4 mb-4">
-                        <div class="card-header bg-surface py-3 px-4 border-bottom">
-                            <h5 class="fw-bold mb-0 text-primary">
-                                <i class="bi bi-box-seam me-2"></i>2. Rental Product Selection
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row g-3">
-                                <!-- Product Select -->
-                                <div class="col-12">
-                                    <label class="form-label small fw-semibold">Select Rental Product <span class="text-danger">*</span></label>
-                                    <select name="product_id" id="productSelect" class="form-select" required>
-                                        <option value="">-- Choose Rental Equipment --</option>
-                                        <% products.forEach(p => { %>
-                                            <option
-                                                value="<%= p.id %>"
-                                                <%= (old && String(old.product_id) === String(p.id)) ? 'selected' : '' %>
-                                            >
-                                                <%= p.product_code %> - <%= p.product_name %> (Available Stock: <%= p.stock_quantity %>)
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                    <small class="text-muted">Only active products configured for rental with available stock are listed.</small>
-                                </div>
-                            </div>
+                const dur = Math.max(1, parseInt(duration || 1, 10));
+                const cleanPeriod = String(period || 'daily').toLowerCase();
+                const res = new Date(start.getTime());
 
-                            <!-- DYNAMIC PRODUCT PROFILE & RATE MATRIX -->
-                            <div id="productProfileBox" class="mt-3 p-3 rounded-3 border bg-surface-soft d-none">
-                                <div class="row g-3 align-items-center">
-                                    <div class="col-12 col-md-8">
-                                        <h6 class="fw-bold mb-1 text-primary" id="dispProdName">Product Name</h6>
-                                        <div class="small text-muted mb-2">
-                                            <span class="badge bg-light text-dark border" id="dispProdCode">PRO-001</span> &bull;
-                                            <span id="dispProdCategory">Category</span> &bull;
-                                            <span id="dispProdBrand">Brand</span>
-                                        </div>
-                                        <div>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                <i class="bi bi-check2-circle me-1"></i>In Stock: <strong id="dispProdStock">0</strong> units
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-4 text-md-end" id="dispProdImageContainer">
-                                        <img src="" id="dispProdImage" class="img-fluid rounded border d-none" style="max-height: 80px; object-fit: cover;" alt="Product">
-                                    </div>
-                                </div>
-
-                                <!-- Available Rental Rates Matrix -->
-                                <div class="mt-3 pt-3 border-top">
-                                    <label class="form-label small fw-bold text-muted mb-2">Configured Rental Rates:</label>
-                                    <div class="row g-2" id="rentalRatesPills">
-                                        <!-- Populated dynamically via JS -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. RENTAL PERIOD, DURATION & SCHEDULE CARD -->
-                    <div class="card border-0 shadow-sm rounded-4 mb-4">
-                        <div class="card-header bg-surface py-3 px-4 border-bottom">
-                            <h5 class="fw-bold mb-0 text-primary">
-                                <i class="bi bi-calendar2-range me-2"></i>3. Rental Period, Duration & Schedule
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row g-3">
-                                <!-- Billing Period -->
-                                <div class="col-12 col-sm-6 col-md-4">
-                                    <label class="form-label small fw-semibold">Billing Period <span class="text-danger">*</span></label>
-                                    <select name="rental_period_type" id="rentalPeriodType" class="form-select" required>
-                                        <option value="daily" <%= (old && (old.rental_period_type === 'daily' || old.rental_period_type === 'days')) ? 'selected' : (!old?.rental_period_type ? 'selected' : '') %>>Days</option>
-                                        <option value="hourly" <%= (old && (old.rental_period_type === 'hourly' || old.rental_period_type === 'hours')) ? 'selected' : '' %>>Hours</option>
-                                        <option value="weekly" <%= (old && (old.rental_period_type === 'weekly' || old.rental_period_type === 'weeks')) ? 'selected' : '' %>>Weeks</option>
-                                        <option value="monthly" <%= (old && (old.rental_period_type === 'monthly' || old.rental_period_type === 'months')) ? 'selected' : '' %>>Months</option>
-                                    </select>
-                                    <small class="text-muted">Select rental charging cycle.</small>
-                                </div>
-
-                                <!-- Estimated Rental Duration -->
-                                <div class="col-12 col-sm-6 col-md-4">
-                                    <label class="form-label small fw-semibold" id="durationLabel">
-                                        Estimated Days <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <input
-                                            type="number"
-                                            name="estimated_duration"
-                                            id="estimatedDurationInput"
-                                            class="form-control"
-                                            min="1"
-                                            step="1"
-                                            value="<%= (old && old.estimated_duration) || defaultEstimatedDuration || 1 %>"
-                                            required
-                                        >
-                                        <span class="input-group-text" id="durationUnitText">Days</span>
-                                    </div>
-                                    <small class="text-muted" id="durationHelpText">Duration expected for rental.</small>
-                                </div>
-
-                                <!-- Rental Rate -->
-                                <div class="col-12 col-sm-12 col-md-4">
-                                    <label class="form-label small fw-semibold">Rental Rate (₹) <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">₹</span>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            name="rental_rate"
-                                            id="rentalRateInput"
-                                            class="form-control"
-                                            value="<%= (old && old.rental_rate) || '0.00' %>"
-                                        >
-                                    </div>
-                                    <small class="text-muted" id="rateUnitNote">Per chosen billing period.</small>
-                                </div>
-
-                                <!-- Check-In Date & Time (Rental Start) -->
-                                <div class="col-12 col-sm-6">
-                                    <label class="form-label small fw-semibold">
-                                        <i class="bi bi-box-arrow-right text-success me-1"></i>Rental Start Date & Time <span class="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        name="check_in_datetime"
-                                        id="checkInDatetime"
-                                        class="form-control"
-                                        value="<%= (old && old.check_in_datetime) || defaultCheckIn %>"
-                                        required
-                                    >
-                                    <small class="text-muted">Defaults to current date & time.</small>
-                                </div>
-
-                                <!-- Check-Out Date & Time (Expected Return - Optional & Auto-calculated) -->
-                                <div class="col-12 col-sm-6">
-                                    <label class="form-label small fw-semibold">
-                                        <i class="bi bi-box-arrow-in-left text-primary me-1"></i>Check-Out Date & Time (Expected Return)
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        name="expected_checkout_datetime"
-                                        id="expectedCheckoutDatetime"
-                                        class="form-control"
-                                        value="<%= (old && old.expected_checkout_datetime) || defaultCheckOut %>"
-                                    >
-                                    <small class="text-muted">Auto-calculated from Start Time + Duration. Can be manually adjusted if needed.</small>
-                                </div>
-                            </div>
-
-                            <!-- DURATION & ESTIMATE PREVIEW BANNER -->
-                            <div class="mt-4 p-3 bg-primary-subtle border border-primary-subtle rounded-3 text-primary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div>
-                                    <i class="bi bi-stopwatch me-1"></i>
-                                    Estimated Duration: <strong id="dispDurationText">1 Day</strong>
-                                </div>
-                                <div>
-                                    Estimated Total Rental Fee: <strong class="fs-5" id="dispEstimatedFee">₹0.00</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- RIGHT COLUMN: FINANCIAL SUMMARY & SUBMISSION -->
-                <div class="col-12 col-xl-4">
-
-                    <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 2rem;">
-                        <div class="card-header bg-surface py-3 px-4 border-bottom">
-                            <h5 class="fw-bold mb-0 text-primary">
-                                <i class="bi bi-calculator me-2"></i>4. Payment & Checkout
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-
-                            <!-- HIDDEN ESTIMATED TOTAL -->
-                            <input type="hidden" name="total_rental_amount" id="hiddenTotalAmount" value="0.00">
-
-                            <!-- Financial Breakdown Summary -->
-                            <div class="bg-surface-soft p-3 rounded-3 border mb-3">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small">Estimated Duration:</span>
-                                    <strong class="text-body" id="summaryDurationText">1 Day</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small">Rental Fee (<span id="summaryRateDesc">₹0.00</span>):</span>
-                                    <strong class="text-body" id="summaryRentalFee">₹0.00</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small">Security Deposit:</span>
-                                    <strong class="text-body" id="summaryDeposit">₹0.00</strong>
-                                </div>
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="fw-bold text-body">Total Estimated Amount:</span>
-                                    <strong class="fw-bold text-primary fs-5" id="summaryGrandTotal">₹0.00</strong>
-                                </div>
-                            </div>
-
-                            <!-- SECURITY DEPOSIT AMOUNT -->
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Security Deposit (₹)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">₹</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        name="security_deposit"
-                                        id="securityDepositInput"
-                                        class="form-control"
-                                        placeholder="0.00"
-                                        value="<%= (old && old.security_deposit) || '0.00' %>"
-                                    >
-                                </div>
-                                <div class="form-text small text-muted">
-                                    Refundable deposit held separately (returned upon product check-in).
-                                </div>
-                            </div>
-
-                            <!-- ADVANCE RENTAL AMOUNT -->
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-body">
-                                    Advance Rental Amount (₹) <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-success-subtle text-success fw-bold">₹</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        name="advance_rental_amount"
-                                        id="advanceAmountInput"
-                                        class="form-control form-control-lg fw-bold text-success"
-                                        placeholder="0.00"
-                                        value="<%= (old && old.advance_rental_amount !== undefined) ? old.advance_rental_amount : '0.00' %>"
-                                        required
-                                    >
-                                </div>
-                                <div class="form-text small text-muted">
-                                    Rental charges collected upfront from customer upon check-out.
-                                </div>
-                                <div id="advanceValidationMsg" class="text-danger small mt-1 d-none">
-                                    <i class="bi bi-exclamation-circle me-1"></i>Advance amount cannot be negative.
-                                </div>
-                            </div>
-
-                            <!-- Balance Due / Status Indicator -->
-                            <div class="p-2.5 rounded-3 border mb-3 bg-surface text-center" id="balanceStatusBox">
-                                <span class="text-muted small d-block">Estimated Remaining Balance on Return:</span>
-                                <strong class="fs-5 text-danger" id="summaryRemainingBalance">₹0.00</strong>
-                            </div>
-
-                            <!-- PAYMENT METHOD -->
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Payment Mode</label>
-                                <select name="payment_method" class="form-select">
-                                    <option value="Cash" <%= (old && old.payment_method === 'Cash') ? 'selected' : '' %>>Cash</option>
-                                    <option value="UPI" <%= (old && old.payment_method === 'UPI') ? 'selected' : '' %>>UPI / GPay / PhonePe</option>
-                                    <option value="Card" <%= (old && old.payment_method === 'Card') ? 'selected' : '' %>>Credit / Debit Card</option>
-                                    <option value="Bank Transfer" <%= (old && old.payment_method === 'Bank Transfer') ? 'selected' : '' %>>Bank Transfer / NEFT</option>
-                                    <option value="Credit" <%= (old && old.payment_method === 'Credit') ? 'selected' : '' %>>Customer Ledger Credit</option>
-                                </select>
-                            </div>
-
-                            <!-- NOTES -->
-                            <div class="mb-4">
-                                <label class="form-label small fw-semibold">Notes / Equipment Condition</label>
-                                <textarea name="notes" class="form-control" rows="2" placeholder="Accessories included, condition, serial no..."><%= (old && old.notes) || '' %></textarea>
-                            </div>
-
-                            <!-- SUBMIT BUTTON -->
-                            <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm fw-bold py-2.5" id="submitRentalBtn">
-                                <i class="bi bi-check-circle me-1"></i> Confirm & Submit Rental
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-        </form>
-
-    </div>
-</main>
-
-<script>
-// Embedded product rates dataset from server
-const serverRentalRates = <%- JSON.stringify(rentalRates) %>;
-
-document.addEventListener('DOMContentLoaded', function () {
-    const customerSelect = document.getElementById('customerSelect');
-    const productSelect = document.getElementById('productSelect');
-    const rentalPeriodType = document.getElementById('rentalPeriodType');
-    const estimatedDurationInput = document.getElementById('estimatedDurationInput');
-    const durationLabel = document.getElementById('durationLabel');
-    const durationUnitText = document.getElementById('durationUnitText');
-    const durationHelpText = document.getElementById('durationHelpText');
-    const rentalRateInput = document.getElementById('rentalRateInput');
-    const securityDepositInput = document.getElementById('securityDepositInput');
-    const checkInDatetime = document.getElementById('checkInDatetime');
-    const expectedCheckoutDatetime = document.getElementById('expectedCheckoutDatetime');
-    const advanceAmountInput = document.getElementById('advanceAmountInput');
-
-    let currentProductRates = [];
-    let isUserManuallyEditingReturnDate = false;
-
-    // Helper: format currency
-    function formatINR(val) {
-        const num = parseFloat(val) || 0;
-        return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // Helper: pad 2 digits
-    const pad = (n) => String(n).padStart(2, '0');
-
-    // Helper: Calculate Expected Return Date & Time
-    function computeExpectedReturn(startStr, period, duration) {
-        const start = startStr ? new Date(startStr) : new Date();
-        if (isNaN(start.getTime())) return '';
-
-        const dur = Math.max(1, parseInt(duration || 1, 10));
-        const cleanPeriod = String(period || 'daily').toLowerCase();
-        const res = new Date(start.getTime());
-
-        if (cleanPeriod === 'hourly' || cleanPeriod === 'hours') {
-            res.setTime(res.getTime() + dur * 60 * 60 * 1000);
-        } else if (cleanPeriod === 'weekly' || cleanPeriod === 'weeks') {
-            res.setDate(res.getDate() + dur * 7);
-        } else if (cleanPeriod === 'monthly' || cleanPeriod === 'months') {
-            res.setMonth(res.getMonth() + dur);
-        } else {
-            // daily
-            res.setDate(res.getDate() + dur);
-        }
-
-        const year = res.getFullYear();
-        const month = pad(res.getMonth() + 1);
-        const day = pad(res.getDate());
-        const hours = pad(res.getHours());
-        const minutes = pad(res.getMinutes());
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    }
-
-    // Update Duration Field Labels & UI
-    function updateDurationLabels() {
-        const period = rentalPeriodType.value.toLowerCase();
-        let label = 'Estimated Days';
-        let unit = 'Days';
-        let help = 'Estimated number of days for rental.';
-
-        if (period === 'hourly' || period === 'hours') {
-            label = 'Estimated Hours';
-            unit = 'Hours';
-            help = 'Estimated number of hours for rental.';
-        } else if (period === 'weekly' || period === 'weeks') {
-            label = 'Estimated Weeks';
-            unit = 'Weeks';
-            help = 'Estimated number of weeks for rental.';
-        } else if (period === 'monthly' || period === 'months') {
-            label = 'Estimated Months';
-            unit = 'Months';
-            help = 'Estimated number of months for rental.';
-        }
-
-        durationLabel.innerHTML = `${label} <span class="text-danger">*</span>`;
-        durationUnitText.textContent = unit;
-        durationHelpText.textContent = help;
-    }
-
-    // Auto-calculate & Update Expected Checkout Datetime
-    function autoCalculateExpectedReturn(force = false) {
-        if (!force && isUserManuallyEditingReturnDate) {
-            return;
-        }
-        const startVal = checkInDatetime.value;
-        const period = rentalPeriodType.value;
-        const duration = parseInt(estimatedDurationInput.value || 1, 10);
-        const calculated = computeExpectedReturn(startVal, period, duration);
-        if (calculated) {
-            expectedCheckoutDatetime.value = calculated;
-        }
-    }
-
-    // 1. Customer Selection AJAX Handler
-    customerSelect.addEventListener('change', function () {
-        const custId = parseInt(this.value, 10);
-        const profileBox = document.getElementById('customerProfileBox');
-
-        if (!custId) {
-            profileBox.classList.add('d-none');
-            return;
-        }
-
-        fetch(`/rentals/ajax?action=get_customer&customer_id=${custId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.customer) {
-                    const c = data.customer;
-                    document.getElementById('dispCustName').textContent = c.customer_name;
-                    document.getElementById('dispCustCode').textContent = c.customer_code;
-                    document.getElementById('dispCustMobile').textContent = c.mobile_number;
-                    document.getElementById('dispCustAddress').textContent = c.address;
-                    document.getElementById('dispCreditLimit').textContent = formatINR(c.credit_limit);
-                    document.getElementById('dispPrevOutstanding').textContent = formatINR(c.current_outstanding);
-                    profileBox.classList.remove('d-none');
+                if (cleanPeriod === 'hourly' || cleanPeriod === 'hours') {
+                    res.setTime(res.getTime() + dur * 60 * 60 * 1000);
+                } else if (cleanPeriod === 'weekly' || cleanPeriod === 'weeks') {
+                    res.setDate(res.getDate() + dur * 7);
+                } else if (cleanPeriod === 'monthly' || cleanPeriod === 'months') {
+                    res.setMonth(res.getMonth() + dur);
                 } else {
-                    profileBox.classList.add('d-none');
+                    // daily
+                    res.setDate(res.getDate() + dur);
                 }
-            })
-            .catch(err => {
-                console.error('Customer fetch error:', err);
-                profileBox.classList.add('d-none');
+
+                const year = res.getFullYear();
+                const month = pad(res.getMonth() + 1);
+                const day = pad(res.getDate());
+                const hours = pad(res.getHours());
+                const minutes = pad(res.getMinutes());
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            // Update Duration Field Labels & UI
+            function updateDurationLabels() {
+                const period = rentalPeriodType.value.toLowerCase();
+                let label = 'Estimated Days';
+                let unit = 'Days';
+                let help = 'Estimated number of days for rental.';
+
+                if (period === 'hourly' || period === 'hours') {
+                    label = 'Estimated Hours';
+                    unit = 'Hours';
+                    help = 'Estimated number of hours for rental.';
+                } else if (period === 'weekly' || period === 'weeks') {
+                    label = 'Estimated Weeks';
+                    unit = 'Weeks';
+                    help = 'Estimated number of weeks for rental.';
+                } else if (period === 'monthly' || period === 'months') {
+                    label = 'Estimated Months';
+                    unit = 'Months';
+                    help = 'Estimated number of months for rental.';
+                }
+
+                durationLabel.innerHTML = `${label} <span class="text-danger">*</span>`;
+                durationUnitText.textContent = unit;
+                durationHelpText.textContent = help;
+            }
+
+            // Auto-calculate & Update Expected Checkout Datetime
+            function autoCalculateExpectedReturn(force = false) {
+                if (!force && isUserManuallyEditingReturnDate) {
+                    return;
+                }
+                const startVal = checkInDatetime.value;
+                const period = rentalPeriodType.value;
+                const duration = parseInt(estimatedDurationInput.value || 1, 10);
+                const calculated = computeExpectedReturn(startVal, period, duration);
+                if (calculated) {
+                    expectedCheckoutDatetime.value = calculated;
+                }
+            }
+
+            // 1. Customer Selection AJAX Handler
+            customerSelect.addEventListener('change', function () {
+                const custId = parseInt(this.value, 10);
+                const profileBox = document.getElementById('customerProfileBox');
+
+                if (!custId) {
+                    profileBox.classList.add('d-none');
+                    return;
+                }
+
+                fetch(`/rentals/ajax?action=get_customer&customer_id=${custId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.customer) {
+                            const c = data.customer;
+                            document.getElementById('dispCustName').textContent = c.customer_name;
+                            document.getElementById('dispCustCode').textContent = c.customer_code;
+                            document.getElementById('dispCustMobile').textContent = c.mobile_number;
+                            document.getElementById('dispCustAddress').textContent = c.address;
+                            document.getElementById('dispCreditLimit').textContent = formatINR(c.credit_limit);
+                            document.getElementById('dispPrevOutstanding').textContent = formatINR(c.current_outstanding);
+                            profileBox.classList.remove('d-none');
+                        } else {
+                            profileBox.classList.add('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Customer fetch error:', err);
+                        profileBox.classList.add('d-none');
+                    });
             });
-    });
 
-    // 2. Product Selection AJAX Handler
-    productSelect.addEventListener('change', function () {
-        const prodId = parseInt(this.value, 10);
-        const prodBox = document.getElementById('productProfileBox');
+            // 2. Product Selection AJAX Handler
+            productSelect.addEventListener('change', function () {
+                const prodId = parseInt(this.value, 10);
+                const prodBox = document.getElementById('productProfileBox');
 
-        if (!prodId) {
-            prodBox.classList.add('d-none');
-            currentProductRates = [];
-            return;
-        }
+                if (!prodId) {
+                    prodBox.classList.add('d-none');
+                    currentProductRates = [];
+                    return;
+                }
 
-        fetch(`/rentals/ajax?action=get_product&product_id=${prodId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.product) {
-                    const p = data.product;
-                    currentProductRates = p.rates || [];
+                fetch(`/rentals/ajax?action=get_product&product_id=${prodId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.product) {
+                            const p = data.product;
+                            currentProductRates = p.rates || [];
 
-                    document.getElementById('dispProdName').textContent = p.product_name;
-                    document.getElementById('dispProdCode').textContent = p.product_code;
-                    document.getElementById('dispProdCategory').textContent = p.category_name;
-                    document.getElementById('dispProdBrand').textContent = p.brand_name;
-                    document.getElementById('dispProdStock').textContent = p.stock_quantity;
+                            document.getElementById('dispProdName').textContent = p.product_name;
+                            document.getElementById('dispProdCode').textContent = p.product_code;
+                            document.getElementById('dispProdCategory').textContent = p.category_name;
+                            document.getElementById('dispProdBrand').textContent = p.brand_name;
+                            document.getElementById('dispProdStock').textContent = p.stock_quantity;
 
-                    const imgElem = document.getElementById('dispProdImage');
-                    if (p.image_path) {
-                        imgElem.src = '/' + p.image_path.replace(/^\/+/, '');
-                        imgElem.classList.remove('d-none');
-                    } else {
-                        imgElem.classList.add('d-none');
-                    }
+                            const imgElem = document.getElementById('dispProdImage');
+                            if (p.image_path) {
+                                imgElem.src = '/' + p.image_path.replace(/^\/+/, '');
+                                imgElem.classList.remove('d-none');
+                            } else {
+                                imgElem.classList.add('d-none');
+                            }
 
-                    // Render Rate Pills
-                    const pillsContainer = document.getElementById('rentalRatesPills');
-                    pillsContainer.innerHTML = '';
+                            // Render Rate Pills
+                            const pillsContainer = document.getElementById('rentalRatesPills');
+                            pillsContainer.innerHTML = '';
 
-                    if (currentProductRates.length === 0) {
-                        pillsContainer.innerHTML = '<div class="col-12 text-muted small">No specific rate periods configured. You can enter rate manually below.</div>';
-                    } else {
-                        currentProductRates.forEach(rate => {
-                            const col = document.createElement('div');
-                            col.className = 'col-6 col-sm-3';
-                            col.innerHTML = `
+                            if (currentProductRates.length === 0) {
+                                pillsContainer.innerHTML = '<div class="col-12 text-muted small">No specific rate periods configured. You can enter rate manually below.</div>';
+                            } else {
+                                currentProductRates.forEach(rate => {
+                                    const col = document.createElement('div');
+                                    col.className = 'col-6 col-sm-3';
+                                    col.innerHTML = `
                                 <div class="p-2 border rounded text-center bg-surface rate-pill" data-period="${rate.period}" data-rate="${rate.rental_rate}" data-deposit="${rate.security_deposit}" style="cursor: pointer;">
                                     <span class="text-muted small text-capitalize d-block">${rate.period}</span>
                                     <strong class="text-primary">${formatINR(rate.rental_rate)}</strong>
                                     ${rate.security_deposit > 0 ? `<small class="text-muted d-block" style="font-size: 0.75rem;">Dep: ${formatINR(rate.security_deposit)}</small>` : ''}
                                 </div>
                             `;
-                            pillsContainer.appendChild(col);
-                        });
+                                    pillsContainer.appendChild(col);
+                                });
 
-                        // Add click event to rate pills
-                        pillsContainer.querySelectorAll('.rate-pill').forEach(pill => {
-                            pill.addEventListener('click', function () {
-                                const p = this.getAttribute('data-period');
-                                const r = this.getAttribute('data-rate');
-                                const d = this.getAttribute('data-deposit');
+                                // Add click event to rate pills
+                                pillsContainer.querySelectorAll('.rate-pill').forEach(pill => {
+                                    pill.addEventListener('click', function () {
+                                        const p = this.getAttribute('data-period');
+                                        const r = this.getAttribute('data-rate');
+                                        const d = this.getAttribute('data-deposit');
 
-                                rentalPeriodType.value = p;
-                                updateDurationLabels();
-                                rentalRateInput.value = r;
-                                if (parseFloat(d) > 0) {
-                                    securityDepositInput.value = d;
-                                }
-                                autoCalculateExpectedReturn(true);
-                                updateCalculations();
-                            });
-                        });
+                                        rentalPeriodType.value = p;
+                                        updateDurationLabels();
+                                        rentalRateInput.value = r;
+                                        if (parseFloat(d) > 0) {
+                                            securityDepositInput.value = d;
+                                        }
+                                        autoCalculateExpectedReturn(true);
+                                        updateCalculations();
+                                    });
+                                });
+                            }
+
+                            // Auto-select rate matching current period type
+                            applySelectedPeriodRate();
+                            prodBox.classList.remove('d-none');
+                            updateCalculations();
+                        } else {
+                            prodBox.classList.add('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Product fetch error:', err);
+                        prodBox.classList.add('d-none');
+                    });
+            });
+
+            // 3. Period Type Change Handler
+            function applySelectedPeriodRate() {
+                const period = rentalPeriodType.value;
+                const matchedRate = currentProductRates.find(r => r.period === period);
+                if (matchedRate) {
+                    rentalRateInput.value = matchedRate.rental_rate.toFixed(2);
+                    if (matchedRate.security_deposit > 0) {
+                        securityDepositInput.value = matchedRate.security_deposit.toFixed(2);
+                    }
+                }
+            }
+
+            rentalPeriodType.addEventListener('change', function () {
+                updateDurationLabels();
+                applySelectedPeriodRate();
+                autoCalculateExpectedReturn(true);
+                updateCalculations();
+            });
+
+            estimatedDurationInput.addEventListener('input', function () {
+                autoCalculateExpectedReturn(true);
+                updateCalculations();
+            });
+
+            checkInDatetime.addEventListener('change', function () {
+                autoCalculateExpectedReturn(true);
+                updateCalculations();
+            });
+
+            // Expected return input track user manual edit
+            expectedCheckoutDatetime.addEventListener('input', function () {
+                isUserManuallyEditingReturnDate = true;
+                updateCalculations();
+            });
+
+            // 4. Update Calculations & Estimates (Sales Note Style)
+            function updateCalculations() {
+                const period = (rentalPeriodType.value || 'daily').toLowerCase();
+                const duration = Math.max(1, parseInt(estimatedDurationInput.value || 1, 10));
+                const rate = parseFloat(rentalRateInput.value) || 0;
+                const deposit = parseFloat(securityDepositInput.value) || 0;
+                const advanceRaw = parseFloat(advanceAmountInput.value);
+                const advance = isNaN(advanceRaw) ? 0 : advanceRaw;
+
+                let durationText = `${duration} Day${duration > 1 ? 's' : ''}`;
+                let unitName = 'day';
+                if (period === 'hourly' || period === 'hours') {
+                    durationText = `${duration} Hour${duration > 1 ? 's' : ''}`;
+                    unitName = 'hour';
+                } else if (period === 'weekly' || period === 'weeks') {
+                    durationText = `${duration} Week${duration > 1 ? 's' : ''}`;
+                    unitName = 'week';
+                } else if (period === 'monthly' || period === 'months') {
+                    durationText = `${duration} Month${duration > 1 ? 's' : ''}`;
+                    unitName = 'month';
+                }
+
+                // Estimated Rental Amount = Rental Rate × Estimated Duration
+                const estimatedRentalAmount = Math.round((duration * rate) * 100) / 100;
+
+                // Estimated Remaining Balance on Return = Estimated Rental Amount - Advance Rental Amount
+                const remainingBalance = Math.max(0, Math.round((estimatedRentalAmount - advance) * 100) / 100);
+
+                // Overpayment & Negative Balance Check
+                const msg = document.getElementById('advanceValidationMsg');
+                const msgText = document.getElementById('advanceValidationText');
+                if (advance < 0) {
+                    if (msg) msg.classList.remove('d-none');
+                    if (msgText) msgText.textContent = 'Advance Rental Amount cannot be negative.';
+                } else if (advance > estimatedRentalAmount + 0.001) {
+                    if (msg) msg.classList.remove('d-none');
+                    if (msgText) msgText.textContent = `Advance Rental Amount (${formatINR(advance)}) cannot exceed Estimated Rental Amount (${formatINR(estimatedRentalAmount)}).`;
+                } else {
+                    if (msg) msg.classList.add('d-none');
+                }
+
+                // Update summary elements
+                document.getElementById('dispDurationText').textContent = durationText;
+                document.getElementById('dispEstimatedFee').textContent = formatINR(estimatedRentalAmount);
+
+                document.getElementById('summaryDurationText').textContent = durationText;
+                document.getElementById('summaryRateDesc').textContent = `${formatINR(rate)} / ${unitName}`;
+                document.getElementById('summaryRentalFee').textContent = formatINR(estimatedRentalAmount);
+                if (document.getElementById('summaryAdvanceAmountDisplay')) {
+                    document.getElementById('summaryAdvanceAmountDisplay').textContent = formatINR(advance);
+                }
+                document.getElementById('summaryRemainingBalance').textContent = formatINR(remainingBalance);
+
+                // Status Badge update
+                const badge = document.getElementById('balanceStatusBadge');
+                if (badge) {
+                    if (advance > estimatedRentalAmount + 0.001) {
+                        badge.className = 'badge bg-danger text-white px-2.5 py-1';
+                        badge.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Advance Exceeds Total';
+                    } else if (estimatedRentalAmount > 0 && advance >= estimatedRentalAmount - 0.001) {
+                        badge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 fw-bold';
+                        badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Fully Covered Upfront (₹0 on Return)';
+                    } else if (advance > 0.001) {
+                        badge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 fw-semibold';
+                        badge.innerHTML = `<i class="bi bi-clock-history me-1"></i>Partially Paid (${formatINR(remainingBalance)} on Return)`;
+                    } else {
+                        badge.className = 'badge bg-secondary-subtle text-secondary border px-2.5 py-1';
+                        badge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Unpaid Upfront (Full Balance on Return)';
+                    }
+                }
+
+                document.getElementById('hiddenTotalAmount').value = estimatedRentalAmount.toFixed(2);
+            }
+
+            rentalRateInput.addEventListener('input', updateCalculations);
+            securityDepositInput.addEventListener('input', updateCalculations);
+            advanceAmountInput.addEventListener('input', updateCalculations);
+
+            // Fill Full Advance button
+            const fillFullAdvanceBtn = document.getElementById('fillFullAdvanceBtn');
+            if (fillFullAdvanceBtn) {
+                fillFullAdvanceBtn.addEventListener('click', function () {
+                    const duration = Math.max(1, parseInt(estimatedDurationInput.value || 1, 10));
+                    const rate = parseFloat(rentalRateInput.value) || 0;
+                    const totalFee = Math.round((duration * rate) * 100) / 100;
+                    advanceAmountInput.value = totalFee.toFixed(2);
+                    updateCalculations();
+                });
+            }
+
+            // Form submission validation
+            document.getElementById('rentalCheckoutForm').addEventListener('submit', function (e) {
+                const cust = customerSelect.value;
+                const prod = productSelect.value;
+                const inDt = checkInDatetime.value;
+                const adv = parseFloat(advanceAmountInput.value);
+                const dur = parseInt(estimatedDurationInput.value || 0, 10);
+                const rate = parseFloat(rentalRateInput.value) || 0;
+                const estimatedRentalAmount = Math.round((dur * rate) * 100) / 100;
+
+                if (!cust) {
+                    e.preventDefault();
+                    alert('Please select a customer.');
+                    customerSelect.focus();
+                    return;
+                }
+
+                if (!prod) {
+                    e.preventDefault();
+                    alert('Please select a rental product.');
+                    productSelect.focus();
+                    return;
+                }
+
+                if (!inDt) {
+                    e.preventDefault();
+                    alert('Please select Rental Start Date & Time.');
+                    checkInDatetime.focus();
+                    return;
+                }
+
+                if (dur < 1) {
+                    e.preventDefault();
+                    alert('Please enter a valid estimated duration (at least 1).');
+                    estimatedDurationInput.focus();
+                    return;
+                }
+
+                // If expected checkout is left blank, auto-fill it before submit
+                if (!expectedCheckoutDatetime.value) {
+                    autoCalculateExpectedReturn(true);
+                }
+
+                const outDt = expectedCheckoutDatetime.value;
+                if (outDt && new Date(outDt) <= new Date(inDt)) {
+                    e.preventDefault();
+                    alert('Expected Check-Out Date & Time must be later than Start Date & Time.');
+                    expectedCheckoutDatetime.focus();
+                    return;
+                }
+
+                if (isNaN(adv) || adv < 0) {
+                    e.preventDefault();
+                    alert('Please enter a valid, non-negative Advance Rental Amount.');
+                    advanceAmountInput.focus();
+                    return;
+                }
+
+                if (adv > estimatedRentalAmount + 0.001) {
+                    e.preventDefault();
+                    alert(`Advance Rental Amount (${formatINR(adv)}) cannot exceed the Estimated Rental Amount (${formatINR(estimatedRentalAmount)}).`);
+                    advanceAmountInput.focus();
+                    return;
+                }
+            });
+
+            // Quick Add Customer AJAX submission
+            const quickAddCustomerForm = document.getElementById('quickAddCustomerForm');
+            const quickCustomerModalAlert = document.getElementById('quickCustomerModalAlert');
+            const quickSaveCustomerBtn = document.getElementById('quickSaveCustomerBtn');
+
+            if (quickAddCustomerForm) {
+                quickAddCustomerForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    quickCustomerModalAlert.classList.add('d-none');
+                    quickCustomerModalAlert.textContent = '';
+
+                    const name = document.getElementById('quickCustName').value.trim();
+                    const mobile = document.getElementById('quickCustMobile').value.trim();
+                    if (!name || !mobile) {
+                        quickCustomerModalAlert.textContent = 'Please provide both Customer Name and Mobile Number.';
+                        quickCustomerModalAlert.classList.remove('d-none');
+                        return;
                     }
 
-                    // Auto-select rate matching current period type
-                    applySelectedPeriodRate();
-                    prodBox.classList.remove('d-none');
-                    updateCalculations();
-                } else {
-                    prodBox.classList.add('d-none');
-                }
-            })
-            .catch(err => {
-                console.error('Product fetch error:', err);
-                prodBox.classList.add('d-none');
-            });
-    });
+                    quickSaveCustomerBtn.disabled = true;
+                    quickSaveCustomerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-    // 3. Period Type Change Handler
-    function applySelectedPeriodRate() {
-        const period = rentalPeriodType.value;
-        const matchedRate = currentProductRates.find(r => r.period === period);
-        if (matchedRate) {
-            rentalRateInput.value = matchedRate.rental_rate.toFixed(2);
-            if (matchedRate.security_deposit > 0) {
-                securityDepositInput.value = matchedRate.security_deposit.toFixed(2);
+                    const payload = {
+                        ajax: '1',
+                        customer_name: name,
+                        customer_type: document.getElementById('quickCustType').value,
+                        company_name: document.getElementById('quickCustCompany').value.trim(),
+                        mobile_number: mobile,
+                        credit_allowed: document.getElementById('quickCustCreditAllowed').checked ? 1 : 0,
+                        credit_limit: document.getElementById('quickCustCreditLimit').value,
+                        address: document.getElementById('quickCustAddress').value.trim(),
+                        opening_balance: '0.00',
+                        opening_balance_type: 'Debit',
+                        status: 1
+                    };
+
+                    fetch('/customers/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        quickSaveCustomerBtn.disabled = false;
+                        quickSaveCustomerBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save & Select Customer';
+
+                        if (data.success && data.customer) {
+                            const c = data.customer;
+                            // Add option to customerSelect
+                            const newOpt = new Option(`${c.customer_code} - ${c.customer_name} (${c.mobile_number})`, c.id, true, true);
+                            customerSelect.add(newOpt);
+                            customerSelect.value = c.id;
+
+                            // Trigger change event to load customer details in profile box
+                            customerSelect.dispatchEvent(new Event('change'));
+
+                            // Close modal
+                            const modalEl = document.getElementById('quickAddCustomerModal');
+                            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            modalInstance.hide();
+                            quickAddCustomerForm.reset();
+
+                            alert(`Customer ${c.customer_name} (${c.customer_code}) created and selected successfully!`);
+                        } else {
+                            quickCustomerModalAlert.textContent = data.message || (data.errors ? data.errors.join(', ') : 'Failed to create customer.');
+                            quickCustomerModalAlert.classList.remove('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        quickSaveCustomerBtn.disabled = false;
+                        quickSaveCustomerBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save & Select Customer';
+                        quickCustomerModalAlert.textContent = 'Network or server error while creating customer: ' + err.message;
+                        quickCustomerModalAlert.classList.remove('d-none');
+                    });
+                });
             }
-        }
-    }
 
-    rentalPeriodType.addEventListener('change', function () {
-        updateDurationLabels();
-        applySelectedPeriodRate();
-        autoCalculateExpectedReturn(true);
-        updateCalculations();
-    });
+            // Initial setup
+            updateDurationLabels();
+            if (!expectedCheckoutDatetime.value) {
+                autoCalculateExpectedReturn(true);
+            }
+            if (customerSelect.value) {
+                customerSelect.dispatchEvent(new Event('change'));
+            }
+            if (productSelect.value) {
+                productSelect.dispatchEvent(new Event('change'));
+            }
+            updateCalculations();
+        });
+    </script>
 
-    estimatedDurationInput.addEventListener('input', function () {
-        autoCalculateExpectedReturn(true);
-        updateCalculations();
-    });
+    <!-- QUICK ADD CUSTOMER MODAL -->
+    <div class="modal fade" id="quickAddCustomerModal" tabindex="-1" aria-labelledby="quickAddCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-surface border-bottom py-3 px-4">
+                    <h5 class="modal-title fw-bold text-primary" id="quickAddCustomerModalLabel">
+                        <i class="bi bi-person-plus-fill me-2"></i>Quick Add Customer
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="quickAddCustomerForm" novalidate>
+                    <div class="modal-body p-4">
+                        <div id="quickCustomerModalAlert" class="alert alert-danger d-none mb-3"></div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Customer Name <span class="text-danger">*</span></label>
+                                <input type="text" name="customer_name" id="quickCustName" class="form-control" required placeholder="e.g. Ramesh Kumar">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Customer Type <span class="text-danger">*</span></label>
+                                <select name="customer_type" id="quickCustType" class="form-select">
+                                    <option value="Individual" selected>Individual</option>
+                                    <option value="Business">Business</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Company / Business Name</label>
+                                <input type="text" name="company_name" id="quickCustCompany" class="form-control" placeholder="Optional for individual">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Mobile Number <span class="text-danger">*</span></label>
+                                <input type="tel" name="mobile_number" id="quickCustMobile" class="form-control" required placeholder="10-digit mobile" maxlength="15">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" name="credit_allowed" id="quickCustCreditAllowed" value="1" checked>
+                                    <label class="form-check-label small fw-semibold" for="quickCustCreditAllowed">Credit Allowed for this Customer</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Credit Limit (₹)</label>
+                                <input type="number" name="credit_limit" id="quickCustCreditLimit" class="form-control" value="10000.00" min="0" step="0.01">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Address</label>
+                                <textarea name="address" id="quickCustAddress" class="form-control" rows="2" placeholder="Street, area, city"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-surface-soft border-top py-3 px-4 d-flex justify-content-between">
+                        <a href="/customers/create" target="_blank" class="btn btn-sm btn-link text-decoration-none">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Customer Form
+                        </a>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" id="quickSaveCustomerBtn" class="btn btn-primary fw-bold">
+                                <i class="bi bi-check2-circle me-1"></i> Save & Select Customer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-    checkInDatetime.addEventListener('change', function () {
-        autoCalculateExpectedReturn(true);
-        updateCalculations();
-    });
-
-    // Expected return input track user manual edit
-    expectedCheckoutDatetime.addEventListener('input', function () {
-        isUserManuallyEditingReturnDate = true;
-        updateCalculations();
-    });
-
-    // 4. Update Calculations & Estimates
-    function updateCalculations() {
-        const period = rentalPeriodType.value;
-        const duration = Math.max(1, parseInt(estimatedDurationInput.value || 1, 10));
-        const rate = parseFloat(rentalRateInput.value) || 0;
-        const deposit = parseFloat(securityDepositInput.value) || 0;
-        const advance = parseFloat(advanceAmountInput.value) || 0;
-
-        let durationText = `${duration} Day${duration > 1 ? 's' : ''}`;
-        if (period === 'hourly' || period === 'hours') {
-            durationText = `${duration} Hour${duration > 1 ? 's' : ''}`;
-        } else if (period === 'weekly' || period === 'weeks') {
-            durationText = `${duration} Week${duration > 1 ? 's' : ''}`;
-        } else if (period === 'monthly' || period === 'months') {
-            durationText = `${duration} Month${duration > 1 ? 's' : ''}`;
-        }
-
-        const totalRentalFee = duration * rate;
-        const grandTotalDue = totalRentalFee + deposit;
-        const remainingBalance = Math.max(0, grandTotalDue - advance);
-
-        document.getElementById('dispDurationText').textContent = durationText;
-        document.getElementById('dispEstimatedFee').textContent = formatINR(totalRentalFee);
-
-        document.getElementById('summaryDurationText').textContent = durationText;
-        document.getElementById('summaryRateDesc').textContent = `${formatINR(rate)} / ${period}`;
-        document.getElementById('summaryRentalFee').textContent = formatINR(totalRentalFee);
-        document.getElementById('summaryDeposit').textContent = formatINR(deposit);
-        document.getElementById('summaryGrandTotal').textContent = formatINR(grandTotalDue);
-        document.getElementById('summaryRemainingBalance').textContent = formatINR(remainingBalance);
-
-        document.getElementById('hiddenTotalAmount').value = totalRentalFee.toFixed(2);
-    }
-
-    rentalRateInput.addEventListener('input', updateCalculations);
-    securityDepositInput.addEventListener('input', updateCalculations);
-    advanceAmountInput.addEventListener('input', function () {
-        const val = parseFloat(this.value);
-        const msg = document.getElementById('advanceValidationMsg');
-        if (val < 0) {
-            msg.classList.remove('d-none');
-        } else {
-            msg.classList.add('d-none');
-        }
-        updateCalculations();
-    });
-
-    // Form submission validation
-    document.getElementById('rentalCheckoutForm').addEventListener('submit', function (e) {
-        const cust = customerSelect.value;
-        const prod = productSelect.value;
-        const inDt = checkInDatetime.value;
-        const adv = parseFloat(advanceAmountInput.value);
-        const dur = parseInt(estimatedDurationInput.value || 0, 10);
-
-        if (!cust) {
-            e.preventDefault();
-            alert('Please select a customer.');
-            customerSelect.focus();
-            return;
-        }
-
-        if (!prod) {
-            e.preventDefault();
-            alert('Please select a rental product.');
-            productSelect.focus();
-            return;
-        }
-
-        if (!inDt) {
-            e.preventDefault();
-            alert('Please select Rental Start Date & Time.');
-            checkInDatetime.focus();
-            return;
-        }
-
-        if (dur < 1) {
-            e.preventDefault();
-            alert('Please enter a valid estimated duration (at least 1).');
-            estimatedDurationInput.focus();
-            return;
-        }
-
-        // If expected checkout is left blank, auto-fill it before submit
-        if (!expectedCheckoutDatetime.value) {
-            autoCalculateExpectedReturn(true);
-        }
-
-        const outDt = expectedCheckoutDatetime.value;
-        if (outDt && new Date(outDt) <= new Date(inDt)) {
-            e.preventDefault();
-            alert('Expected Check-Out Date & Time must be later than Start Date & Time.');
-            expectedCheckoutDatetime.focus();
-            return;
-        }
-
-        if (isNaN(adv) || adv < 0) {
-            e.preventDefault();
-            alert('Please enter a valid, non-negative Advance Rental Amount.');
-            advanceAmountInput.focus();
-            return;
-        }
-    });
-
-    // Initial setup
-    updateDurationLabels();
-    if (!expectedCheckoutDatetime.value) {
-        autoCalculateExpectedReturn(true);
-    }
-    if (customerSelect.value) {
-        customerSelect.dispatchEvent(new Event('change'));
-    }
-    if (productSelect.value) {
-        productSelect.dispatchEvent(new Event('change'));
-    }
-    updateCalculations();
-});
-</script>
-
-<%- include('includes/footer') %>
+    <%- include('includes/footer') %>

@@ -286,6 +286,8 @@ exports.createRental = async (req, res) => {
             errors.push('Advance Rental Amount must be a valid number.');
         } else if (advanceRentalAmount < 0) {
             errors.push('Advance Rental Amount cannot be negative.');
+        } else if (advanceRentalAmount > totalEstimatedAmount + 0.001) {
+            errors.push(`Advance Rental Amount (₹${advanceRentalAmount.toFixed(2)}) cannot exceed Estimated Rental Amount (₹${totalEstimatedAmount.toFixed(2)}).`);
         }
         if (estimatedDuration < 1) {
             errors.push('Estimated Rental Duration must be at least 1.');

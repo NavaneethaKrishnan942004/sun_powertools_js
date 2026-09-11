@@ -1,4 +1,4 @@
-giconst assert = require('assert');
+const assert = require('assert');
 const http = require('http');
 const pool = require('./config/db');
 const { getCustomerFinancialSummary } = require('./utils/customerHelper');
