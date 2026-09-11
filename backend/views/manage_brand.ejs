@@ -5,8 +5,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Masters', link: 'masters.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Masters', link: '/masters' },
             { title: 'Brand Master' }
         ]) %>
 
@@ -34,12 +34,12 @@
         <!-- STANDARDIZED SEARCH & FILTER HEADER -->
         <div class="row g-3 align-items-center mb-3">
             <div class="col-12 col-md d-flex flex-grow-1 gap-2">
-                <form method="GET" action="manage_brand.php" class="w-100 d-flex gap-2">
+                <form method="GET" action="/brands" class="w-100 d-flex gap-2">
                     <div class="manage-search-wrapper">
                         <i class="bi bi-search manage-search-icon"></i>
                         <input type="text" name="search" class="form-control manage-search-input" placeholder="Search by ID or brand name..." value="<%= e(search) %>" aria-label="Search Brands">
                         <% if (search) { %>
-                            <a href="manage_brand.php" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
+                            <a href="/brands" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
                                 <i class="bi bi-x-circle-fill"></i>
                             </a>
                         <% } %>
@@ -62,7 +62,7 @@
         <!-- EXPANDABLE FILTER PANEL -->
         <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
             <div class="filter-panel-box">
-                <form method="GET" action="manage_brand.php" id="filterForm">
+                <form method="GET" action="/brands" id="filterForm">
                     <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
                     <div class="row g-3">
                         <div class="col-12 col-sm-6 col-md-4">
@@ -75,7 +75,7 @@
                         </div>
                     </div>
                     <div class="filter-actions">
-                        <a href="manage_brand.php<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
+                        <a href="/brands<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -136,7 +136,7 @@
                                             <td><%= e(row.updated_by_name || row.updated_by || '-') %></td>
                                             <td><%= row.updated_at ? e(row.updated_at) : '-' %></td>
                                             <td class="action-column text-end text-nowrap">
-                                                <a href="view_brand.php?id=<%= row.id %>"
+                                                <a href="/brands/view/<%= row.id %>"
                                                     class="btn btn-sm btn-outline-secondary" title="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
@@ -167,7 +167,7 @@
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
 
-                                                    <form method="POST" action="manage_brand.php">
+                                                    <form method="POST" action="/brands">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="form_action" value="edit">
                                                             <input type="hidden" name="id" value="<%= row.id %>">
@@ -266,7 +266,7 @@
             </div>
 
             <!-- STANDARDIZED PAGINATION -->
-            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manage_brand.php' }) %>
+            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: '/brands' }) %>
         </div>
 
     </div>
@@ -276,7 +276,7 @@
 <div class="modal fade" id="createBrandModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="manage_brand.php">
+            <form method="POST" action="/brands">
                 <div class="modal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h5 class="modal-title mb-0 fw-bold">Create Brand</h5>

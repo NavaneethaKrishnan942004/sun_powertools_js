@@ -5,8 +5,8 @@ const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
-router.get(['/manage_brand.php', '/manage_brand'], brandController.index);
-router.post(['/manage_brand.php', '/manage_brand'], brandController.save);
-router.get(['/view_brand.php', '/view_brand'], brandController.view);
+router.get(['/brands', '/manage_brand.php', '/manage_brand'], brandController.index);
+router.post(['/brands', '/manage_brand.php', '/manage_brand'], brandController.save);
+router.get(['/brands/view/:id', '/view_brand.php', '/view_brand'], brandController.view);
 
 module.exports = router;

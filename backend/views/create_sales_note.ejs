@@ -5,8 +5,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Sales Notes', link: 'manage_sales_note.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Sales Notes', link: '/sales-notes' },
             { title: 'Create Sales Note' }
         ]) %>
 
@@ -19,7 +19,7 @@
                 
             </div>
             <div class="d-flex gap-2">
-                <a href="manage_sales_note.php" class="btn btn-outline-secondary">
+                <a href="/sales-notes" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i> Back to Sales Notes
                 </a>
             </div>
@@ -42,7 +42,7 @@
         <% } %>
 
         <!-- MAIN SALES NOTE FORM -->
-        <form method="POST" action="create_sales_note.php" id="salesNoteForm" novalidate>
+        <form method="POST" action="/sales-notes/create" id="salesNoteForm" novalidate>
             <div class="row g-4">
 
                 <!-- LEFT COLUMN: CUSTOMER SELECTION & PRODUCT ITEMS -->
@@ -186,8 +186,9 @@
                                                     data-unit="<%= p.unit_name || 'Unit' %>"
                                                     data-discount="<%= p.discount_percent || 0 %>"
                                                     data-category="<%= p.category_name || '' %>"
-                                                    data-brand="<%= p.brand_name || '' %>">
-                                                    <%= p.product_code %> - <%= p.product_name %> (Stock: <%= Number(p.stock_quantity) %> | ₹<%= numberFormat(p.selling_price, 2) %>)
+                                                    data-brand="<%= p.brand_name || '' %>"
+                                                    <%= Number(p.stock_quantity) <= 0 ? 'disabled' : '' %>>
+                                                    <%= p.product_code %> | <%= p.product_name %> | Stock: <%= Number(p.stock_quantity) %> | ₹<%= numberFormat(p.selling_price, 2) %>
                                                 </option>
                                             <% }) %>
                                         </select>
@@ -273,6 +274,11 @@
                                     <input type="number" name="other_charges" id="otherChargesInput" class="form-control form-control-sm text-end" value="<%= otherCharges %>" min="0" step="0.01">
                                 </div>
                             </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">Round Off:</span>
+                                <span class="fw-semibold text-muted" id="summaryRoundOff">₹0.00</span>
+                                <input type="hidden" name="round_off" id="roundOffInput" value="0.00">
+                            </div>
 
                             <hr class="my-3">
 
@@ -280,7 +286,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-2 p-3 bg-surface-soft rounded-3 border">
                                 <div>
                                     <span class="fs-6 fw-bold text-muted d-block">Calculated Grand Total:</span>
-                                    <small class="text-muted">Based on items, tax & charges</small>
+                                    <small class="text-muted">Rounded to nearest rupee</small>
                                 </div>
                                 <span class="fs-4 fw-bold text-body" id="summaryGrandTotal">₹0.00</span>
                             </div>
@@ -350,7 +356,7 @@
                                 </div>
 
                                 <div class="mb-2">
-                                    <label class="form-label small fw-semibold">Amount Received Now (₹)</label>
+                                    <label class="form-label small fw-semibold">Amount Received / Payment 1 (₹)</label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-surface">₹</span>
                                         <input type="number" name="amount_received" id="amountReceivedInput" class="form-control fw-bold text-success" value="<%= typeof amountReceived !== 'undefined' ? amountReceived : '0.00' %>" min="0" step="0.01" placeholder="0.00">
@@ -358,17 +364,37 @@
                                     <div id="amountReceivedError" class="text-danger small mt-1 d-none">
                                         <i class="bi bi-exclamation-circle me-1"></i>Amount Received cannot exceed Final Grand Total.
                                     </div>
-                                    <small class="text-muted d-block mt-0.5">Enter 0 for full credit, or partial amount received.</small>
+                                    <small class="text-muted d-block mt-0.5">Enter 0 for full credit, or initial Payment 1 received now.</small>
                                 </div>
 
                                 <div class="mb-2" id="creditPaymentMethodGroup">
-                                    <label class="form-label small fw-semibold">Payment Method for Received Amount</label>
+                                    <label class="form-label small fw-semibold">Payment Method for Payment 1</label>
                                     <select name="payment_method" id="creditPaymentMethod" class="form-select form-select-sm">
                                         <option value="Cash">Cash</option>
                                         <option value="UPI">UPI / QR Code</option>
                                         <option value="Card">Card</option>
                                         <option value="Bank Transfer">Bank Transfer</option>
                                     </select>
+                                </div>
+
+                                <!-- Real-time Credit Breakdown Display -->
+                                <div class="p-3 bg-surface rounded-3 border mb-3 shadow-xs" id="creditSummaryCard">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <span class="small fw-bold text-muted text-uppercase"><i class="bi bi-pie-chart me-1"></i>Credit Sale Summary</span>
+                                        <span id="creditPaymentStatusBadge" class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1">Unpaid</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-muted">Total Sales Amount:</span>
+                                        <strong id="creditTotalDisp" class="text-body">₹0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-muted">Paid Now (Payment 1):</span>
+                                        <strong id="creditPaidDisp" class="text-success">₹0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between pt-1 border-top mt-1">
+                                        <span class="fw-bold text-danger">Balance Amount:</span>
+                                        <strong id="creditBalanceDisp" class="fw-bold text-danger fs-6">₹0.00</strong>
+                                    </div>
                                 </div>
 
                                 <!-- Prominent Balance to Pay Warning Panel -->
@@ -416,8 +442,8 @@
                             </div>
 
                             <!-- Manager Credit Override Checkbox -->
-                            <div id="overrideBox" class="form-check p-3 bg-danger-subtle text-danger rounded-3 border border-danger-subtle mb-3 <%= creditOverride ? '' : 'd-none' %>">
-                                <input class="form-check-input ms-0 me-2" type="checkbox" name="credit_override" id="creditOverrideChk" value="1" <%= creditOverride ? 'checked' : '' %>>
+                            <div id="overrideBox" class="form-check p-3 bg-danger-subtle text-danger rounded-3 border border-danger-subtle mb-3 <%= (typeof creditOverride !== 'undefined' && creditOverride || typeof creditLimitExceeded !== 'undefined' && creditLimitExceeded) ? '' : 'd-none' %>">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="credit_override" id="creditOverrideChk" value="1" <%= (typeof creditOverride !== 'undefined' && creditOverride) ? 'checked' : '' %>>
                                 <label class="form-check-label small fw-bold" for="creditOverrideChk">
                                     Authorize Credit Limit Override
                                 </label>
@@ -443,6 +469,7 @@
                 </div>
 
             </div>
+            
         </form>
 
     </div>
@@ -452,7 +479,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let currentCustomer = null;
-    let items = []; // Line items array
+    let items = <%- (typeof initialItemsFormatted !== 'undefined' && initialItemsFormatted && initialItemsFormatted.length > 0) ? JSON.stringify(initialItemsFormatted) : '[]' %>;
 
     const salesNoteForm = document.getElementById('salesNoteForm');
     const customerSelect = document.getElementById('customerSelect');
@@ -483,6 +510,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryDiscount = document.getElementById('summaryDiscount');
     const summaryTax = document.getElementById('summaryTax');
     const otherChargesInput = document.getElementById('otherChargesInput');
+    const summaryRoundOff = document.getElementById('summaryRoundOff');
+    const roundOffInput = document.getElementById('roundOffInput');
     const summaryGrandTotal = document.getElementById('summaryGrandTotal');
 
     // Final Grand Total & Discount Elements
@@ -508,6 +537,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const amountReceivedInput = document.getElementById('amountReceivedInput');
     const amountReceivedError = document.getElementById('amountReceivedError');
     const dispCreditAmount = document.getElementById('dispCreditAmount');
+    const creditTotalDisp = document.getElementById('creditTotalDisp');
+    const creditPaidDisp = document.getElementById('creditPaidDisp');
+    const creditBalanceDisp = document.getElementById('creditBalanceDisp');
+    const creditPaymentStatusBadge = document.getElementById('creditPaymentStatusBadge');
 
     // Customer Validation & Impact Elements
     const customerRequiredStar = document.getElementById('customerRequiredStar');
@@ -535,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         customerValidationFeedback.classList.add('d-none');
 
-        fetch('ajax_sales_note.php?action=get_customer&customer_id=' + customerId)
+        fetch('/sales-notes/ajax?action=get_customer&customer_id=' + customerId)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.customer) {
@@ -621,8 +654,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         const stock = parseFloat(opt.dataset.stock) || 0;
-        quickStockDisplay.value = stock;
-        quickQuantityInput.max = stock;
+        quickStockDisplay.value = stock <= 0 ? '0 (Out of Stock)' : stock;
+        quickQuantityInput.max = Math.max(1, stock);
+        if (stock <= 0) {
+            stockErrorText.textContent = "This product is out of stock and cannot be added to the sale.";
+            stockErrorAlert.classList.remove('d-none');
+        }
     });
 
     // 4. ADD PRODUCT TO ITEMS TABLE
@@ -634,11 +671,18 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const stock = parseFloat(opt.dataset.stock) || 0;
+        if (stock <= 0) {
+            stockErrorText.textContent = "This product is out of stock and cannot be added to the sale.";
+            stockErrorAlert.classList.remove('d-none');
+            alert("This product is out of stock and cannot be added to the sale.");
+            return;
+        }
+
         const productId = parseInt(opt.value);
         const code = opt.dataset.code;
         const name = opt.dataset.name;
         const rate = parseFloat(opt.dataset.price) || 0;
-        const stock = parseFloat(opt.dataset.stock) || 0;
         const unit = opt.dataset.unit || 'Unit';
         const defaultDiscount = parseFloat(opt.dataset.discount) || 0;
         const qty = parseFloat(quickQuantityInput.value) || 1;
@@ -801,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const lineSub = item.quantity * item.unit_price;
             const lineDisc = Math.min(lineSub, parseFloat(item.discount) || 0);
             const taxable = Math.max(0, lineSub - lineDisc);
-            const lineTax = (taxable * (parseFloat(item.tax_percent) || 0)) / 100;
+            const lineTax = Math.round(((taxable * (parseFloat(item.tax_percent) || 0)) / 100) * 100) / 100;
 
             subtotal += lineSub;
             totalDiscount += lineDisc;
@@ -809,11 +853,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const otherCharges = Math.max(0, parseFloat(otherChargesInput.value) || 0);
-        const calculatedGrandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
+        const rawCalculatedGrandTotal = Math.max(0, (subtotal - totalDiscount) + totalTax + otherCharges);
+        const roundedGrandTotal = Math.round(rawCalculatedGrandTotal);
+        const calculatedGrandTotal = roundedGrandTotal;
+        const roundOff = Number((roundedGrandTotal - rawCalculatedGrandTotal).toFixed(2));
 
         summarySubtotal.textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryDiscount.textContent = '- ₹' + totalDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         summaryTax.textContent = '+ ₹' + totalTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        if (summaryRoundOff) {
+            if (roundOff > 0) {
+                summaryRoundOff.textContent = '+ ₹' + roundOff.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                summaryRoundOff.className = 'fw-semibold text-primary';
+            } else if (roundOff < 0) {
+                summaryRoundOff.textContent = '- ₹' + Math.abs(roundOff).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                summaryRoundOff.className = 'fw-semibold text-danger';
+            } else {
+                summaryRoundOff.textContent = '₹0.00';
+                summaryRoundOff.className = 'fw-semibold text-muted';
+            }
+        }
+        if (roundOffInput) {
+            roundOffInput.value = roundOff.toFixed(2);
+        }
+
         summaryGrandTotal.textContent = '₹' + calculatedGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         // Determine Final Grand Total
@@ -908,6 +972,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (prominentBalanceToPay) {
                 prominentBalanceToPay.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
+            if (creditTotalDisp) {
+                creditTotalDisp.textContent = '₹' + finalTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (creditPaidDisp) {
+                creditPaidDisp.textContent = '₹' + paidAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (creditBalanceDisp) {
+                creditBalanceDisp.textContent = '₹' + creditAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (creditPaymentStatusBadge) {
+                if (finalTotal <= 0.001) {
+                    creditPaymentStatusBadge.textContent = 'Fully Paid';
+                    creditPaymentStatusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle fw-bold px-2 py-1';
+                } else if (paidAmount >= finalTotal - 0.001) {
+                    creditPaymentStatusBadge.textContent = 'Fully Paid (Saves as Normal Sale)';
+                    creditPaymentStatusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle fw-bold px-2 py-1';
+                } else if (paidAmount > 0.001) {
+                    creditPaymentStatusBadge.textContent = 'Partially Paid (Credit Sale)';
+                    creditPaymentStatusBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold px-2 py-1';
+                } else {
+                    creditPaymentStatusBadge.textContent = 'Unpaid (Credit Sale)';
+                    creditPaymentStatusBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1';
+                }
+            }
         }
 
         // Customer Balance Impact & Outstanding
@@ -940,10 +1028,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     overrideBox.classList.add('d-none');
                 } else if (creditLimit > 0 && newBal > creditLimit) {
                     const excess = newBal - creditLimit;
-                    creditAlertBanner.className = 'alert alert-danger d-flex align-items-center gap-2 mt-3 mb-0';
-                    creditAlertMessage.innerHTML = `<strong>Credit limit exceeded!</strong> Available Credit was ₹${Math.max(0, creditLimit - prevBal).toFixed(2)}. Requested Credit exceeds limit by ₹${excess.toFixed(2)}.`;
+                    creditAlertBanner.className = 'alert alert-warning d-flex align-items-center gap-2 mt-3 mb-0';
+                    creditAlertMessage.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i><strong>Credit Limit Exceeded:</strong> Customer limit is ₹${creditLimit.toFixed(2)}. New outstanding will be ₹${newBal.toFixed(2)} (Exceeds limit by ₹${excess.toFixed(2)}).`;
                     creditAlertBanner.classList.remove('d-none');
-                    overrideBox.classList.remove('d-none');
+                    if (overrideBox) overrideBox.classList.remove('d-none');
                 } else if (creditLimit > 0 && newBal >= creditLimit * 0.8) {
                     creditAlertBanner.className = 'alert alert-warning d-flex align-items-center gap-2 mt-3 mb-0';
                     creditAlertMessage.textContent = `Warning: Customer is approaching credit limit (${((newBal/creditLimit)*100).toFixed(1)}% utilized).`;
@@ -1024,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price) - Math.min(item.quantity * item.unit_price, item.discount || 0) + ((item.quantity * item.unit_price - Math.min(item.quantity * item.unit_price, item.discount || 0)) * (item.tax_percent || 0) / 100), 0);
         const other = parseFloat(otherChargesInput.value) || 0;
-        const calcTotal = subtotal + other;
+        const calcTotal = Math.round(subtotal + other);
 
         if (rawFinal > calcTotal + 0.01) {
             e.preventDefault();
@@ -1092,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 status: 1
             };
 
-            fetch('create_customer.php', {
+            fetch('/customers/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1146,6 +1234,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize UI on page load
     updateSaleTypeUI();
+    if (items && items.length > 0) {
+        renderItemsTable();
+        recalculateAll();
+    }
 });
 </script>
 
@@ -1199,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div class="modal-footer bg-surface-soft border-top py-3 px-4 d-flex justify-content-between">
-                    <a href="create_customer.php" target="_blank" class="btn btn-sm btn-link text-decoration-none">
+                    <a href="/customers/create" target="_blank" class="btn btn-sm btn-link text-decoration-none">
                         <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Customer Form
                     </a>
                     <div class="d-flex gap-2">

@@ -4,8 +4,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Masters', link: 'masters.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Masters', link: '/masters' },
             { title: 'User Master' }
         ]) %>
 
@@ -13,7 +13,7 @@
             <div>
                 <h1 class="page-title mb-1">User Master</h1>
             </div>
-            <a href="create_user.php" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create User</a>
+            <a href="/users/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create User</a>
         </div>
 
         <% if (locals.success && success) { %>
@@ -39,12 +39,12 @@
         <!-- STANDARDIZED SEARCH & FILTER HEADER -->
         <div class="row g-3 align-items-center mb-3">
             <div class="col-12 col-md d-flex flex-grow-1 gap-2">
-                <form method="GET" action="manage_user.php" class="w-100 d-flex gap-2">
+                <form method="GET" action="/users" class="w-100 d-flex gap-2">
                     <div class="manage-search-wrapper">
                         <i class="bi bi-search manage-search-icon"></i>
                         <input type="text" name="search" class="form-control manage-search-input" placeholder="Search by ID, user name, email, phone..." value="<%= search || '' %>" aria-label="Search Users">
                         <% if (search) { %>
-                            <a href="manage_user.php" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
+                            <a href="/users" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
                                 <i class="bi bi-x-circle-fill"></i>
                             </a>
                         <% } %>
@@ -68,7 +68,7 @@
         <!-- EXPANDABLE FILTER PANEL -->
         <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
             <div class="filter-panel-box">
-                <form method="GET" action="manage_user.php" id="userFilterForm">
+                <form method="GET" action="/users" id="userFilterForm">
                     <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
                     <div class="row g-3">
                         <div class="col-12 col-sm-6 col-md-4">
@@ -89,7 +89,7 @@
                         </div>
                     </div>
                     <div class="filter-actions">
-                        <a href="manage_user.php<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
+                        <a href="/users<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -158,8 +158,8 @@
                                         <td><small class="text-muted"><%= row.updated_at ? new Date(row.updated_at).toLocaleDateString('en-GB') : '-' %></small></td>
                                         <td class="action-column text-end pe-4 text-nowrap">
                                             <div class="btn-group btn-group-sm">
-                                                <a href="view_user.php?id=<%= row.id %>" class="btn btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
-                                                <a href="edit_user.php?id=<%= row.id %>" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                                <a href="/users/view/<%= row.id %>" class="btn btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                                                <a href="/users/edit/<%= row.id %>" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
                                             </div>
                                         </td>
                                     </tr>
@@ -171,7 +171,7 @@
             </div>
 
             <!-- STANDARDIZED PAGINATION -->
-            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manage_user.php' }) %>
+            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: '/users' }) %>
         </div>
     </div>
 </main>

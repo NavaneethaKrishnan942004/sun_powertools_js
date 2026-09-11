@@ -239,7 +239,7 @@ const brandController = {
                 });
             }
 
-            res.redirect('/manage_brand.php');
+            res.redirect('/brands');
         } catch (err) {
             console.error('[BrandController.save] Error:', err);
             res.status(500).send('Internal Server Error');
@@ -249,7 +249,7 @@ const brandController = {
     // GET /view_brand.php or /view_brand
     view: async (req, res) => {
         try {
-            const id = parseInt(req.query.id || 0, 10);
+            const id = parseInt(req.params.id || req.query.id || 0, 10);
             const [rows] = await db.query(`
                 SELECT 
                     bm.*,

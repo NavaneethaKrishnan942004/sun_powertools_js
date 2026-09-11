@@ -5,10 +5,10 @@
 
 <!-- Breadcrumb Navigation -->
 <%- renderBreadcrumbs([
-    { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-    { title: 'Settings', link: 'settings.php' },
-    { title: 'DMS Masters', link: 'masters.php' },
-    { title: 'Product Master', link: 'manage_product.php' },
+    { title: '', icon: 'bi bi-house-door', link: '/' },
+    { title: 'Settings', link: '/settings' },
+    { title: 'DMS Masters', link: '/masters' },
+    { title: 'Product Master', link: '/products' },
     { title: 'Add' }
 ]) %>
 
@@ -18,7 +18,7 @@
         <h1 class="page-title mb-1">Create Product</h1>
         <p class="text-muted mb-0">Add a new product for rental and sales.</p>
     </div>
-    <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
+    <a href="/products" class="btn btn-outline-secondary">Back</a>
 </div>
 
 <% if (generalError) { %>
@@ -440,7 +440,7 @@
 
 <!-- BUTTONS -->
 <div class="d-flex justify-content-end gap-2 mb-4">
-    <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
+    <a href="/products" class="btn btn-outline-secondary">Back</a>
     <button type="submit" class="btn btn-primary">
         <i class="bi bi-check-lg me-1"></i> Save
     </button>

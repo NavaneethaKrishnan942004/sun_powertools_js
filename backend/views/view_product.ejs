@@ -5,10 +5,10 @@
 
 <!-- Breadcrumb Navigation -->
 <%- renderBreadcrumbs([
-    { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-    { title: 'Settings', link: 'settings.php' },
-    { title: 'DMS Masters', link: 'masters.php' },
-    { title: 'Product Master', link: 'manage_product.php' },
+    { title: '', icon: 'bi bi-house-door', link: '/' },
+    { title: 'Settings', link: '/settings' },
+    { title: 'DMS Masters', link: '/masters' },
+    { title: 'Product Master', link: '/products' },
     { title: 'View' }
 ]) %>
 
@@ -19,8 +19,8 @@
         <p class="text-muted mb-0">View complete product details.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="manage_product.php" class="btn btn-outline-secondary">Back</a>
-        <a href="edit_product.php?id=<%= product.id %>" class="btn btn-primary">
+        <a href="/products" class="btn btn-outline-secondary">Back</a>
+        <a href="/products/edit/<%= product.id %>" class="btn btn-primary">
             <i class="bi bi-pencil me-1"></i> Edit
         </a>
     </div>

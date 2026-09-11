@@ -88,9 +88,9 @@ app.use((req, res) => {
         return res.status(404).json({ success: false, message: 'Resource not found.' });
     }
     if (req.session && req.session.user_id) {
-        return res.redirect('/index.php');
+        return res.redirect('/');
     }
-    res.redirect('/login.php');
+    res.redirect('/login');
 });
 
 // Global Error Handler
@@ -99,15 +99,23 @@ app.use((err, req, res, next) => {
     if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
     }
-    res.status(500).send(`<h3>An unexpected error occurred</h3><p>${err.message}</p><a href="/index.php">Return to Dashboard</a>`);
+    res.status(500).send(`<h3>An unexpected error occurred</h3><p>${err.message}</p><a href="/">Return to Dashboard</a>`);
 });
 
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`=========================================`);
     console.log(`  Sun PowerTools Node.js Backend Server  `);
     console.log(`  Running on: http://localhost:${PORT}   `);
     console.log(`=========================================`);
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`[Server Error] Port ${PORT} is already in use by another process.`);
+    } else {
+        console.error('[Server Error]', err);
+    }
 });
 
 module.exports = app;

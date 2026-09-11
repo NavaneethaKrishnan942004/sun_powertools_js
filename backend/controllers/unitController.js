@@ -239,7 +239,7 @@ const unitController = {
                 });
             }
 
-            res.redirect('/manaage_unit.php');
+            res.redirect('/units');
         } catch (err) {
             console.error('[UnitController.save] Error:', err);
             res.status(500).send('Internal Server Error');
@@ -249,7 +249,7 @@ const unitController = {
     // GET /view_unit.php or /view_unit
     view: async (req, res) => {
         try {
-            const id = parseInt(req.query.id || 0, 10);
+            const id = parseInt(req.params.id || req.query.id || 0, 10);
             const [rows] = await db.query(`
                 SELECT 
                     um.*,

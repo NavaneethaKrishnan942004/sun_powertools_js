@@ -241,7 +241,7 @@ const categoryController = {
                 });
             }
 
-            res.redirect('/manage_category.php');
+            res.redirect('/categories');
         } catch (err) {
             console.error('[CategoryController.save] Error:', err);
             res.status(500).send('Internal Server Error');
@@ -251,7 +251,7 @@ const categoryController = {
     // GET /view_category.php or /view_category
     view: async (req, res) => {
         try {
-            const id = parseInt(req.query.id || 0, 10);
+            const id = parseInt(req.params.id || req.query.id || 0, 10);
             const [rows] = await db.query(`
                 SELECT 
                     cm.*,

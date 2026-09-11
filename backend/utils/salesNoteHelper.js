@@ -179,9 +179,9 @@ function getPaymentTypeBadge(type) {
 
 /**
  * Determine Payment Status based on financial values:
- * - FULL PAYMENT: Amount Paid >= Grand Total
- * - PARTIALLY PAID: Amount Paid > 0 and Amount Paid < Grand Total
- * - UNPAID: Amount Paid = 0 and Grand Total > 0
+ * - Fully Paid: Amount Paid >= Grand Total
+ * - Partially Paid: Amount Paid > 0 and Amount Paid < Grand Total
+ * - Unpaid: Amount Paid = 0 and Grand Total > 0
  */
 function getPaymentStatusInfo(paidAmount, totalAmount) {
     const paid = Math.max(0.00, parseFloat(paidAmount || 0));
@@ -190,37 +190,37 @@ function getPaymentStatusInfo(paidAmount, totalAmount) {
 
     if (total <= 0.001) {
         return {
-            status: 'FULL PAYMENT',
+            status: 'Fully Paid',
             code: 'FULL_PAYMENT',
             badge_class: 'bg-success-subtle text-success border border-success-subtle fw-bold',
             balance: 0.00,
-            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">FULL PAYMENT</span>'
+            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">Fully Paid</span>'
         };
     }
 
     if (paid >= total - 0.001) {
         return {
-            status: 'FULL PAYMENT',
+            status: 'Fully Paid',
             code: 'FULL_PAYMENT',
             badge_class: 'bg-success-subtle text-success border border-success-subtle fw-bold',
             balance: 0.00,
-            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">FULL PAYMENT</span>'
+            badge_html: '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2.5 py-1 rounded-pill">Fully Paid</span>'
         };
     } else if (paid > 0.001) {
         return {
-            status: 'PARTIALLY PAID',
+            status: 'Partially Paid',
             code: 'PARTIALLY_PAID',
             badge_class: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold',
             balance: balance,
-            badge_html: '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold px-2.5 py-1 rounded-pill">PARTIALLY PAID</span>'
+            badge_html: '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold px-2.5 py-1 rounded-pill">Partially Paid</span>'
         };
     } else {
         return {
-            status: 'UNPAID',
+            status: 'Unpaid',
             code: 'UNPAID',
             badge_class: 'bg-danger-subtle text-danger border border-danger-subtle fw-bold',
             balance: balance,
-            badge_html: '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2.5 py-1 rounded-pill">UNPAID</span>'
+            badge_html: '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2.5 py-1 rounded-pill">Unpaid</span>'
         };
     }
 }
@@ -230,7 +230,17 @@ function getPaymentStatusInfo(paidAmount, totalAmount) {
  * Supports backward-compatibility for historical sales notes where sale_type was not set
  */
 function getSaleTypeInfo(saleType, creditAmount = 0, paymentType = '') {
-    const isCredit = (String(saleType).toLowerCase() === 'credit') || parseFloat(creditAmount || 0) > 0.001 || paymentType === 'Credit';
+    const credAmt = parseFloat(creditAmount || 0);
+    const sType = String(saleType || '').toLowerCase();
+
+    let isCredit = false;
+    if (sType === 'sale') {
+        isCredit = credAmt > 0.001;
+    } else if (sType === 'credit') {
+        isCredit = true;
+    } else {
+        isCredit = credAmt > 0.001 || paymentType === 'Credit';
+    }
 
     if (isCredit) {
         return {
@@ -433,11 +443,62 @@ async function getSalesAnalytics(conn) {
     return analytics;
 }
 
+/**
+ * Build complete chronological payment list (Payment 1, 2, 3, etc.) for a sales note
+ * Combines initial creation payment with subsequent credit payments
+ */
+function buildPaymentsList(sale, subsequentPayments = []) {
+    const list = [];
+    const totalSubPayments = subsequentPayments.reduce((sum, p) => sum + parseFloat(p.credit_amount || 0), 0);
+    const firstPaymentAmt = (sale.first_payment !== undefined && sale.first_payment !== null)
+        ? parseFloat(sale.first_payment)
+        : Math.max(0.00, parseFloat(sale.paid_amount || 0) - totalSubPayments);
+
+    // If initial payment was made at creation time, it is Payment 1
+    if (firstPaymentAmt > 0.001) {
+        let initDate = sale.sales_date ? (sale.sales_time ? `${sale.sales_date} ${sale.sales_time}` : sale.sales_date) : sale.created_at;
+        list.push({
+            id: 'initial',
+            payment_number: 1,
+            payment_label: 'Payment 1',
+            full_label: 'Payment 1 (Initial / Creation)',
+            short_label: 'P1',
+            amount: firstPaymentAmt,
+            payment_method: sale.payment_type || 'Cash',
+            transaction_date: initDate,
+            is_initial: true,
+            notes: 'Initial payment at sale creation',
+            status: 'Paid'
+        });
+    }
+
+    // Subsequent installment payments: Payment 2, 3, 4, etc. (or Payment 1, 2, 3 if first was 0)
+    subsequentPayments.forEach((p) => {
+        const nextNum = list.length + 1;
+        list.push({
+            id: p.id,
+            payment_number: nextNum,
+            payment_label: `Payment ${nextNum}`,
+            full_label: `Payment ${nextNum} (Installment)`,
+            short_label: `P${nextNum}`,
+            amount: parseFloat(p.credit_amount || p.total_amount || 0),
+            payment_method: p.payment_method || 'Cash',
+            transaction_date: p.transaction_date,
+            is_initial: false,
+            notes: p.notes || p.reason || `Credit payment #${nextNum}`,
+            status: 'Paid'
+        });
+    });
+
+    return list;
+}
+
 module.exports = {
     generateSalesNoteNumber,
     evaluateCreditStatus,
     getPaymentTypeBadge,
     getPaymentStatusInfo,
     getSaleTypeInfo,
-    getSalesAnalytics
+    getSalesAnalytics,
+    buildPaymentsList
 };

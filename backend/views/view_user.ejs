@@ -4,10 +4,10 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Settings', link: 'settings.php' },
-            { title: 'DMS Masters', link: 'masters.php' },
-            { title: 'User Master', link: 'manage_user.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Settings', link: '/settings' },
+            { title: 'DMS Masters', link: '/masters' },
+            { title: 'User Master', link: '/users' },
             { title: 'View' }
         ]) %>
 
@@ -17,10 +17,10 @@
                 <p class="text-muted mb-0"><%= user.user_id %></p>
             </div>
             <div class="d-flex gap-2">
-                <a href="edit_user.php?id=<%= user.id %>" class="btn btn-primary">
+                <a href="/users/edit/<%= user.id %>" class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
-                <a href="manage_user.php" class="btn btn-outline-secondary">Back</a>
+                <a href="/users" class="btn btn-outline-secondary">Back</a>
             </div>
         </div>
 

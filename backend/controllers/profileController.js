@@ -15,7 +15,7 @@ const getProfile = async (req, res, next) => {
 
         const user = rows[0];
         if (!user) {
-            return req.session.destroy(() => res.redirect('login.php'));
+            return req.session.destroy(() => res.redirect('/login'));
         }
 
         const avatarSrc = user.avatar
@@ -40,7 +40,7 @@ const updateProfile = async (req, res, next) => {
         const [userRows] = await db.query('SELECT * FROM user_master WHERE id = ? LIMIT 1', [userId]);
         let user = userRows[0];
         if (!user) {
-            return req.session.destroy(() => res.redirect('login.php'));
+            return req.session.destroy(() => res.redirect('/login'));
         }
 
         let message = '';

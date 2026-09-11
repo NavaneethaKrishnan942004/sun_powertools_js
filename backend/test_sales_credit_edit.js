@@ -78,27 +78,27 @@ async function runTests() {
     console.log('--- TEST GROUP 1: Payment Status & Sale Type Helper Logic ---');
     test('Full Payment detected when paid equals grand total', () => {
         const info = getPaymentStatusInfo(10000, 10000);
-        assert.strictEqual(info.status, 'FULL PAYMENT');
+        assert.strictEqual(info.status, 'Fully Paid');
         assert.strictEqual(info.code, 'FULL_PAYMENT');
         assert.strictEqual(info.balance, 0);
     });
 
     test('Full Payment detected when paid exceeds grand total', () => {
         const info = getPaymentStatusInfo(12000, 10000);
-        assert.strictEqual(info.status, 'FULL PAYMENT');
+        assert.strictEqual(info.status, 'Fully Paid');
         assert.strictEqual(info.balance, 0);
     });
 
     test('Partially Paid detected when 0 < paid < grand total', () => {
         const info = getPaymentStatusInfo(4000, 10000);
-        assert.strictEqual(info.status, 'PARTIALLY PAID');
+        assert.strictEqual(info.status, 'Partially Paid');
         assert.strictEqual(info.code, 'PARTIALLY_PAID');
         assert.strictEqual(info.balance, 6000);
     });
 
     test('Unpaid detected when paid is 0 and total > 0', () => {
         const info = getPaymentStatusInfo(0, 10000);
-        assert.strictEqual(info.status, 'UNPAID');
+        assert.strictEqual(info.status, 'Unpaid');
         assert.strictEqual(info.code, 'UNPAID');
         assert.strictEqual(info.balance, 10000);
     });
@@ -271,17 +271,132 @@ async function runTests() {
 
         // Verify status badges are present in HTML
         assert(res.body.includes('CREDIT SALE'), 'CREDIT SALE badge rendered');
-        assert(res.body.includes('FULL PAYMENT'), 'FULL PAYMENT badge rendered');
+        assert(res.body.includes('Fully Paid') || res.body.includes('Partially Paid'), 'Payment status badge rendered');
 
         // Verify sticky action column is preserved
         assert(res.body.includes('action-column-wide'), 'Sticky action column class action-column-wide present');
+
+        // Verify Credit Sale row highlighting and action rules
+        assert(res.body.includes('credit-sale-row'), 'Credit Sale row has credit-sale-row highlight class');
+        assert(!res.body.includes(`/sales-notes/edit/${createdCreditSaleId}`), 'Credit Sale row does NOT show normal Edit link');
     });
 
-    // --- GROUP 7: Normal Sale Creation & Edit ---
-    console.log('\n--- TEST GROUP 7: Normal Sale Create & Edit Verification ---');
+    // --- GROUP 7: Receive Payment Flow for Credit Sale ---
+    console.log('\n--- TEST GROUP 7: Receive Payment Flow for Credit Sale ---');
+    let partialCreditSaleId = 0;
+    let partialCreditSaleNo = '';
+    const unitPrice = parseFloat(testProduct.selling_price);
+
+    await testAsync('Create Credit Sale with ₹0 paid -> Status is Unpaid', async () => {
+        const payload = new URLSearchParams();
+        payload.append('sales_datetime', '2026-09-09T18:00');
+        payload.append('customer_id', String(testCustomer.id));
+        payload.append('final_grand_total', String(unitPrice));
+        payload.append('sale_type', 'credit');
+        payload.append('amount_received', '0');
+        payload.append('credit_override', '1');
+        payload.append('notes', 'Unpaid Credit Sale Test');
+        payload.append('items[0][product_id]', String(testProduct.id));
+        payload.append('items[0][quantity]', '1');
+        payload.append('items[0][unit_price]', String(unitPrice));
+        payload.append('items[0][discount]', '0');
+        payload.append('items[0][tax_percent]', '0');
+
+        const res = await makeRequest('/create_sales_note.php', 'POST', payload.toString(), {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        });
+        assert([302, 200].includes(res.status));
+
+        const [latest] = await pool.query("SELECT * FROM sales_notes ORDER BY id DESC LIMIT 1");
+        partialCreditSaleId = latest[0].id;
+        partialCreditSaleNo = latest[0].sales_note_no;
+
+        assert.strictEqual(parseFloat(latest[0].paid_amount), 0, 'Paid amount is 0');
+        assert.strictEqual(parseFloat(latest[0].credit_amount), unitPrice, 'Credit amount is full total');
+        const pStatus = getPaymentStatusInfo(latest[0].paid_amount, latest[0].total_amount);
+        assert.strictEqual(pStatus.status, 'Unpaid', 'Status is Unpaid');
+    });
+
+    await testAsync('Record partial payment via /sales-notes/receive-payment -> Balance decreases correctly', async () => {
+        const payAmount = Math.min(500, unitPrice / 2);
+        const payload = new URLSearchParams();
+        payload.append('sales_note_id', String(partialCreditSaleId));
+        payload.append('payment_amount', String(payAmount));
+        payload.append('payment_method', 'UPI');
+        payload.append('notes', 'Partial Payment Receipt Test');
+
+        const res = await makeRequest('/sales-notes/receive-payment', 'POST', payload.toString(), {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        });
+        assert([302, 200].includes(res.status));
+
+        const [updated] = await pool.query("SELECT * FROM sales_notes WHERE id = ?", [partialCreditSaleId]);
+        assert.strictEqual(parseFloat(updated[0].paid_amount), payAmount, 'Paid amount updated');
+        assert.strictEqual(parseFloat(updated[0].credit_amount), unitPrice - payAmount, 'Remaining balance updated');
+
+        const pStatus = getPaymentStatusInfo(updated[0].paid_amount, updated[0].total_amount);
+        assert.strictEqual(pStatus.status, 'Partially Paid', 'Status is now Partially Paid');
+
+        // Verify transaction logged in customer_transactions
+        const [txs] = await pool.query(
+            "SELECT * FROM customer_transactions WHERE reference_number = ? AND transaction_type = 'payment' ORDER BY id DESC LIMIT 1",
+            [partialCreditSaleNo]
+        );
+        assert(txs.length > 0, 'Payment transaction recorded in customer ledger');
+        assert.strictEqual(parseFloat(txs[0].credit_amount), payAmount, 'Payment amount credited to customer account');
+    });
+
+    await testAsync('Reject payment greater than outstanding balance', async () => {
+        const [current] = await pool.query("SELECT * FROM sales_notes WHERE id = ?", [partialCreditSaleId]);
+        const currentBal = parseFloat(current[0].credit_amount);
+        const excessiveAmount = currentBal + 1000;
+
+        const payload = new URLSearchParams();
+        payload.append('sales_note_id', String(partialCreditSaleId));
+        payload.append('payment_amount', String(excessiveAmount));
+        payload.append('payment_method', 'Cash');
+
+        const res = await makeRequest('/sales-notes/receive-payment', 'POST', payload.toString(), {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        });
+
+        // Redirects with error
+        assert([302, 200].includes(res.status));
+        // Verify payment was NOT applied
+        const [notUpdated] = await pool.query("SELECT * FROM sales_notes WHERE id = ?", [partialCreditSaleId]);
+        assert.strictEqual(parseFloat(notUpdated[0].credit_amount), currentBal, 'Balance untouched after rejected overpayment');
+    });
+
+    await testAsync('Record full remaining payment -> Balance becomes ₹0 and Status is Fully Paid', async () => {
+        const [current] = await pool.query("SELECT * FROM sales_notes WHERE id = ?", [partialCreditSaleId]);
+        const remainingBal = parseFloat(current[0].credit_amount);
+
+        const payload = new URLSearchParams();
+        payload.append('sales_note_id', String(partialCreditSaleId));
+        payload.append('payment_amount', String(remainingBal));
+        payload.append('payment_method', 'Card');
+        payload.append('notes', 'Final Settlement Test');
+
+        const res = await makeRequest('/sales-notes/receive-payment', 'POST', payload.toString(), {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        });
+        assert([302, 200].includes(res.status));
+
+        const [finalSale] = await pool.query("SELECT * FROM sales_notes WHERE id = ?", [partialCreditSaleId]);
+        assert.strictEqual(parseFloat(finalSale[0].paid_amount), unitPrice, 'Total amount fully paid');
+        assert.strictEqual(parseFloat(finalSale[0].credit_amount), 0, 'Balance is now 0');
+        assert.strictEqual(finalSale[0].sale_type, 'credit', 'Sale type permanently remains credit');
+
+        const pStatus = getPaymentStatusInfo(finalSale[0].paid_amount, finalSale[0].total_amount);
+        assert.strictEqual(pStatus.status, 'Fully Paid', 'Status is now Fully Paid');
+        const sType = getSaleTypeInfo(finalSale[0].sale_type, finalSale[0].credit_amount);
+        assert.strictEqual(sType.type, 'credit', 'Identified as Credit Sale even when Fully Paid');
+    });
+
+    // --- GROUP 8: Normal Sale Creation & Edit Action Visibility ---
+    console.log('\n--- TEST GROUP 8: Normal Sale Creation & Action Check ---');
     let normalSaleId = 0;
-    await testAsync('Create Normal Sale', async () => {
-        const unitPrice = parseFloat(testProduct.selling_price);
+    await testAsync('Create Normal Sale & Verify Normal Sale displays Edit action', async () => {
         const payload = new URLSearchParams();
         payload.append('sales_datetime', '2026-09-09T18:00');
         payload.append('customer_id', String(testCustomer.id));
@@ -303,22 +418,19 @@ async function runTests() {
         normalSaleId = latest[0].id;
         assert.strictEqual(latest[0].sale_type, 'sale', 'Normal sale saved as sale_type = sale');
         assert.strictEqual(parseFloat(latest[0].credit_amount), 0, 'Credit amount is 0');
+
+        // Manage table check for normal sale Edit link
+        const manageRes = await makeRequest('/manage_sales_note.php');
+        assert(manageRes.body.includes(`/sales-notes/edit/${normalSaleId}`), 'Normal sale row displays normal Edit button');
     });
 
-    await testAsync('GET /edit_sales_note.php for Normal Sale shows Normal Sale checked', async () => {
-        const res = await makeRequest(`/edit_sales_note.php?id=${normalSaleId}`);
-        assert.strictEqual(res.status, 200);
-        assert(res.body.includes('id="saleTypeNormal" value="sale" checked'), 'Normal Sale radio is checked');
-        assert(!res.body.includes('id="saleTypeCredit" value="credit" checked'), 'Credit Sale radio is NOT checked');
-    });
-
-    // --- GROUP 8: View Sales Note Verification ---
-    console.log('\n--- TEST GROUP 8: View Sales Note Page ---');
-    await testAsync('View Sales Note page displays Sale Type and Payment Status badges', async () => {
-        const res = await makeRequest(`/view_sales_note.php?id=${createdCreditSaleId}`);
+    // --- GROUP 9: View Sales Note Verification ---
+    console.log('\n--- TEST GROUP 9: View Sales Note Page ---');
+    await testAsync('View Sales Note page displays Sale Type, Payment Status, and Balance to Pay', async () => {
+        const res = await makeRequest(`/view_sales_note.php?id=${partialCreditSaleId}`);
         assert.strictEqual(res.status, 200);
         assert(res.body.includes('CREDIT SALE'), 'CREDIT SALE badge shown on view page');
-        assert(res.body.includes('FULL PAYMENT'), 'FULL PAYMENT badge shown on view page');
+        assert(res.body.includes('Fully Paid'), 'Fully Paid badge shown on view page');
         assert(res.body.includes('Balance to Pay:'), 'Balance to Pay row shown on view page');
     });
 

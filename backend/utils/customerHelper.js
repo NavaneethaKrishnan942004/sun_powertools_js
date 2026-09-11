@@ -51,8 +51,10 @@ async function getCustomerFinancialSummary(conn, customerId, customerData = null
     // Base from opening balance
     let netDebit = (openingType === 'Debit') ? openingBalance : -openingBalance;
 
-    let totalSales = 0.00;
-    let totalRentals = 0.00;
+    let totalSalesVolume = 0.00;
+    let totalSalesDebt = 0.00;
+    let totalRentalsVolume = 0.00;
+    let totalRentalsDebt = 0.00;
     let totalPayments = 0.00;
     let totalReturns = 0.00;
 
@@ -60,8 +62,8 @@ async function getCustomerFinancialSummary(conn, customerId, customerData = null
         const [rows] = await db.query(`
             SELECT 
                 transaction_type,
-                COALESCE(SUM(debit_amount), 0) AS sum_debit,
-                COALESCE(SUM(credit_amount), 0) AS sum_credit,
+                COALESCE(SUM(CASE WHEN debit_amount IS NOT NULL THEN debit_amount ELSE total_amount END), 0) AS sum_debit,
+                COALESCE(SUM(CASE WHEN credit_amount IS NOT NULL THEN credit_amount ELSE total_amount END), 0) AS sum_credit,
                 COALESCE(SUM(total_amount), 0) AS sum_total
             FROM customer_transactions 
             WHERE customer_id = :customer_id
@@ -75,15 +77,17 @@ async function getCustomerFinancialSummary(conn, customerId, customerData = null
             const sumTotal = parseFloat(r.sum_total || 0);
 
             if (type === 'sales' || type === 'sale' || type === 'sales_note' || type === 'invoice') {
-                totalSales += sumDebit || sumTotal;
+                totalSalesDebt += sumDebit;
+                totalSalesVolume += sumTotal;
             } else if (type === 'rental' || type === 'rental_note') {
-                totalRentals += sumDebit || sumTotal;
+                totalRentalsDebt += sumDebit;
+                totalRentalsVolume += sumTotal;
             } else if (type === 'payment' || type === 'receipt') {
-                totalPayments += sumCredit || sumTotal;
+                totalPayments += sumCredit;
             } else if (type === 'return' || type === 'sales_return') {
-                totalReturns += sumCredit || sumTotal;
+                totalReturns += sumCredit;
             } else {
-                if (sumDebit > 0) totalSales += sumDebit;
+                if (sumDebit > 0) totalSalesDebt += sumDebit;
                 if (sumCredit > 0) totalPayments += sumCredit;
             }
         }
@@ -91,7 +95,7 @@ async function getCustomerFinancialSummary(conn, customerId, customerData = null
         console.error('[customerHelper] Error computing financial summary:', err.message);
     }
 
-    const currentOutstanding = (netDebit + totalSales + totalRentals) - (totalPayments + totalReturns);
+    const currentOutstanding = (netDebit + totalSalesDebt + totalRentalsDebt) - (totalPayments + totalReturns);
     const availableCredit = (creditAllowed === 1) ? Math.max(0.00, creditLimit - currentOutstanding) : 0.00;
     const isExceeded = (creditAllowed === 1) && (currentOutstanding > creditLimit);
     const creditUtilization = (creditAllowed === 1 && creditLimit > 0)
@@ -104,8 +108,10 @@ async function getCustomerFinancialSummary(conn, customerId, customerData = null
         net_opening: netDebit,
         credit_limit: creditLimit,
         credit_allowed: creditAllowed,
-        total_sales: totalSales,
-        total_rentals: totalRentals,
+        total_sales: totalSalesVolume,
+        total_sales_debt: totalSalesDebt,
+        total_rentals: totalRentalsVolume,
+        total_rentals_debt: totalRentalsDebt,
         total_payments: totalPayments,
         total_returns: totalReturns,
         current_outstanding: currentOutstanding,

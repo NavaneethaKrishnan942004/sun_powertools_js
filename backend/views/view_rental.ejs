@@ -5,8 +5,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Rentals', link: 'manage_rental.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Rentals', link: '/rentals' },
             { title: 'View Rental ' + rental.rental_no }
         ]) %>
 
@@ -25,7 +25,7 @@
                 <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i> Print Contract
                 </button>
-                <a href="manage_rental.php" class="btn btn-outline-secondary">
+                <a href="/rentals" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i> Back to Rentals
                 </a>
                 <% if (['Active', 'Overdue'].includes(rental.effective_status)) { %>
@@ -64,7 +64,7 @@
                         <h5 class="fw-bold mb-0 text-primary">
                             <i class="bi bi-person-circle me-2"></i>Customer Information
                         </h5>
-                        <a href="view_customer.php?id=<%= rental.customer_id %>" class="btn btn-sm btn-outline-primary">
+                        <a href="/customers/view/<%= rental.customer_id %>" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-box-arrow-up-right me-1"></i> View Profile
                         </a>
                     </div>
@@ -109,7 +109,7 @@
                         <h5 class="fw-bold mb-0 text-primary">
                             <i class="bi bi-tools me-2"></i>Rented Equipment & Rates
                         </h5>
-                        <a href="view_product.php?id=<%= rental.product_id %>" class="btn btn-sm btn-outline-primary">
+                        <a href="/products/view/<%= rental.product_id %>" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-box-arrow-up-right me-1"></i> View Product
                         </a>
                     </div>
@@ -392,7 +392,7 @@
 <div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="return_rental.php" id="viewReturnForm">
+            <form method="POST" action="/rentals/return" id="viewReturnForm">
                 <input type="hidden" name="id" value="<%= rental.id %>">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-success" id="returnModalLabel">
@@ -569,7 +569,7 @@
 <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="cancel_rental.php">
+            <form method="POST" action="/rentals/cancel">
                 <input type="hidden" name="id" value="<%= rental.id %>">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-danger" id="cancelModalLabel">
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const deductions = depositDeductionInput.value || 0;
         const reason = deductionReasonInput.value || '';
 
-        fetch(`/ajax_rental.php?action=calculate_return_settlement&rental_id=${rentalId}&actual_return=${encodeURIComponent(actualReturn)}&additional_charges=${encodeURIComponent(addCharges)}&deposit_deductions=${encodeURIComponent(deductions)}&deposit_deduction_reason=${encodeURIComponent(reason)}`)
+        fetch(`/rentals/ajax?action=calculate_return_settlement&rental_id=${rentalId}&actual_return=${encodeURIComponent(actualReturn)}&additional_charges=${encodeURIComponent(addCharges)}&deposit_deductions=${encodeURIComponent(deductions)}&deposit_deduction_reason=${encodeURIComponent(reason)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.settlement) {

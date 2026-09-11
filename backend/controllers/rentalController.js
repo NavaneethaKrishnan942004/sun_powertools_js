@@ -438,7 +438,7 @@ exports.createRental = async (req, res) => {
         await conn.commit();
         conn.release();
 
-        return res.redirect(`/view_rental.php?id=${rentalId}&success=${encodeURIComponent(`Rental ${rentalNo} created successfully!`)}`);
+        return res.redirect(`/rentals/view/${rentalId}?id=${rentalId}&success=${encodeURIComponent(`Rental ${rentalNo} created successfully!`)}`);
     } catch (err) {
         await conn.rollback();
         conn.release();
@@ -470,9 +470,9 @@ exports.createRental = async (req, res) => {
  */
 exports.viewRental = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Invalid Rental ID'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Invalid Rental ID'));
         }
 
         const [rows] = await pool.query(
@@ -511,7 +511,7 @@ exports.viewRental = async (req, res) => {
         );
 
         if (!rows.length) {
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Rental record not found.'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Rental record not found.'));
         }
 
         const rental = rows[0];
@@ -567,13 +567,13 @@ exports.returnRental = async (req, res) => {
         const id = parseInt(req.body.id || req.query.id || 0, 10);
         if (id <= 0) {
             conn.release();
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Invalid Rental ID'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Invalid Rental ID'));
         }
 
         const [rentals] = await conn.query('SELECT * FROM rentals WHERE id = ? LIMIT 1 FOR UPDATE', [id]);
         if (!rentals.length) {
             conn.release();
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Rental not found'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Rental not found'));
         }
 
         const rental = rentals[0];
@@ -694,7 +694,7 @@ exports.returnRental = async (req, res) => {
         await conn.rollback();
         conn.release();
         console.error('returnRental error:', err);
-        return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Return failed: ' + err.message));
+        return res.redirect('/rentals?error=' + encodeURIComponent('Return failed: ' + err.message));
     }
 };
 
@@ -708,13 +708,13 @@ exports.cancelRental = async (req, res) => {
         const id = parseInt(req.body.id || req.query.id || 0, 10);
         if (id <= 0) {
             conn.release();
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Invalid Rental ID'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Invalid Rental ID'));
         }
 
         const [rentals] = await conn.query('SELECT * FROM rentals WHERE id = ? LIMIT 1 FOR UPDATE', [id]);
         if (!rentals.length) {
             conn.release();
-            return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Rental not found'));
+            return res.redirect('/rentals?error=' + encodeURIComponent('Rental not found'));
         }
 
         const rental = rentals[0];
@@ -763,7 +763,7 @@ exports.cancelRental = async (req, res) => {
         await conn.rollback();
         conn.release();
         console.error('cancelRental error:', err);
-        return res.redirect('/manage_rental.php?error=' + encodeURIComponent('Cancellation failed: ' + err.message));
+        return res.redirect('/rentals?error=' + encodeURIComponent('Cancellation failed: ' + err.message));
     }
 };
 

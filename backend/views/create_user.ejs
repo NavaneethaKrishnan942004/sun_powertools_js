@@ -4,8 +4,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Users Management', link: 'manage_user.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Users Management', link: '/users' },
             { title: 'Add' }
         ]) %>
 
@@ -78,7 +78,7 @@
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-4">
-                        <a href="manage_user.php" class="btn btn-outline-secondary">Back</a>
+                        <a href="/users" class="btn btn-outline-secondary">Back</a>
                         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
                     </div>
                 </div>

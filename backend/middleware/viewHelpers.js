@@ -173,6 +173,7 @@ function viewHelpers(req, res, next) {
         reqPath += '.php';
     }
 
+    res.locals.currentPath = req.path;
     res.locals.currentPage = reqPath;
     res.locals.e = e;
     res.locals.nl2br = nl2br;

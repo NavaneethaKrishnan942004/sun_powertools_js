@@ -5,9 +5,9 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Masters', link: 'masters.php' },
-            { title: 'Customer Master', link: 'manage_customer.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Masters', link: '/masters' },
+            { title: 'Customer Master', link: '/customers' },
             { title: 'Edit Customer' }
         ]) %>
 
@@ -17,12 +17,12 @@
                 <h1 class="page-title mb-1">Edit Customer</h1>
                 <small class="text-muted">Customer Code: <%= e(customer.customer_code) %></small>
             </div>
-            <a href="manage_customer.php" class="btn btn-outline-secondary">
+            <a href="/customers" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Back to Customers
             </a>
         </div>
 
-        <form method="POST" action="edit_customer.php" id="editCustomerForm" novalidate>
+        <form method="POST" action="/customers/edit" id="editCustomerForm" novalidate>
             <input type="hidden" name="id" value="<%= customer.id %>">
 
             <!-- SECTION 1: CUSTOMER INFORMATION -->
@@ -250,7 +250,7 @@
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="bi bi-check-lg me-1"></i> Update Customer
                     </button>
-                    <a href="manage_customer.php" class="btn btn-outline-secondary px-4">
+                    <a href="/customers" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                 </div>

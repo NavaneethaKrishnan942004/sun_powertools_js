@@ -239,7 +239,7 @@ const productTypeController = {
                 });
             }
 
-            res.redirect('/manage_producttype.php');
+            res.redirect('/product-types');
         } catch (err) {
             console.error('[ProductTypeController.save] Error:', err);
             res.status(500).send('Internal Server Error');
@@ -249,7 +249,7 @@ const productTypeController = {
     // GET /view_producttype.php, /view_product_type.php, or /view_producttype
     view: async (req, res) => {
         try {
-            const id = parseInt(req.query.id || 0, 10);
+            const id = parseInt(req.params.id || req.query.id || 0, 10);
             const [rows] = await db.query(`
                 SELECT 
                     ptm.*,

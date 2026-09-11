@@ -190,7 +190,7 @@ const createProcess = async (req, res, next) => {
 
 const editForm = async (req, res, next) => {
     try {
-        const id = parseInt(req.query.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || 0, 10);
         const [rows] = await db.query('SELECT * FROM user_master WHERE id = ? LIMIT 1', [id]);
         const user = rows[0];
 
@@ -349,7 +349,7 @@ const editProcess = async (req, res, next) => {
 
 const viewUser = async (req, res, next) => {
     try {
-        const id = parseInt(req.query.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || 0, 10);
         const [rows] = await db.query('SELECT * FROM user_master WHERE id = ? LIMIT 1', [id]);
         const user = rows[0];
 

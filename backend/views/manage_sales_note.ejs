@@ -1,574 +1,1201 @@
 <%- include('includes/header') %>
 
-<main class="main-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
+    <style>
+        .credit-sale-row {
+            background-color: rgba(13, 110, 253, 0.04) !important;
+        }
 
-        <!-- Breadcrumb Navigation -->
-        <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Sales Notes' }
-        ]) %>
+        .credit-sale-row td:first-child {
+            border-left: 4px solid #0d6efd !important;
+        }
 
-        <!-- PAGE HEADING & PRIMARY ACTIONS -->
-        <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
-            <div>
-                <h1 class="page-title mb-1">
-                    <i class="bi bi-receipt text-primary me-2"></i>Sales Notes
-                </h1>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#analyticsCollapse" aria-expanded="false" aria-controls="analyticsCollapse">
-                    <i class="bi bi-graph-up-arrow me-1"></i> Business Analytics
-                </button>
-                <a href="create_sales_note.php" class="btn btn-primary shadow-sm">
-                    <i class="bi bi-plus-lg me-1"></i> Create Sales Note
-                </a>
-            </div>
-        </div>
+        .credit-sale-row:hover {
+            background-color: rgba(13, 110, 253, 0.08) !important;
+        }
 
-        <!-- ALERTS / NOTIFICATIONS -->
-        <% if (locals.success) { %>
-            <div class="alert alert-success alert-dismissible fade show auto-hide-alert d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
-                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                <div class="fw-medium"><%= success %></div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <% } %>
+        .credit-limit-exceeded-row {
+            background-color: rgba(220, 53, 69, 0.05) !important;
+        }
 
-        <% if (locals.error) { %>
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
-                <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
-                <div class="fw-medium"><%= error %></div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <% } %>
+        .credit-limit-exceeded-row td:first-child {
+            border-left: 4px solid #dc3545 !important;
+        }
 
-        <!-- SUMMARY KPI CARDS -->
-        <div class="row g-3 mb-4">
-            <!-- Total Sales -->
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card metric-primary p-3 rounded-4 shadow-sm border bg-surface">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-semibold text-uppercase">Total Sales</span>
-                        <div class="avatar-xs bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                            <i class="bi bi-currency-rupee fs-5"></i>
-                        </div>
+        .credit-limit-exceeded-row:hover {
+            background-color: rgba(220, 53, 69, 0.09) !important;
+        }
+
+        /* Responsive Action Column for Manage Sales Notes */
+        #salesNoteTable th.action-column-sales,
+        #salesNoteTable td.action-column-sales {
+            white-space: nowrap !important;
+            text-align: end !important;
+            padding: 0.65rem 0.75rem !important;
+        }
+
+        /* Ensure action button group stays in a neat single line without breaking */
+        .sales-action-group {
+            display: inline-flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+        }
+
+        .sales-action-group .btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0.28rem 0.48rem !important;
+            font-size: 0.8125rem !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+        }
+
+        .sales-action-group .receive-payment-btn {
+            font-weight: 600 !important;
+            letter-spacing: 0.01em;
+        }
+
+        /* Desktop and Large Displays (>= 1200px) */
+        @media (min-width: 1200px) {
+
+            #salesNoteTable th.action-column-sales,
+            #salesNoteTable td.action-column-sales {
+                min-width: 220px !important;
+                width: 220px !important;
+                padding-right: 1.25rem !important;
+            }
+        }
+
+        /* Medium Tablets & Laptops (768px - 1199.98px) */
+        @media (min-width: 768px) and (max-width: 1199.98px) {
+
+            #salesNoteTable th.action-column-sales,
+            #salesNoteTable td.action-column-sales {
+                min-width: 185px !important;
+                width: 185px !important;
+                padding: 0.5rem 0.65rem !important;
+            }
+
+            .sales-action-group .btn {
+                padding: 0.25rem 0.42rem !important;
+            }
+        }
+
+        /* Mobile Devices (< 768px) */
+        @media (max-width: 767.98px) {
+
+            #salesNoteTable th.action-column-sales,
+            #salesNoteTable td.action-column-sales {
+                min-width: 155px !important;
+                width: 155px !important;
+                padding: 0.4rem 0.5rem !important;
+            }
+
+            .sales-action-group .btn {
+                padding: 0.22rem 0.38rem !important;
+                font-size: 0.775rem !important;
+            }
+        }
+    </style>
+
+    <main class="main-content">
+        <div class="container-fluid px-3 px-lg-4 py-4">
+
+            <!-- Breadcrumb Navigation -->
+            <%- renderBreadcrumbs([ { title: '' , icon: 'bi bi-house-door' , link: '/' }, { title: 'Sales Notes' } ]) %>
+
+                <!-- PAGE HEADING & PRIMARY ACTIONS -->
+                <div
+                    class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+                    <div>
+                        <h1 class="page-title mb-1">
+                            <i class="bi bi-receipt text-primary me-2"></i>Sales Notes
+                        </h1>
                     </div>
-                    <h3 class="fw-bold mb-1">₹<%= numberFormat(analytics.sales_summary.total_sales, 2) %></h3>
-                    <div class="text-muted small">
-                        <span class="badge bg-primary-subtle text-primary"><%= numberFormat(analytics.sales_summary.total_count) %></span> notes generated
-                    </div>
-                </div>
-            </div>
-
-            <!-- Today's Sales -->
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card metric-success p-3 rounded-4 shadow-sm border bg-surface">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-semibold text-uppercase">Today's Sales</span>
-                        <div class="avatar-xs bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                            <i class="bi bi-calendar-check fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold mb-1 text-success">₹<%= numberFormat(analytics.sales_summary.today_sales, 2) %></h3>
-                    <div class="text-muted small">
-                        <span class="badge bg-success-subtle text-success"><%= numberFormat(analytics.sales_summary.today_count) %></span> sales today
-                    </div>
-                </div>
-            </div>
-
-            <!-- Total Paid Received -->
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card metric-info p-3 rounded-4 shadow-sm border bg-surface">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-semibold text-uppercase">Paid Received</span>
-                        <div class="avatar-xs bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                            <i class="bi bi-cash-stack fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold mb-1 text-info">₹<%= numberFormat(analytics.sales_summary.total_paid, 2) %></h3>
-                    <div class="text-muted small">Cash / UPI / Card / Bank</div>
-                </div>
-            </div>
-
-            <!-- Outstanding Credit Sales -->
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card metric-warning p-3 rounded-4 shadow-sm border bg-surface">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-semibold text-uppercase">Credit Sales Issued</span>
-                        <div class="avatar-xs bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                            <i class="bi bi-credit-card-2-back fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold mb-1 text-danger">₹<%= numberFormat(analytics.sales_summary.total_credit, 2) %></h3>
-                    <div class="text-muted small">
-                        Outstanding: <strong>₹<%= numberFormat(analytics.credit_analysis.total_outstanding, 2) %></strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- COLLAPSIBLE BUSINESS ANALYTICS SECTION -->
-        <div class="collapse mb-4" id="analyticsCollapse">
-            <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0">
-                        <i class="bi bi-speedometer2 text-primary me-2"></i>Sales & Customer Credit Analytics
-                    </h5>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#analyticsCollapse">
-                        <i class="bi bi-x-lg"></i> Close
-                    </button>
-                </div>
-
-                <div class="row g-4">
-                    <!-- Left: Sales Summary & Payment Breakdown -->
-                    <div class="col-12 col-lg-6">
-                        <div class="p-3 border rounded-3 bg-surface-soft h-100">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-clock-history me-1"></i> Periodic Performance & Payment Methods</h6>
-                            
-                            <div class="row g-2 mb-3">
-                                <div class="col-6 col-sm-4">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">This Week</small>
-                                        <strong class="text-body">₹<%= numberFormat(analytics.sales_summary.week_sales, 2) %></strong>
-                                        <div class="small text-muted"><%= analytics.sales_summary.week_count %> sales</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-sm-4">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">This Month</small>
-                                        <strong class="text-body">₹<%= numberFormat(analytics.sales_summary.month_sales, 2) %></strong>
-                                        <div class="small text-muted"><%= analytics.sales_summary.month_count %> sales</div>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-sm-4">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">Avg Sale Value</small>
-                                        <strong class="text-body">₹<%= numberFormat(analytics.sales_summary.avg_sale_value, 2) %></strong>
-                                        <div class="small text-muted">per note</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h6 class="fw-bold small text-muted text-uppercase mb-2">Payment Methods Breakdown</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered align-middle mb-0 small">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Method</th>
-                                            <th class="text-center">Count</th>
-                                            <th class="text-end">Total Amount</th>
-                                            <th class="text-end">Paid Amount</th>
-                                            <th class="text-end">Credit Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% if (analytics.payment_breakdown && analytics.payment_breakdown.length > 0) { %>
-                                            <% analytics.payment_breakdown.forEach(pm => { %>
-                                                <tr>
-                                                    <td><%- getPaymentTypeBadge(pm.payment_type) %></td>
-                                                    <td class="text-center fw-semibold"><%= pm.tx_count %></td>
-                                                    <td class="text-end fw-semibold">₹<%= numberFormat(pm.total_amount, 2) %></td>
-                                                    <td class="text-end text-success">₹<%= numberFormat(pm.paid_amount, 2) %></td>
-                                                    <td class="text-end text-danger">₹<%= numberFormat(pm.credit_amount, 2) %></td>
-                                                </tr>
-                                            <% }) %>
-                                        <% } else { %>
-                                            <tr><td colspan="5" class="text-center text-muted">No transactions yet</td></tr>
-                                        <% } %>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: Credit Risk & Product Highlights -->
-                    <div class="col-12 col-lg-6">
-                        <div class="p-3 border rounded-3 bg-surface-soft h-100">
-                            <h6 class="fw-bold text-danger mb-3"><i class="bi bi-shield-exclamation me-1"></i> Customer Credit Health Status</h6>
-                            
-                            <div class="row g-2 mb-3">
-                                <div class="col-6 col-sm-3">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">With Balance</small>
-                                        <strong class="fs-6 text-primary"><%= analytics.credit_analysis.customers_with_balance %></strong>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-sm-3">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">Near Limit (80%+)</small>
-                                        <strong class="fs-6 text-warning"><%= analytics.credit_analysis.customers_near_limit %></strong>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-sm-3">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">Limit Reached</small>
-                                        <strong class="fs-6 text-danger"><%= analytics.credit_analysis.customers_reached_limit %></strong>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-sm-3">
-                                    <div class="p-2 border rounded bg-surface text-center">
-                                        <small class="text-muted d-block">Limit Exceeded</small>
-                                        <strong class="fs-6 text-danger fw-bold"><%= analytics.credit_analysis.customers_exceeded_limit %></strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h6 class="fw-bold small text-muted text-uppercase mb-2">Top Selling Products</h6>
-                            <div class="table-responsive mb-2">
-                                <table class="table table-sm table-bordered align-middle mb-0 small">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Code</th>
-                                            <th>Product</th>
-                                            <th class="text-center">Qty Sold</th>
-                                            <th class="text-end">Revenue</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% if (analytics.top_products && analytics.top_products.length > 0) { %>
-                                            <% analytics.top_products.forEach(tp => { %>
-                                                <tr>
-                                                    <td><span class="badge bg-secondary-subtle text-secondary"><%= tp.product_code %></span></td>
-                                                    <td class="text-truncate" style="max-width: 180px;" title="<%= tp.product_name %>"><%= tp.product_name %></td>
-                                                    <td class="text-center fw-bold"><%= numberFormat(tp.total_qty_sold) %></td>
-                                                    <td class="text-end fw-semibold text-success">₹<%= numberFormat(tp.total_revenue, 2) %></td>
-                                                </tr>
-                                            <% }) %>
-                                        <% } else { %>
-                                            <tr><td colspan="4" class="text-center text-muted">No sales items yet</td></tr>
-                                        <% } %>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <%
-        const hasActiveFilters = Boolean(customerIdFilter || paymentTypeFilter || creditStatusFilter || dateFrom || dateTo || (statusFilter && statusFilter !== '1'));
-        %>
-
-        <!-- STANDARDIZED SEARCH & FILTER HEADER -->
-        <div class="row g-3 align-items-center mb-3">
-            <div class="col-12 col-md d-flex flex-grow-1 gap-2">
-                <form method="GET" action="manage_sales_note.php" class="w-100 d-flex gap-2">
-                    <div class="manage-search-wrapper">
-                        <i class="bi bi-search manage-search-icon"></i>
-                        <input type="text" name="search" class="form-control manage-search-input" placeholder="Search by note #, customer name, code, mobile..." value="<%= search %>" aria-label="Search Sales Notes">
-                        <% if (search) { %>
-                            <a href="manage_sales_note.php" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </a>
-                        <% } %>
-                    </div>
-                    <% if (customerIdFilter) { %><input type="hidden" name="customer_id" value="<%= customerIdFilter %>"><% } %>
-                    <% if (paymentTypeFilter) { %><input type="hidden" name="payment_type" value="<%= paymentTypeFilter %>"><% } %>
-                    <% if (creditStatusFilter) { %><input type="hidden" name="credit_status" value="<%= creditStatusFilter %>"><% } %>
-                    <% if (dateFrom) { %><input type="hidden" name="date_from" value="<%= dateFrom %>"><% } %>
-                    <% if (dateTo) { %><input type="hidden" name="date_to" value="<%= dateTo %>"><% } %>
-                    <% if (statusFilter && statusFilter !== '1') { %><input type="hidden" name="status" value="<%= statusFilter %>"><% } %>
-                </form>
-            </div>
-            <div class="col-12 col-md-auto d-flex gap-2 justify-content-end">
-                <button class="btn btn-filter-toggle <%= hasActiveFilters ? 'active' : '' %>" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" aria-expanded="<%= hasActiveFilters ? 'true' : 'false' %>" aria-controls="filterSection">
-                    <i class="bi bi-funnel"></i>
-                    <span>Filters</span>
-                    <% if (hasActiveFilters) { %>
-                        <span class="badge bg-primary text-white rounded-pill ms-1">Active</span>
-                    <% } %>
-                    <i class="bi bi-chevron-down filter-toggle-icon"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- EXPANDABLE FILTER PANEL -->
-        <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
-            <div class="filter-panel-box">
-                <form method="GET" action="manage_sales_note.php" id="filterForm">
-                    <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
-                    <div class="row g-3">
-                        <!-- Customer Filter -->
-                        <div class="col-12 col-sm-6 col-lg-3">
-                            <label class="form-label small fw-semibold text-muted">Customer</label>
-                            <select name="customer_id" class="form-select">
-                                <option value="">All Customers</option>
-                                <% customersList.forEach(c => { %>
-                                    <option value="<%= c.id %>" <%= Number(customerIdFilter) === Number(c.id) ? 'selected' : '' %>>
-                                        <%= c.customer_code %> - <%= c.customer_name %>
-                                    </option>
-                                <% }) %>
-                            </select>
-                        </div>
-
-                        <!-- Payment Type Filter -->
-                        <div class="col-12 col-sm-6 col-lg-2">
-                            <label class="form-label small fw-semibold text-muted">Payment Type</label>
-                            <select name="payment_type" class="form-select">
-                                <option value="">All Payment Types</option>
-                                <option value="Cash" <%= paymentTypeFilter === 'Cash' ? 'selected' : '' %>>Cash</option>
-                                <option value="UPI" <%= paymentTypeFilter === 'UPI' ? 'selected' : '' %>>UPI</option>
-                                <option value="Card" <%= paymentTypeFilter === 'Card' ? 'selected' : '' %>>Card</option>
-                                <option value="Bank Transfer" <%= paymentTypeFilter === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer</option>
-                                <option value="Credit" <%= paymentTypeFilter === 'Credit' ? 'selected' : '' %>>Credit</option>
-                                <option value="Mixed" <%= paymentTypeFilter === 'Mixed' ? 'selected' : '' %>>Mixed / Partial</option>
-                            </select>
-                        </div>
-
-                        <!-- Credit Status Filter -->
-                        <div class="col-12 col-sm-6 col-lg-2">
-                            <label class="form-label small fw-semibold text-muted">Credit Status</label>
-                            <select name="credit_status" class="form-select">
-                                <option value="">All Statuses</option>
-                                <option value="Within Limit" <%= creditStatusFilter === 'Within Limit' ? 'selected' : '' %>>Within Limit</option>
-                                <option value="Near Limit" <%= creditStatusFilter === 'Near Limit' ? 'selected' : '' %>>Near Limit</option>
-                                <option value="Limit Reached" <%= creditStatusFilter === 'Limit Reached' ? 'selected' : '' %>>Limit Reached</option>
-                                <option value="Limit Exceeded" <%= creditStatusFilter === 'Limit Exceeded' ? 'selected' : '' %>>Limit Exceeded</option>
-                                <option value="Credit Not Allowed" <%= creditStatusFilter === 'Credit Not Allowed' ? 'selected' : '' %>>Credit Not Allowed</option>
-                            </select>
-                        </div>
-
-                        <!-- Date Range From -->
-                        <div class="col-12 col-sm-6 col-lg-2">
-                            <label class="form-label small fw-semibold text-muted">From Date</label>
-                            <input type="date" name="date_from" class="form-control" value="<%= dateFrom %>">
-                        </div>
-
-                        <!-- Date Range To -->
-                        <div class="col-12 col-sm-6 col-lg-2">
-                            <label class="form-label small fw-semibold text-muted">To Date</label>
-                            <input type="date" name="date_to" class="form-control" value="<%= dateTo %>">
-                        </div>
-
-                        <!-- Status Filter -->
-                        <div class="col-12 col-sm-6 col-lg-1">
-                            <label class="form-label small fw-semibold text-muted">Status</label>
-                            <select name="status" class="form-select">
-                                <option value="1" <%= statusFilter === '1' ? 'selected' : '' %>>Active</option>
-                                <option value="0" <%= statusFilter === '0' ? 'selected' : '' %>>Cancelled</option>
-                                <option value="all" <%= statusFilter === 'all' ? 'selected' : '' %>>All</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="filter-actions">
-                        <a href="manage_sales_note.php<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse"
+                            data-bs-target="#analyticsCollapse" aria-expanded="false" aria-controls="analyticsCollapse">
+                            <i class="bi bi-graph-up-arrow me-1"></i> Business Analytics
+                        </button>
+                        <a href="/sales-notes/create" class="btn btn-primary shadow-sm">
+                            <i class="bi bi-plus-lg me-1"></i> Create Sales Note
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                    </div>
+                </div>
+
+                <!-- ALERTS / NOTIFICATIONS -->
+                <% if (locals.success) { %>
+                    <div class="alert alert-success alert-dismissible fade show auto-hide-alert d-flex align-items-center gap-2 shadow-sm mb-4"
+                        role="alert">
+                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                        <div class="fw-medium">
+                            <%= success %>
+                        </div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"
+                            aria-label="Close"></button>
+                    </div>
+                    <% } %>
+
+                        <% if (locals.error) { %>
+                            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4"
+                                role="alert">
+                                <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                                <div class="fw-medium">
+                                    <%= error %>
+                                </div>
+                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                            </div>
+                            <% } %>
+
+                                <!-- SUMMARY KPI CARDS -->
+                                <div class="row g-3 mb-4">
+                                    <!-- Total Sales -->
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <div
+                                            class="metric-card metric-primary p-3 rounded-4 shadow-sm border bg-surface">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="text-muted small fw-semibold text-uppercase">Total
+                                                    Sales</span>
+                                                <div class="avatar-xs bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center"
+                                                    style="width:36px;height:36px;">
+                                                    <i class="bi bi-currency-rupee fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="fw-bold mb-1">₹<%=
+                                                    numberFormat(analytics.sales_summary.total_sales, 2) %>
+                                            </h3>
+                                            <div class="text-muted small">
+                                                <span class="badge bg-primary-subtle text-primary">
+                                                    <%= numberFormat(analytics.sales_summary.total_count) %>
+                                                </span> notes generated
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Today's Sales -->
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <div
+                                            class="metric-card metric-success p-3 rounded-4 shadow-sm border bg-surface">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="text-muted small fw-semibold text-uppercase">Today's
+                                                    Sales</span>
+                                                <div class="avatar-xs bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center"
+                                                    style="width:36px;height:36px;">
+                                                    <i class="bi bi-calendar-check fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="fw-bold mb-1 text-success">₹<%=
+                                                    numberFormat(analytics.sales_summary.today_sales, 2) %>
+                                            </h3>
+                                            <div class="text-muted small">
+                                                <span class="badge bg-success-subtle text-success">
+                                                    <%= numberFormat(analytics.sales_summary.today_count) %>
+                                                </span> sales today
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Total Paid Received -->
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <div class="metric-card metric-info p-3 rounded-4 shadow-sm border bg-surface">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="text-muted small fw-semibold text-uppercase">Paid
+                                                    Received</span>
+                                                <div class="avatar-xs bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center"
+                                                    style="width:36px;height:36px;">
+                                                    <i class="bi bi-cash-stack fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="fw-bold mb-1 text-info">₹<%=
+                                                    numberFormat(analytics.sales_summary.total_paid, 2) %>
+                                            </h3>
+                                            <div class="text-muted small">Cash / UPI / Card / Bank</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Outstanding Credit Sales -->
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <div
+                                            class="metric-card metric-warning p-3 rounded-4 shadow-sm border bg-surface">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="text-muted small fw-semibold text-uppercase">Credit Sales
+                                                    Issued</span>
+                                                <div class="avatar-xs bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center"
+                                                    style="width:36px;height:36px;">
+                                                    <i class="bi bi-credit-card-2-back fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="fw-bold mb-1 text-danger">₹<%=
+                                                    numberFormat(analytics.sales_summary.total_credit, 2) %>
+                                            </h3>
+                                            <div class="text-muted small">
+                                                Outstanding: <strong>₹<%=
+                                                        numberFormat(analytics.credit_analysis.total_outstanding, 2) %>
+                                                        </strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- COLLAPSIBLE BUSINESS ANALYTICS SECTION -->
+                                <div class="collapse mb-4" id="analyticsCollapse">
+                                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="fw-bold mb-0">
+                                                <i class="bi bi-speedometer2 text-primary me-2"></i>Sales & Customer
+                                                Credit Analytics
+                                            </h5>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#analyticsCollapse">
+                                                <i class="bi bi-x-lg"></i> Close
+                                            </button>
+                                        </div>
+
+                                        <div class="row g-4">
+                                            <!-- Left: Sales Summary & Payment Breakdown -->
+                                            <div class="col-12 col-lg-6">
+                                                <div class="p-3 border rounded-3 bg-surface-soft h-100">
+                                                    <h6 class="fw-bold text-primary mb-3"><i
+                                                            class="bi bi-clock-history me-1"></i> Periodic Performance &
+                                                        Payment Methods</h6>
+
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-6 col-sm-4">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">This Week</small>
+                                                                <strong class="text-body">₹<%=
+                                                                        numberFormat(analytics.sales_summary.week_sales,
+                                                                        2) %></strong>
+                                                                <div class="small text-muted">
+                                                                    <%= analytics.sales_summary.week_count %> sales
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-4">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">This Month</small>
+                                                                <strong class="text-body">₹<%=
+                                                                        numberFormat(analytics.sales_summary.month_sales,
+                                                                        2) %></strong>
+                                                                <div class="small text-muted">
+                                                                    <%= analytics.sales_summary.month_count %> sales
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">Avg Sale Value</small>
+                                                                <strong class="text-body">₹<%=
+                                                                        numberFormat(analytics.sales_summary.avg_sale_value,
+                                                                        2) %></strong>
+                                                                <div class="small text-muted">per note</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <h6 class="fw-bold small text-muted text-uppercase mb-2">Payment
+                                                        Methods Breakdown</h6>
+                                                    <div class="table-responsive">
+                                                        <table
+                                                            class="table table-sm table-bordered align-middle mb-0 small">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Method</th>
+                                                                    <th class="text-center">Count</th>
+                                                                    <th class="text-end">Total Amount</th>
+                                                                    <th class="text-end">Paid Amount</th>
+                                                                    <th class="text-end">Credit Amount</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <% if (analytics.payment_breakdown &&
+                                                                    analytics.payment_breakdown.length> 0) { %>
+                                                                    <% analytics.payment_breakdown.forEach(pm=> { %>
+                                                                        <tr>
+                                                                            <td><%- getPaymentTypeBadge(pm.payment_type)
+                                                                                    %></td>
+                                                                            <td class="text-center fw-semibold">
+                                                                                <%= pm.tx_count %>
+                                                                            </td>
+                                                                            <td class="text-end fw-semibold">₹<%=
+                                                                                    numberFormat(pm.total_amount, 2) %>
+                                                                            </td>
+                                                                            <td class="text-end text-success">₹<%=
+                                                                                    numberFormat(pm.paid_amount, 2) %>
+                                                                            </td>
+                                                                            <td class="text-end text-danger">₹<%=
+                                                                                    numberFormat(pm.credit_amount, 2) %>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <% }) %>
+                                                                            <% } else { %>
+                                                                                <tr>
+                                                                                    <td colspan="5"
+                                                                                        class="text-center text-muted">
+                                                                                        No transactions yet</td>
+                                                                                </tr>
+                                                                                <% } %>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Right: Credit Risk & Product Highlights -->
+                                            <div class="col-12 col-lg-6">
+                                                <div class="p-3 border rounded-3 bg-surface-soft h-100">
+                                                    <h6 class="fw-bold text-danger mb-3"><i
+                                                            class="bi bi-shield-exclamation me-1"></i> Customer Credit
+                                                        Health Status</h6>
+
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">With Balance</small>
+                                                                <strong class="fs-6 text-primary">
+                                                                    <%= analytics.credit_analysis.customers_with_balance
+                                                                        %>
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">Near Limit
+                                                                    (80%+)</small>
+                                                                <strong class="fs-6 text-warning">
+                                                                    <%= analytics.credit_analysis.customers_near_limit
+                                                                        %>
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">Limit Reached</small>
+                                                                <strong class="fs-6 text-danger">
+                                                                    <%= analytics.credit_analysis.customers_reached_limit
+                                                                        %>
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-surface text-center">
+                                                                <small class="text-muted d-block">Limit Exceeded</small>
+                                                                <strong class="fs-6 text-danger fw-bold">
+                                                                    <%= analytics.credit_analysis.customers_exceeded_limit
+                                                                        %>
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <h6 class="fw-bold small text-muted text-uppercase mb-2">Top Selling
+                                                        Products</h6>
+                                                    <div class="table-responsive mb-2">
+                                                        <table
+                                                            class="table table-sm table-bordered align-middle mb-0 small">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Code</th>
+                                                                    <th>Product</th>
+                                                                    <th class="text-center">Qty Sold</th>
+                                                                    <th class="text-end">Revenue</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <% if (analytics.top_products &&
+                                                                    analytics.top_products.length> 0) { %>
+                                                                    <% analytics.top_products.forEach(tp=> { %>
+                                                                        <tr>
+                                                                            <td><span
+                                                                                    class="badge bg-secondary-subtle text-secondary">
+                                                                                    <%= tp.product_code %>
+                                                                                </span></td>
+                                                                            <td class="text-truncate"
+                                                                                style="max-width: 180px;"
+                                                                                title="<%= tp.product_name %>">
+                                                                                <%= tp.product_name %>
+                                                                            </td>
+                                                                            <td class="text-center fw-bold">
+                                                                                <%= numberFormat(tp.total_qty_sold) %>
+                                                                            </td>
+                                                                            <td
+                                                                                class="text-end fw-semibold text-success">
+                                                                                ₹<%= numberFormat(tp.total_revenue, 2)
+                                                                                    %>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <% }) %>
+                                                                            <% } else { %>
+                                                                                <tr>
+                                                                                    <td colspan="4"
+                                                                                        class="text-center text-muted">
+                                                                                        No sales items yet</td>
+                                                                                </tr>
+                                                                                <% } %>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <% const hasActiveFilters=Boolean(customerIdFilter || paymentTypeFilter ||
+                                    (typeof paymentStatusFilter !== 'undefined' && paymentStatusFilter) ||
+                                    creditStatusFilter || dateFrom || dateTo || (statusFilter && statusFilter !=='1' ));
+                                    %>
+
+                                    <!-- STANDARDIZED SEARCH & FILTER HEADER -->
+                                    <div class="row g-3 align-items-center mb-3">
+                                        <div class="col-12 col-md d-flex flex-grow-1 gap-2">
+                                            <form method="GET" action="/sales-notes" class="w-100 d-flex gap-2">
+                                                <div class="manage-search-wrapper">
+                                                    <i class="bi bi-search manage-search-icon"></i>
+                                                    <input type="text" name="search"
+                                                        class="form-control manage-search-input"
+                                                        placeholder="Search by note #, customer name, code, mobile..."
+                                                        value="<%= search %>" aria-label="Search Sales Notes">
+                                                    <% if (search) { %>
+                                                        <a href="/sales-notes"
+                                                            class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2"
+                                                            title="Clear search">
+                                                            <i class="bi bi-x-circle-fill"></i>
+                                                        </a>
+                                                        <% } %>
+                                                </div>
+                                                <% if (customerIdFilter) { %><input type="hidden" name="customer_id"
+                                                        value="<%= customerIdFilter %>">
+                                                    <% } %>
+                                                        <% if (paymentTypeFilter) { %><input type="hidden"
+                                                                name="payment_type" value="<%= paymentTypeFilter %>">
+                                                            <% } %>
+                                                            <% if (typeof paymentStatusFilter !== 'undefined' && paymentStatusFilter) { %><input type="hidden"
+                                                                    name="payment_status" value="<%= paymentStatusFilter %>">
+                                                                <% } %>
+                                                                <% if (creditStatusFilter) { %><input type="hidden"
+                                                                        name="credit_status"
+                                                                        value="<%= creditStatusFilter %>">
+                                                                    <% } %>
+                                                                        <% if (dateFrom) { %><input type="hidden"
+                                                                                name="date_from"
+                                                                                value="<%= dateFrom %>">
+                                                                            <% } %>
+                                                                                <% if (dateTo) { %><input type="hidden"
+                                                                                        name="date_to"
+                                                                                        value="<%= dateTo %>">
+                                                                                    <% } %>
+                                                                                        <% if (statusFilter &&
+                                                                                            statusFilter !=='1' ) { %>
+                                                                                            <input type="hidden"
+                                                                                                name="status"
+                                                                                                value="<%= statusFilter %>">
+                                                                                            <% } %>
+                                            </form>
+                                        </div>
+                                        <div class="col-12 col-md-auto d-flex gap-2 justify-content-end">
+                                            <button
+                                                class="btn btn-filter-toggle <%= hasActiveFilters ? 'active' : '' %>"
+                                                type="button" data-bs-toggle="collapse" data-bs-target="#filterSection"
+                                                aria-expanded="<%= hasActiveFilters ? 'true' : 'false' %>"
+                                                aria-controls="filterSection">
+                                                <i class="bi bi-funnel"></i>
+                                                <span>Filters</span>
+                                                <% if (hasActiveFilters) { %>
+                                                    <span
+                                                        class="badge bg-primary text-white rounded-pill ms-1">Active</span>
+                                                    <% } %>
+                                                        <i class="bi bi-chevron-down filter-toggle-icon"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- EXPANDABLE FILTER PANEL -->
+                                    <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
+                                        <div class="filter-panel-box">
+                                            <form method="GET" action="/sales-notes" id="filterForm">
+                                                <% if (search) { %><input type="hidden" name="search"
+                                                        value="<%= search %>">
+                                                    <% } %>
+                                                        <div class="row g-3">
+                                                            <!-- Customer Filter -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">Customer</label>
+                                                                <select name="customer_id" class="form-select">
+                                                                    <option value="">All Customers</option>
+                                                                    <% customersList.forEach(c=> { %>
+                                                                        <option value="<%= c.id %>"
+                                                                            <%=Number(customerIdFilter)===Number(c.id)
+                                                                            ? 'selected' : '' %>>
+                                                                            <%= c.customer_code %> - <%= c.customer_name
+                                                                                    %>
+                                                                        </option>
+                                                                        <% }) %>
+                                                                </select>
+                                                            </div>
+
+                                                            <!-- Payment Type Filter -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">Payment
+                                                                    Type</label>
+                                                                <select name="payment_type" class="form-select">
+                                                                    <option value="">All Payment Types</option>
+                                                                    <option value="Cash" <%=paymentTypeFilter==='Cash'
+                                                                        ? 'selected' : '' %>>Cash</option>
+                                                                    <option value="UPI" <%=paymentTypeFilter==='UPI'
+                                                                        ? 'selected' : '' %>>UPI</option>
+                                                                    <option value="Card" <%=paymentTypeFilter==='Card'
+                                                                        ? 'selected' : '' %>>Card</option>
+                                                                    <option value="Bank Transfer"
+                                                                        <%=paymentTypeFilter==='Bank Transfer'
+                                                                        ? 'selected' : '' %>>Bank Transfer</option>
+                                                                    <option value="Credit"
+                                                                        <%=paymentTypeFilter==='Credit' ? 'selected'
+                                                                        : '' %>>Credit</option>
+                                                                    <option value="Mixed" <%=paymentTypeFilter==='Mixed'
+                                                                        ? 'selected' : '' %>>Mixed / Partial</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <!-- Credit Status Filter -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">Credit
+                                                                    Status</label>
+                                                                <select name="credit_status" class="form-select">
+                                                                    <option value="">All Statuses</option>
+                                                                    <option value="Within Limit"
+                                                                        <%=creditStatusFilter==='Within Limit'
+                                                                        ? 'selected' : '' %>>Within Limit</option>
+                                                                    <option value="Near Limit"
+                                                                        <%=creditStatusFilter==='Near Limit'
+                                                                        ? 'selected' : '' %>>Near Limit</option>
+                                                                    <option value="Limit Reached"
+                                                                        <%=creditStatusFilter==='Limit Reached'
+                                                                        ? 'selected' : '' %>>Limit Reached</option>
+                                                                    <option value="Limit Exceeded"
+                                                                        <%=creditStatusFilter==='Limit Exceeded'
+                                                                        ? 'selected' : '' %>>Limit Exceeded</option>
+                                                                    <option value="Credit Not Allowed"
+                                                                        <%=creditStatusFilter==='Credit Not Allowed'
+                                                                        ? 'selected' : '' %>>Credit Not Allowed</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <!-- Date Range From -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">From
+                                                                    Date</label>
+                                                                <input type="date" name="date_from" class="form-control"
+                                                                    value="<%= dateFrom %>">
+                                                            </div>
+
+                                                            <!-- Date Range To -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">To
+                                                                    Date</label>
+                                                                <input type="date" name="date_to" class="form-control"
+                                                                    value="<%= dateTo %>">
+                                                            </div>
+
+                                                            <!-- Payment Status Filter -->
+                                                            <div class="col-12 col-sm-6 col-lg-2">
+                                                                <label
+                                                                    class="form-label small fw-semibold text-muted">Payment Status</label>
+                                                                <select name="payment_status" class="form-select">
+                                                                    <option value="">All Payment Statuses</option>
+                                                                    <option value="paid" <%= (typeof paymentStatusFilter !== 'undefined' && (paymentStatusFilter === 'paid' || paymentStatusFilter === 'Fully Paid')) ? 'selected' : '' %>>Fully Paid</option>
+                                                                    <option value="partial" <%= (typeof paymentStatusFilter !== 'undefined' && (paymentStatusFilter === 'partial' || paymentStatusFilter === 'Partially Paid')) ? 'selected' : '' %>>Partially Paid</option>
+                                                                    <option value="unpaid" <%= (typeof paymentStatusFilter !== 'undefined' && (paymentStatusFilter === 'unpaid' || paymentStatusFilter === 'Unpaid')) ? 'selected' : '' %>>Unpaid</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="filter-actions">
+                                                            <a href="/sales-notes<%= search ? '?search=' + encodeURIComponent(search) : '' %>"
+                                                                class="btn btn-outline-secondary">
+                                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                                            </a>
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                                                            </button>
+                                                        </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <!-- SALES NOTE TABLE CARD -->
+                                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                                        <div
+                                            class="card-header bg-surface py-3 px-4 d-flex justify-content-between align-items-center">
+                                            <div class="fw-bold">
+                                                <span>Records: </span>
+                                                <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5">
+                                                    <%= numberFormat(totalRecords) %>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0" id="salesNoteTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="ps-4">Sales Note No</th>
+                                                        <th>Date & Time</th>
+                                                        <th>Customer Info</th>
+                                                        <th class="text-center">Sale Type</th>
+                                                        <th class="text-end">Grand Total</th>
+                                                        <th class="text-end">Paid</th>
+                                                        <th class="text-end">Balance</th>
+                                                        <th class="text-center">Pay Type</th>
+                                                        <th class="text-center">Payment Status</th>
+                                                        <th class="text-end">New Outstanding</th>
+                                                        <th class="text-center">Credit Status</th>
+                                                        <th>Created By</th>
+                                                        <th
+                                                            class="action-column action-column-wide action-column-sales text-end pe-3 pe-xl-4">
+                                                            Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <% if (salesNotes.length> 0) { %>
+                                                        <% salesNotes.forEach(sn=> { %>
+                                                            <% const isCancelled=(Number(sn.status)===0); const
+                                                                isCreditSale=(sn.computed_sale_type==='credit' ) ||
+                                                                (String(sn.sale_type).toLowerCase()==='credit' ) ||
+                                                                (Number(sn.credit_amount)> 0.001);
+                                                                const balAmt = (sn.balance_amount !== undefined) ?
+                                                                Number(sn.balance_amount) : Math.max(0,
+                                                                Number(sn.total_amount) - Number(sn.paid_amount));
+                                                                const isExceeded = sn.is_credit_limit_exceeded ||
+                                                                sn.credit_status === 'Limit Exceeded' ||
+                                                                sn.credit_status === 'Credit Limit Exceeded' ||
+                                                                (Number(sn.credit_limit) > 0 &&
+                                                                Number(sn.new_outstanding) > Number(sn.credit_limit));
+
+                                                                let rowClasses = [];
+                                                                if (isExceeded) {
+                                                                rowClasses.push('credit-limit-exceeded-row');
+                                                                } else if (isCreditSale) {
+                                                                rowClasses.push('credit-sale-row');
+                                                                }
+                                                                if (isCancelled) {
+                                                                rowClasses.push('opacity-50 table-light');
+                                                                }
+                                                                %>
+                                                                <tr class="<%= rowClasses.join(' ') %>">
+                                                                    <!-- Sales Note Number -->
+                                                                    <td class="ps-4">
+                                                                        <a href="/sales-notes/view/<%= sn.id %>"
+                                                                            class="fw-bold text-decoration-none text-primary">
+                                                                            <%= sn.sales_note_no %>
+                                                                        </a>
+                                                                        <% if (isCancelled) { %>
+                                                                            <span
+                                                                                class="badge bg-danger-subtle text-danger ms-1">Cancelled</span>
+                                                                            <% } %>
+                                                                                <% if (isExceeded) { %>
+                                                                                    <span
+                                                                                        class="badge bg-danger text-white ms-1"
+                                                                                        title="Customer Credit Limit Exceeded">
+                                                                                        <i
+                                                                                            class="bi bi-exclamation-triangle-fill me-1"></i>Limit
+                                                                                        Exceeded
+                                                                                    </span>
+                                                                                    <% } else if (sn.credit_override) {
+                                                                                        %>
+                                                                                        <span
+                                                                                            class="badge bg-danger text-white ms-1"
+                                                                                            title="Manager Override Applied">Override</span>
+                                                                                        <% } %>
+                                                                    </td>
+
+                                                                    <!-- Date & Time -->
+                                                                    <td>
+                                                                        <div class="fw-semibold text-body">
+                                                                            <%= new
+                                                                                Date(sn.sales_date).toLocaleDateString('en-GB',
+                                                                                { day: '2-digit' , month: 'short' ,
+                                                                                year: 'numeric' }) %>
+                                                                        </div>
+                                                                        <div class="text-muted small">
+                                                                            <%= sn.sales_time %>
+                                                                        </div>
+                                                                    </td>
+
+                                                                    <!-- Customer Details -->
+                                                                    <td>
+                                                                        <div class="fw-bold text-body cell-truncate"
+                                                                            title="<%= sn.customer_name || 'Walk-in Customer' %>">
+                                                                            <%= sn.customer_name || 'Walk-in Customer'
+                                                                                %>
+                                                                        </div>
+                                                                        <div
+                                                                            class="text-muted small d-flex align-items-center gap-1">
+                                                                            <% if (sn.customer_code) { %>
+                                                                                <span
+                                                                                    class="badge bg-light text-dark border">
+                                                                                    <%= sn.customer_code %>
+                                                                                </span>
+                                                                                <% } else { %>
+                                                                                    <span
+                                                                                        class="badge bg-secondary-subtle text-secondary">Walk-in</span>
+                                                                                    <% } %>
+                                                                                        <span>
+                                                                                            <%= sn.mobile_number || ''
+                                                                                                %>
+                                                                                        </span>
+                                                                        </div>
+                                                                    </td>
+
+                                                                    <!-- Sale Type -->
+                                                                    <td class="text-center">
+                                                                        <%- sn.sale_type_badge ||
+                                                                            getSaleTypeInfo(sn.sale_type,
+                                                                            sn.credit_amount,
+                                                                            sn.payment_type).badge_html %>
+                                                                    </td>
+
+                                                                    <!-- Grand Total / Current Payable -->
+                                                                    <td class="text-end">
+                                                                        <% if (isCreditSale) { %>
+                                                                            <div
+                                                                                class="fw-bold <%= balAmt > 0.001 ? 'text-primary' : 'text-success' %>">
+                                                                                ₹<%= numberFormat(balAmt, 2) %>
+                                                                            </div>
+                                                                            <div class="small text-muted"
+                                                                                title="Original Sale Total"
+                                                                                style="font-size: 0.75rem;">
+                                                                                Orig: ₹<%= numberFormat(sn.total_amount,
+                                                                                    2) %>
+                                                                            </div>
+                                                                            <% } else { %>
+                                                                                <div class="fw-bold text-body">
+                                                                                    ₹<%= numberFormat(sn.total_amount,
+                                                                                        2) %>
+                                                                                </div>
+                                                                                <% } %>
+                                                                    </td>
+
+                                                                    <!-- Paid Amount -->
+                                                                    <td class="text-end">
+                                                                        <% if (isCreditSale) { %>
+                                                                            <div class="fw-semibold text-success">
+                                                                                ₹<%= numberFormat(sn.paid_amount, 2) %>
+                                                                            </div>
+                                                                            <% if (sn.payments_list &&
+                                                                                sn.payments_list.length> 0) { %>
+                                                                                <div class="small text-muted mt-0.5"
+                                                                                    style="font-size: 0.72rem; line-height: 1.25;">
+                                                                                    <% sn.payments_list.forEach((pmt)=>
+                                                                                        { %>
+                                                                                        <div
+                                                                                            title="<%= pmt.full_label %>: ₹<%= numberFormat(pmt.amount, 2) %> via <%= pmt.payment_method %>">
+                                                                                            <span class="text-secondary"><%= pmt.payment_label %>:</span>
+                                                                                            <span class="text-success fw-semibold">₹<%= numberFormat(pmt.amount, 2) %></span>
+                                                                                        </div>
+                                                                                        <% }) %>
+                                                                                </div>
+                                                                                <% } else if (Number(sn.paid_amount)>
+                                                                                    0.001) { %>
+                                                                                    <div class="small text-muted mt-0.5"
+                                                                                        style="font-size: 0.72rem;">
+                                                                                        <span>Payment 1: ₹<%=
+                                                                                                numberFormat(sn.paid_amount,
+                                                                                                2) %></span>
+                                                                                    </div>
+                                                                                    <% } %>
+                                                                                        <% } else { %>
+                                                                                            <span
+                                                                                                class="fw-semibold text-success">
+                                                                                                ₹<%= numberFormat(sn.paid_amount,
+                                                                                                    2) %>
+                                                                                            </span>
+                                                                                            <% } %>
+                                                                    </td>
+
+                                                                    <!-- Balance Amount -->
+                                                                    <td class="text-end">
+                                                                        <span
+                                                                            class="<%= balAmt > 0.001 ? 'fw-bold text-danger' : 'text-muted' %>">
+                                                                            ₹<%= numberFormat(balAmt, 2) %>
+                                                                        </span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <div class="mt-1"><%-
+                                                                                getPaymentTypeBadge(sn.payment_type) %>
+                                                                        </div>
+                                                                    </td>
+                                                                    <!-- Payment Status -->
+                                                                    <td class="text-center">
+                                                                        <div><%- sn.payment_status_badge ||
+                                                                                getPaymentStatusInfo(sn.paid_amount,
+                                                                                sn.total_amount).badge_html %></div>
+
+                                                                    </td>
+
+                                                                    <!-- New Outstanding -->
+                                                                    <td class="text-end">
+                                                                        <div class="fw-bold text-dark">₹<%=
+                                                                                numberFormat(sn.new_outstanding, 2) %>
+                                                                        </div>
+                                                                        <div class="small text-muted">Limit: ₹<%=
+                                                                                numberFormat(sn.credit_limit, 0) %>
+                                                                        </div>
+                                                                    </td>
+
+                                                                    <!-- Credit Status -->
+                                                                    <td class="text-center">
+                                                                        <% const
+                                                                            creditEval=evaluateCreditStatus(Number(sn.new_outstanding),
+                                                                            Number(sn.credit_limit),
+                                                                            Number(sn.cust_credit_allowed !==undefined ?
+                                                                            sn.cust_credit_allowed : 1)); %>
+                                                                            <span
+                                                                                class="badge <%= isExceeded ? 'bg-danger text-white' : creditEval.badge_class %> px-2 py-1">
+                                                                                <%= isExceeded ? 'Credit Limit Exceeded'
+                                                                                    : (sn.credit_status ||
+                                                                                    creditEval.status) %>
+                                                                            </span>
+                                                                    </td>
+
+                                                                    <!-- Created By -->
+                                                                    <td>
+                                                                        <div class="small fw-semibold">
+                                                                            <%= sn.created_by_name || 'System' %>
+                                                                        </div>
+                                                                        <div class="small text-muted">
+                                                                            <%= sn.created_at ? new
+                                                                                Date(sn.created_at).toLocaleString('en-GB')
+                                                                                : '' %>
+                                                                        </div>
+                                                                    </td>
+
+                                                                    <!-- Actions -->
+                                                                    <td
+                                                                        class="action-column action-column-wide action-column-sales text-end pe-3 pe-xl-4">
+                                                                        <div
+                                                                            class="btn-group btn-group-sm sales-action-group">
+                                                                            <a href="/sales-notes/view/<%= sn.id %>"
+                                                                                class="btn btn-outline-primary"
+                                                                                title="View Sales Note">
+                                                                                <i class="bi bi-eye"></i>
+                                                                            </a>
+                                                                            <a href="/sales-notes/view/<%= sn.id %>&print=1"
+                                                                                class="btn btn-outline-secondary"
+                                                                                target="_blank" title="Print Invoice">
+                                                                                <i class="bi bi-printer"></i>
+                                                                            </a>
+                                                                            <% if (!isCancelled) { %>
+                                                                                <a href="/sales-notes/edit/<%= sn.id %>"
+                                                                                    class="btn btn-outline-warning"
+                                                                                    title="Edit Sales Note">
+                                                                                    <i class="bi bi-pencil"></i>
+                                                                                </a>
+                                                                                <% if (isCreditSale && balAmt> 0.001) {
+                                                                                    %>
+                                                                                    <button type="button"
+                                                                                        class="btn btn-outline-success receive-payment-btn"
+                                                                                        title="Pay Credit Balance (₹<%= numberFormat(balAmt, 2) %>)"
+                                                                                        data-id="<%= sn.id %>"
+                                                                                        data-note-no="<%= sn.sales_note_no %>"
+                                                                                        data-customer-name="<%= sn.customer_name || 'Walk-in Customer' %>"
+                                                                                        data-customer-code="<%= sn.customer_code || '' %>"
+                                                                                        data-total="<%= sn.total_amount %>"
+                                                                                        data-paid="<%= sn.paid_amount %>"
+                                                                                        data-first-payment="<%= sn.first_payment_amt !== undefined ? sn.first_payment_amt : sn.paid_amount %>"
+                                                                                        data-balance="<%= balAmt %>"
+                                                                                        data-payments-count="<%= (sn.payments_list && sn.payments_list.length) ? sn.payments_list.length : (Number(sn.paid_amount) > 0.001 ? 1 : 0) %>">
+                                                                                        <i
+                                                                                            class="bi bi-cash-coin"></i>
+                                                                                    </button>
+                                                                                    <% } %>
+                                                                                        <button type="button"
+                                                                                            class="btn btn-outline-danger"
+                                                                                            title="Cancel Sales Note"
+                                                                                            onclick="confirmCancelSale(<%= sn.id %>, '<%= sn.sales_note_no %>')">
+                                                                                            <i class="bi bi-trash"></i>
+                                                                                        </button>
+                                                                                        <% } %>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                                <% }) %>
+                                                                    <% } else { %>
+                                                                        <tr>
+                                                                            <td colspan="12"
+                                                                                class="text-center py-5 text-muted">
+                                                                                <i
+                                                                                    class="bi bi-receipt fs-1 d-block mb-2 text-muted"></i>
+                                                                                <p class="mb-2 fw-medium">No Sales Notes
+                                                                                    found matching criteria.</p>
+                                                                                <a href="/sales-notes/create"
+                                                                                    class="btn btn-sm btn-primary">
+                                                                                    <i class="bi bi-plus-lg me-1"></i>
+                                                                                    Create First Sales Note
+                                                                                </a>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <% } %>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- STANDARDIZED PAGINATION -->
+                                        <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams,
+                                            baseUrl: '/sales-notes' }) %>
+                                    </div>
+
+        </div>
+    </main>
+
+    <!-- CANCEL CONFIRMATION MODAL -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger" id="cancelModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Cancel Sales Note
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <p class="mb-2">Are you sure you want to cancel Sales Note <strong id="cancelNoteNumber"></strong>?
+                    </p>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-info-circle me-1"></i> Cancelling this note will <strong>restore product
+                            stock</strong> and <strong>reverse any customer credit balance</strong> associated with this
+                        transaction.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Sale</button>
+                    <a href="#" id="confirmCancelBtn" class="btn btn-danger">Confirm Cancellation</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECEIVE PAYMENT MODAL -->
+    <div class="modal fade" id="receivePaymentModal" tabindex="-1" aria-labelledby="receivePaymentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <form method="POST" action="/sales-notes/receive-payment" id="receivePaymentForm">
+                    <input type="hidden" name="sales_note_id" id="modalSalesNoteId">
+                    <div class="modal-header bg-surface py-3 px-4 border-bottom">
+                        <div>
+                            <h5 class="modal-title fw-bold text-success mb-0" id="receivePaymentModalLabel">
+                                <i class="bi bi-cash-coin me-2"></i>Receive Payment
+                            </h5>
+                            <small class="text-muted" id="modalNoteCustomerInfo">Sales Note: -</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <!-- Summary Card -->
+                        <div class="p-3 bg-surface-soft rounded-3 border mb-3">
+                            <div class="row g-2 text-center">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Total Sales</small>
+                                    <strong class="fs-6 text-body" id="modalDispTotal">₹0.00</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Already Paid</small>
+                                    <strong class="fs-6 text-success" id="modalDispPaid">₹0.00</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Current Balance</small>
+                                    <strong class="fs-6 text-danger fw-bold" id="modalDispBalance">₹0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Amount Input -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-primary mb-0" for="modalPaymentAmount">
+                                    Payment Amount to Receive (₹) <span class="text-danger">*</span>
+                                </label>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold"
+                                    id="modalPayFullBtn">
+                                    Pay Full Balance
+                                </button>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text bg-surface">₹</span>
+                                <input type="number" name="payment_amount" id="modalPaymentAmount"
+                                    class="form-control form-control-lg fw-bold text-success" step="0.01" min="0.01"
+                                    placeholder="0.00" required>
+                            </div>
+                            <div id="modalAmountError" class="text-danger small mt-1 d-none fw-semibold">
+                                <i class="bi bi-exclamation-circle me-1"></i><span id="modalAmountErrorText"></span>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Payment Method <span
+                                    class="text-danger">*</span></label>
+                            <select name="payment_method" id="modalPaymentMethod" class="form-select fw-semibold"
+                                required>
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI / QR Code</option>
+                                <option value="Card">Credit / Debit Card</option>
+                                <option value="Bank Transfer">Bank Transfer / NEFT</option>
+                            </select>
+                        </div>
+
+                        <!-- Payment Date -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Payment Date</label>
+                            <input type="date" name="payment_date" id="modalPaymentDate"
+                                class="form-control form-control-sm"
+                                value="<%= new Date().toISOString().split('T')[0] %>">
+                        </div>
+
+                        <!-- Real-time After Payment Preview -->
+                        <div class="p-3 bg-light rounded-3 border mb-3 small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Total Paid After Payment:</span>
+                                <strong id="modalNewPaidPreview" class="text-success">₹0.00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Remaining Balance:</span>
+                                <strong id="modalNewBalancePreview" class="text-danger">₹0.00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between border-top pt-1 mt-1">
+                                <span class="fw-bold">Resulting Status:</span>
+                                <span id="modalNewStatusBadge"
+                                    class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Partially
+                                    Paid</span>
+                            </div>
+                        </div>
+
+                        <!-- Remarks / Reference -->
+                        <div class="mb-0">
+                            <label class="form-label small fw-semibold">Remarks / Transaction Reference
+                                (Optional)</label>
+                            <input type="text" name="notes" id="modalNotes" class="form-control form-control-sm"
+                                placeholder="e.g. GPay Ref #12345, cheque #...">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-surface py-3 px-4 border-top">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="modalSubmitBtn" class="btn btn-success fw-bold">
+                            <i class="bi bi-check2-circle me-1"></i> Record Payment
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-
-        <!-- SALES NOTE TABLE CARD -->
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-            <div class="card-header bg-surface py-3 px-4 d-flex justify-content-between align-items-center">
-                <div class="fw-bold">
-                    <span>Records: </span>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5"><%= numberFormat(totalRecords) %></span>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="salesNoteTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Sales Note No</th>
-                            <th>Date & Time</th>
-                            <th>Customer Info</th>
-                            <th class="text-center">Sale Type</th>
-                            <th class="text-end">Grand Total</th>
-                            <th class="text-end">Paid</th>
-                            <th class="text-end">Balance</th>
-                            <th class="text-center">Pay Type</th>
-                            <th class="text-center">Payment Status</th>
-                            <th class="text-end">New Outstanding</th>
-                            <th class="text-center">Credit Status</th>
-                            <th>Created By</th>
-                            <th class="action-column action-column-wide text-end pe-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (salesNotes.length > 0) { %>
-                            <% salesNotes.forEach(sn => { %>
-                                <%
-                                const isCancelled = (Number(sn.status) === 0);
-                                let rowHighlight = '';
-                                if (isCancelled) {
-                                    rowHighlight = 'opacity-50 table-light';
-                                } else if (sn.credit_status === 'Limit Exceeded') {
-                                    rowHighlight = 'table-danger-subtle';
-                                } else if (sn.credit_status === 'Limit Reached') {
-                                    rowHighlight = 'table-warning-subtle';
-                                }
-                                const balAmt = (sn.balance_amount !== undefined) ? Number(sn.balance_amount) : Math.max(0, Number(sn.total_amount) - Number(sn.paid_amount));
-                                %>
-                                <tr class="<%= rowHighlight %>">
-                                    <!-- Sales Note Number -->
-                                    <td class="ps-4">
-                                        <a href="view_sales_note.php?id=<%= sn.id %>" class="fw-bold text-decoration-none text-primary">
-                                            <%= sn.sales_note_no %>
-                                        </a>
-                                        <% if (isCancelled) { %>
-                                            <span class="badge bg-danger-subtle text-danger ms-1">Cancelled</span>
-                                        <% } %>
-                                        <% if (sn.credit_override) { %>
-                                            <span class="badge bg-danger text-white ms-1" title="Manager Override Applied">Override</span>
-                                        <% } %>
-                                    </td>
-
-                                    <!-- Date & Time -->
-                                    <td>
-                                        <div class="fw-semibold text-body"><%= new Date(sn.sales_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %></div>
-                                        <div class="text-muted small"><%= sn.sales_time %></div>
-                                    </td>
-
-                                    <!-- Customer Details -->
-                                    <td>
-                                        <div class="fw-bold text-body cell-truncate" title="<%= sn.customer_name || 'Walk-in Customer' %>">
-                                            <%= sn.customer_name || 'Walk-in Customer' %>
-                                        </div>
-                                        <div class="text-muted small d-flex align-items-center gap-1">
-                                            <% if (sn.customer_code) { %>
-                                                <span class="badge bg-light text-dark border"><%= sn.customer_code %></span>
-                                            <% } else { %>
-                                                <span class="badge bg-secondary-subtle text-secondary">Walk-in</span>
-                                            <% } %>
-                                            <span><%= sn.mobile_number || '' %></span>
-                                        </div>
-                                    </td>
-
-                                    <!-- Sale Type -->
-                                    <td class="text-center">
-                                        <%- sn.sale_type_badge || getSaleTypeInfo(sn.sale_type, sn.credit_amount, sn.payment_type).badge_html %>
-                                    </td>
-
-                                    <!-- Grand Total -->
-                                    <td class="text-end fw-bold text-body">
-                                        ₹<%= numberFormat(sn.total_amount, 2) %>
-                                    </td>
-
-                                    <!-- Paid Amount -->
-                                    <td class="text-end fw-semibold text-success">
-                                        ₹<%= numberFormat(sn.paid_amount, 2) %>
-                                    </td>
-
-                                    <!-- Balance Amount -->
-                                    <td class="text-end">
-                                        <span class="<%= balAmt > 0.001 ? 'fw-bold text-danger' : 'text-muted' %>">
-                                            ₹<%= numberFormat(balAmt, 2) %>
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="mt-1"><%- getPaymentTypeBadge(sn.payment_type) %></div>
-                                    </td>
-                                    <!-- Payment Status -->
-                                    <td class="text-center">
-                                        <div><%- sn.payment_status_badge || getPaymentStatusInfo(sn.paid_amount, sn.total_amount).badge_html %></div>
-                                       
-                                    </td>
-
-                                    <!-- New Outstanding -->
-                                    <td class="text-end">
-                                        <div class="fw-bold text-dark">₹<%= numberFormat(sn.new_outstanding, 2) %></div>
-                                        <div class="small text-muted">Limit: ₹<%= numberFormat(sn.credit_limit, 0) %></div>
-                                    </td>
-
-                                    <!-- Credit Status -->
-                                    <td class="text-center">
-                                        <%
-                                        const creditEval = evaluateCreditStatus(Number(sn.new_outstanding), Number(sn.credit_limit), Number(sn.cust_credit_allowed !== undefined ? sn.cust_credit_allowed : 1));
-                                        %>
-                                        <span class="badge <%= creditEval.badge_class %> px-2 py-1">
-                                            <%= sn.credit_status || creditEval.status %>
-                                        </span>
-                                    </td>
-
-                                    <!-- Created By -->
-                                    <td>
-                                        <div class="small fw-semibold"><%= sn.created_by_name || 'System' %></div>
-                                        <div class="small text-muted"><%= sn.created_at ? new Date(sn.created_at).toLocaleString('en-GB') : '' %></div>
-                                    </td>
-
-                                    <!-- Actions -->
-                                    <td class="action-column action-column-wide text-end pe-4">
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="view_sales_note.php?id=<%= sn.id %>" class="btn btn-outline-primary" title="View Sales Note">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <a href="view_sales_note.php?id=<%= sn.id %>&print=1" class="btn btn-outline-secondary" target="_blank" title="Print Invoice">
-                                                <i class="bi bi-printer"></i>
-                                            </a>
-                                            <% if (!isCancelled) { %>
-                                                <a href="edit_sales_note.php?id=<%= sn.id %>" class="btn btn-outline-warning" title="Edit Sales Note">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-outline-danger" title="Cancel Sales Note" onclick="confirmCancelSale(<%= sn.id %>, '<%= sn.sales_note_no %>')">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            <% } %>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } else { %>
-                            <tr>
-                                <td colspan="12" class="text-center py-5 text-muted">
-                                    <i class="bi bi-receipt fs-1 d-block mb-2 text-muted"></i>
-                                    <p class="mb-2 fw-medium">No Sales Notes found matching criteria.</p>
-                                    <a href="create_sales_note.php" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-plus-lg me-1"></i> Create First Sales Note
-                                    </a>
-                                </td>
-                            </tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- STANDARDIZED PAGINATION -->
-            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manage_sales_note.php' }) %>
-        </div>
-
     </div>
-</main>
 
-<!-- CANCEL CONFIRMATION MODAL -->
-<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger" id="cancelModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Cancel Sales Note
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-3">
-                <p class="mb-2">Are you sure you want to cancel Sales Note <strong id="cancelNoteNumber"></strong>?</p>
-                <div class="alert alert-warning small mb-0">
-                    <i class="bi bi-info-circle me-1"></i> Cancelling this note will <strong>restore product stock</strong> and <strong>reverse any customer credit balance</strong> associated with this transaction.
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Sale</button>
-                <a href="#" id="confirmCancelBtn" class="btn btn-danger">Confirm Cancellation</a>
-            </div>
-        </div>
-    </div>
-</div>
+    <script>
+        function confirmCancelSale(id, noteNo) {
+            document.getElementById('cancelNoteNumber').textContent = noteNo;
+            document.getElementById('confirmCancelBtn').href = '/sales-notes?action=delete&id=' + id;
+            const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+            modal.show();
+        }
 
-<script>
-function confirmCancelSale(id, noteNo) {
-    document.getElementById('cancelNoteNumber').textContent = noteNo;
-    document.getElementById('confirmCancelBtn').href = 'manage_sales_note.php?action=delete&id=' + id;
-    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
-    modal.show();
-}
-</script>
+        let currentModalBalance = 0;
+        let currentModalTotal = 0;
+        let currentModalPaid = 0;
 
-<%- include('includes/footer') %>
+        document.querySelectorAll('.receive-payment-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.id;
+                const noteNo = this.dataset.noteNo;
+                const custName = this.dataset.customerName;
+                const custCode = this.dataset.customerCode;
+                const total = parseFloat(this.dataset.total) || 0;
+                const paid = parseFloat(this.dataset.paid) || 0;
+                const balance = parseFloat(this.dataset.balance) || 0;
+
+                currentModalBalance = balance;
+                currentModalTotal = total;
+                currentModalPaid = paid;
+
+                const paymentsCount = parseInt(this.dataset.paymentsCount || 0, 10);
+                const nextPaymentNum = paymentsCount + 1;
+                const modalTitle = document.getElementById('receivePaymentModalLabel');
+                if (modalTitle) {
+                    modalTitle.innerHTML = `<i class="bi bi-cash-coin me-2"></i>Receive Payment (Payment ${nextPaymentNum})`;
+                }
+
+                document.getElementById('modalSalesNoteId').value = id;
+                document.getElementById('modalNoteCustomerInfo').textContent = `${noteNo} • ${custName}${custCode ? ' (' + custCode + ')' : ''}`;
+                document.getElementById('modalDispTotal').textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('modalDispPaid').textContent = '₹' + paid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('modalDispBalance').textContent = '₹' + balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const amtInput = document.getElementById('modalPaymentAmount');
+                amtInput.value = balance > 0 ? balance.toFixed(2) : '';
+                amtInput.max = balance.toFixed(2);
+
+                document.getElementById('modalNotes').value = '';
+                document.getElementById('modalPaymentMethod').value = 'Cash';
+
+                recalculateModalPreview();
+
+                const modal = new bootstrap.Modal(document.getElementById('receivePaymentModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('modalPayFullBtn').addEventListener('click', function () {
+            const amtInput = document.getElementById('modalPaymentAmount');
+            amtInput.value = currentModalBalance.toFixed(2);
+            recalculateModalPreview();
+        });
+
+        document.getElementById('modalPaymentAmount').addEventListener('input', recalculateModalPreview);
+
+        function recalculateModalPreview() {
+            const amtInput = document.getElementById('modalPaymentAmount');
+            const errBox = document.getElementById('modalAmountError');
+            const errText = document.getElementById('modalAmountErrorText');
+            const submitBtn = document.getElementById('modalSubmitBtn');
+            const newPaidPreview = document.getElementById('modalNewPaidPreview');
+            const newBalPreview = document.getElementById('modalNewBalancePreview');
+            const statusBadge = document.getElementById('modalNewStatusBadge');
+
+            const enteredAmt = parseFloat(amtInput.value) || 0;
+
+            if (enteredAmt <= 0) {
+                errText.textContent = 'Payment amount must be greater than ₹0.00.';
+                errBox.classList.remove('d-none');
+                submitBtn.disabled = true;
+            } else if (enteredAmt > currentModalBalance + 0.01) {
+                errText.textContent = `Payment cannot exceed current balance of ₹${currentModalBalance.toFixed(2)}.`;
+                errBox.classList.remove('d-none');
+                submitBtn.disabled = true;
+            } else {
+                errBox.classList.add('d-none');
+                submitBtn.disabled = false;
+            }
+
+            const newPaid = Math.min(currentModalTotal, currentModalPaid + enteredAmt);
+            const newBal = Math.max(0, currentModalTotal - newPaid);
+
+            newPaidPreview.textContent = '₹' + newPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            newBalPreview.textContent = '₹' + newBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            if (newBal <= 0.001) {
+                statusBadge.textContent = 'Fully Paid';
+                statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle fw-bold';
+            } else {
+                statusBadge.textContent = 'Partially Paid';
+                statusBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold';
+            }
+        }
+    </script>
+
+    <%- include('includes/footer') %>

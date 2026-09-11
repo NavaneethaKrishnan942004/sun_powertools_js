@@ -5,8 +5,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Masters', link: 'masters.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Masters', link: '/masters' },
             { title: 'Customer Master' }
         ]) %>
 
@@ -17,7 +17,7 @@
                     <i class="bi bi-people text-primary me-2"></i>Customer Master
                 </h1>
             </div>
-            <a href="create_customer.php" class="btn btn-primary shadow-sm">
+            <a href="/customers/create" class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-lg me-1"></i> Add Customer
             </a>
         </div>
@@ -42,7 +42,7 @@
         <!-- SEARCH & FILTER SECTION -->
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body p-3 p-md-4">
-                <form method="GET" action="manage_customer.php" id="customerFilterForm">
+                <form method="GET" action="/customers" id="customerFilterForm">
                     <div class="row g-2 align-items-center">
                         <!-- Search Input -->
                         <div class="col">
@@ -63,7 +63,7 @@
                         <!-- Reset / Clear Button -->
                         <% if (search !== '' || customerTypeFilter !== '' || creditAllowedFilter !== '' || statusFilter !== '') { %>
                             <div class="col-auto">
-                                <a href="manage_customer.php" class="btn btn-outline-secondary" title="Reset Filters" style="height: 44px; display: inline-flex; align-items: center;">
+                                <a href="/customers" class="btn btn-outline-secondary" title="Reset Filters" style="height: 44px; display: inline-flex; align-items: center;">
                                     <i class="bi bi-x-lg me-1"></i> <span class="d-none d-sm-inline">Clear</span>
                                 </a>
                             </div>
@@ -122,7 +122,7 @@
                             </div>
 
                             <div class="filter-actions">
-                                <a href="manage_customer.php" class="btn btn-sm btn-outline-secondary">
+                                <a href="/customers" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                                 </a>
                                 <button type="submit" class="btn btn-sm btn-primary">
@@ -170,9 +170,9 @@
                                             <h5 class="fw-semibold text-body">No Customers Found</h5>
                                             <p class="text-muted mb-3">No customer records matched your search and filter criteria.</p>
                                             <% if (search || customerTypeFilter || creditAllowedFilter || statusFilter) { %>
-                                                <a href="manage_customer.php" class="btn btn-outline-secondary me-2">Clear Filters</a>
+                                                <a href="/customers" class="btn btn-outline-secondary me-2">Clear Filters</a>
                                             <% } %>
-                                            <a href="create_customer.php" class="btn btn-primary">
+                                            <a href="/customers/create" class="btn btn-primary">
                                                 <i class="bi bi-plus-lg me-1"></i> Add Customer
                                             </a>
                                         </div>
@@ -190,7 +190,7 @@
 
                                         <!-- NAME -->
                                         <td>
-                                            <a href="view_customer.php?id=<%= row.id %>" class="fw-semibold text-decoration-none text-body">
+                                            <a href="/customers/view/<%= row.id %>" class="fw-semibold text-decoration-none text-body">
                                                 <%= e(row.customer_name) %>
                                             </a>
                                         </td>
@@ -243,18 +243,18 @@
                                         <!-- ACTIONS -->
                                         <td class="action-column text-end pe-4 text-nowrap">
                                             <div class="btn-group btn-group-sm">
-                                                <a href="view_customer.php?id=<%= row.id %>" class="btn btn-outline-secondary" title="View Profile">
+                                                <a href="/customers/view/<%= row.id %>" class="btn btn-outline-secondary" title="View Profile">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a href="edit_customer.php?id=<%= row.id %>" class="btn btn-outline-primary" title="Edit">
+                                                <a href="/customers/edit/<%= row.id %>" class="btn btn-outline-primary" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <% if (parseInt(row.status) === 1) { %>
-                                                    <a href="manage_customer.php?action=deactivate&id=<%= row.id %>" class="btn btn-outline-danger" title="Deactivate Customer" onclick="return confirm('Are you sure you want to deactivate customer <%= e(row.customer_code) %>?');">
+                                                    <a href="/customers?action=deactivate&id=<%= row.id %>" class="btn btn-outline-danger" title="Deactivate Customer" onclick="return confirm('Are you sure you want to deactivate customer <%= e(row.customer_code) %>?');">
                                                         <i class="bi bi-slash-circle"></i>
                                                     </a>
                                                 <% } else { %>
-                                                    <a href="manage_customer.php?action=activate&id=<%= row.id %>" class="btn btn-outline-success" title="Activate Customer">
+                                                    <a href="/customers?action=activate&id=<%= row.id %>" class="btn btn-outline-success" title="Activate Customer">
                                                         <i class="bi bi-check-circle"></i>
                                                     </a>
                                                 <% } %>
@@ -269,7 +269,7 @@
             </div>
 
             <!-- PAGINATION -->
-            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manage_customer.php' }) %>
+            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: '/customers' }) %>
         </div>
 
     </div>

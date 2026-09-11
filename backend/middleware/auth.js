@@ -8,7 +8,7 @@ function requireLogin(req, res, next) {
         if (req.xhr || req.headers.accept?.includes('application/json')) {
             return res.status(401).json({ success: false, message: 'Unauthorized access. Please log in.' });
         }
-        return res.redirect('/login.php');
+        return res.redirect('/login');
     }
     next();
 }

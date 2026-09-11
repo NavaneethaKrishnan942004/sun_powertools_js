@@ -5,9 +5,9 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Masters', link: 'masters.php' },
-            { title: 'Customer Master', link: 'manage_customer.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Masters', link: '/masters' },
+            { title: 'Customer Master', link: '/customers' },
             { title: 'Create Customer' }
         ]) %>
 
@@ -16,7 +16,7 @@
             <div>
                 <h1 class="page-title mb-1">Create Customer</h1>
             </div>
-            <a href="manage_customer.php" class="btn btn-outline-secondary">
+            <a href="/customers" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Back to Customers
             </a>
         </div>
@@ -29,7 +29,7 @@
             </div>
         <% } %>
 
-        <form method="POST" action="create_customer.php" id="createCustomerForm" novalidate>
+        <form method="POST" action="/customers/create" id="createCustomerForm" novalidate>
 
             <!-- SECTION 1: CUSTOMER INFORMATION -->
             <div class="card shadow-sm mb-4">
@@ -284,7 +284,7 @@
                     <button type="submit" name="submit_action" value="save" class="btn btn-primary px-4">
                         <i class="bi bi-check-lg me-1"></i> Save Customer
                     </button>
-                    <a href="manage_customer.php" class="btn btn-outline-secondary px-4">
+                    <a href="/customers" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                 </div>

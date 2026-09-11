@@ -5,7 +5,7 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
             { title: 'Rentals' }
         ]) %>
 
@@ -17,7 +17,7 @@
                 </h1>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <a href="create_rental.php" class="btn btn-primary shadow-sm">
+                <a href="/rentals/create" class="btn btn-primary shadow-sm">
                     <i class="bi bi-plus-lg me-1"></i> Create Rental Checkout
                 </a>
             </div>
@@ -25,7 +25,7 @@
 
         <!-- ALERTS / NOTIFICATIONS -->
         <% if (locals.success) { %>
-            <div class="alert alert-success alert-dismissible fade show auto-hide-alert d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
                 <i class="bi bi-check-circle-fill text-success fs-5"></i>
                 <div class="fw-medium"><%= success %></div>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -114,12 +114,12 @@
         <!-- STANDARDIZED SEARCH & FILTER HEADER -->
         <div class="row g-3 align-items-center mb-3">
             <div class="col-12 col-md d-flex flex-grow-1 gap-2">
-                <form method="GET" action="manage_rental.php" class="w-100 d-flex gap-2">
+                <form method="GET" action="/rentals" class="w-100 d-flex gap-2">
                     <div class="manage-search-wrapper">
                         <i class="bi bi-search manage-search-icon"></i>
                         <input type="text" name="search" class="form-control manage-search-input" placeholder="Search by Rental #, Customer Name, Mobile, Product..." value="<%= search %>" aria-label="Search Rentals">
                         <% if (search) { %>
-                            <a href="manage_rental.php" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
+                            <a href="/rentals" class="btn btn-sm text-muted position-absolute end-0 top-50 translate-middle-y me-2" title="Clear search">
                                 <i class="bi bi-x-circle-fill"></i>
                             </a>
                         <% } %>
@@ -144,7 +144,7 @@
         <!-- EXPANDABLE FILTER PANEL -->
         <div class="collapse mb-4 <%= hasActiveFilters ? 'show' : '' %>" id="filterSection">
             <div class="filter-panel-box">
-                <form method="GET" action="manage_rental.php" id="rentalFilterForm">
+                <form method="GET" action="/rentals" id="rentalFilterForm">
                     <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
                     <div class="row g-3">
                         <!-- Status Filter -->
@@ -173,7 +173,7 @@
                     </div>
 
                     <div class="filter-actions">
-                        <a href="manage_rental.php<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
+                        <a href="/rentals<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -216,7 +216,7 @@
                                              <i class="bi bi-clock-history display-4 text-muted d-block mb-3"></i>
                                             <h5 class="fw-semibold text-body">No Rental Records Found</h5>
                                             <p class="text-muted mb-3">Start renting power tools by creating a new rental transaction.</p>
-                                            <a href="create_rental.php" class="btn btn-primary">
+                                            <a href="/rentals/create" class="btn btn-primary">
                                                 <i class="bi bi-plus-lg me-1"></i> Create Rental
                                             </a>
                                         </div>
@@ -228,7 +228,7 @@
                                         <!-- RENTAL ID -->
                                         <td class="ps-4 text-nowrap">
                                             <div class="fw-bold text-primary">
-                                                <a href="view_rental.php?id=<%= row.id %>" class="text-decoration-none text-primary">
+                                                <a href="/rentals/view/<%= row.id %>" class="text-decoration-none text-primary">
                                                     <%= row.rental_no %>
                                                 </a>
                                             </div>
@@ -238,7 +238,7 @@
                                         <!-- CUSTOMER -->
                                         <td>
                                             <div class="fw-semibold text-body">
-                                                <a href="view_customer.php?id=<%= row.customer_id %>" class="text-decoration-none text-body">
+                                                <a href="/customers/view/<%= row.customer_id %>" class="text-decoration-none text-body">
                                                     <%= row.customer_name %>
                                                 </a>
                                             </div>
@@ -251,7 +251,7 @@
                                         <!-- PRODUCT -->
                                         <td>
                                             <div class="fw-semibold text-body text-truncate" style="max-width: 250px;" title="<%= row.product_name %>">
-                                                <a href="view_product.php?id=<%= row.product_id %>" class="text-decoration-none text-body">
+                                                <a href="/products/view/<%= row.product_id %>" class="text-decoration-none text-body">
                                                     <%= row.product_name %>
                                                 </a>
                                             </div>
@@ -309,7 +309,7 @@
                                         <td class="action-column action-column-wide text-end pe-4 text-nowrap">
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <!-- View -->
-                                                <a href="view_rental.php?id=<%= row.id %>" class="btn btn-outline-secondary" title="View Rental Details">
+                                                <a href="/rentals/view/<%= row.id %>" class="btn btn-outline-secondary" title="View Rental Details">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
 
@@ -363,7 +363,7 @@
             </div>
 
             <!-- STANDARDIZED PAGINATION -->
-            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: 'manage_rental.php' }) %>
+            <%- renderPagination({ page, totalPages, totalRecords, limit, queryParams, baseUrl: '/rentals' }) %>
         </div>
 
     </div>
@@ -373,7 +373,7 @@
 <div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="return_rental.php" id="returnForm">
+            <form method="POST" action="/rentals/return" id="returnForm">
                 <input type="hidden" name="id" id="returnRentalId">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-success" id="returnModalLabel">
@@ -546,7 +546,7 @@
 <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="cancel_rental.php" id="cancelForm">
+            <form method="POST" action="/rentals/cancel" id="cancelForm">
                 <input type="hidden" name="id" id="cancelRentalId">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-danger" id="cancelModalLabel">
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const deductions = depositDeductionInput.value || 0;
         const reason = deductionReasonInput.value || '';
 
-        fetch(`/ajax_rental.php?action=calculate_return_settlement&rental_id=${rentalId}&actual_return=${encodeURIComponent(actualReturn)}&additional_charges=${encodeURIComponent(addCharges)}&deposit_deductions=${encodeURIComponent(deductions)}&deposit_deduction_reason=${encodeURIComponent(reason)}`)
+        fetch(`/rentals/ajax?action=calculate_return_settlement&rental_id=${rentalId}&actual_return=${encodeURIComponent(actualReturn)}&additional_charges=${encodeURIComponent(addCharges)}&deposit_deductions=${encodeURIComponent(deductions)}&deposit_deduction_reason=${encodeURIComponent(reason)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.settlement) {

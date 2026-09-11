@@ -358,7 +358,7 @@ exports.createCustomer = async (req, res) => {
 // Show edit customer form
 exports.editCustomerForm = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_customer.php?error=${encodeURIComponent('Invalid customer ID.')}`);
         }
@@ -428,7 +428,7 @@ exports.editCustomerForm = async (req, res) => {
 // Process edit customer
 exports.editCustomer = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_customer.php?error=${encodeURIComponent('Invalid customer ID.')}`);
         }
@@ -615,7 +615,7 @@ exports.editCustomer = async (req, res) => {
 // View single customer
 exports.viewCustomer = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_customer.php?error=${encodeURIComponent('Invalid customer ID.')}`);
         }

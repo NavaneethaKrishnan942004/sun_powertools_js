@@ -459,14 +459,14 @@ exports.createProduct = async (req, res) => {
 // Show edit product form
 exports.editProductForm = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
 
         const [pRows] = await pool.query('SELECT * FROM product_master WHERE id = ?', [id]);
         if (!pRows.length) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
         const product = pRows[0];
 
@@ -502,14 +502,14 @@ exports.editProductForm = async (req, res) => {
 // Process edit product
 exports.editProduct = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
 
         const [pRows] = await pool.query('SELECT * FROM product_master WHERE id = ?', [id]);
         if (!pRows.length) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
 
         const [categories] = await pool.query('SELECT id, category_code, category_name FROM category_master WHERE status = 1 ORDER BY category_name');
@@ -740,9 +740,9 @@ exports.editProduct = async (req, res) => {
 // View single product
 exports.viewProduct = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || 0, 10);
         if (id <= 0) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
 
         const [pRows] = await pool.query(
@@ -764,7 +764,7 @@ exports.viewProduct = async (req, res) => {
         );
 
         if (!pRows.length) {
-            return res.redirect('/manage_product.php');
+            return res.redirect('/products');
         }
 
         const product = pRows[0];

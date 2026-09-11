@@ -5,54 +5,56 @@ const productPages = ['manage_product.php', 'create_product.php', 'edit_product.
 const customerPages = ['manage_customer.php', 'create_customer.php', 'edit_customer.php', 'view_customer.php', 'manage_customer', 'create_customer', 'edit_customer', 'view_customer'];
 const userPages = ['manage_user.php', 'create_user.php', 'edit_user.php', 'view_user.php', 'manage_user', 'create_user', 'edit_user', 'view_user'];
 
+const cur = typeof currentPath !== 'undefined' ? currentPath : '';
+
 const menuItems = [
     {
         title: 'Dashboard',
         icon: 'bi-speedometer2',
-        link: 'index.php',
-        active: (currentPage === 'index.php' || currentPage === '')
+        link: '/',
+        active: (cur === '/' || cur === '/index' || currentPage === 'index.php' || currentPage === '')
     },
     {
         title: 'Sales Notes',
         icon: 'bi-receipt',
-        link: 'manage_sales_note.php',
-        active: salesPages.includes(currentPage)
+        link: '/sales-notes',
+        active: (cur.startsWith('/sales-notes') || salesPages.includes(currentPage))
     },
     {
         title: 'Rentals',
         icon: 'bi-clock-history',
-        link: 'manage_rental.php',
-        active: rentalPages.includes(currentPage)
+        link: '/rentals',
+        active: (cur.startsWith('/rentals') || rentalPages.includes(currentPage))
     },
     {
         title: 'Product',
         icon: 'bi-box-seam',
-        link: 'manage_product.php',
-        active: productPages.includes(currentPage)
+        link: '/products',
+        active: (cur.startsWith('/products') || productPages.includes(currentPage))
     },
     {
         title: 'Customers',
         icon: 'bi-people',
-        link: 'manage_customer.php',
-        active: customerPages.includes(currentPage)
+        link: '/customers',
+        active: (cur.startsWith('/customers') || customerPages.includes(currentPage))
     },
     {
         title: 'Users',
         icon: 'bi-person-badge',
-        link: 'manage_user.php',
-        active: userPages.includes(currentPage)
+        link: '/users',
+        active: (cur.startsWith('/users') || userPages.includes(currentPage))
     },
     {
         title: 'Profile',
         icon: 'bi-person-circle',
-        link: 'profile.php',
-        active: (currentPage === 'profile.php')
+        link: '/profile',
+        active: (cur === '/profile' || currentPage === 'profile.php')
     },
     {
         title: 'Settings',
         icon: 'bi-gear',
-        link: 'masters.php',
-        active: ['masters.php', 'manage_category.php', 'manage_brand.php', 'manaage_unit.php', 'manage_producttype.php'].includes(currentPage)
+        link: '/masters',
+        active: (cur === '/settings' || cur === '/masters' || cur.startsWith('/categories') || cur.startsWith('/brands') || cur.startsWith('/units') || cur.startsWith('/product-types') || ['masters.php', 'manage_category.php', 'manage_brand.php', 'manaage_unit.php', 'manage_producttype.php'].includes(currentPage))
     }
 ];
 %>
@@ -61,7 +63,7 @@ const menuItems = [
 
     <!-- Logo -->
     <div class="sidebar-header">
-        <a class="brand-mark" href="index.php" aria-label="Dashboard">
+        <a class="brand-mark" href="/" aria-label="Dashboard">
             <span class="brand-icon">
                 <i class="bi bi-tools"></i>
             </span>

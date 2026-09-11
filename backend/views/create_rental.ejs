@@ -5,8 +5,8 @@
 
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
-            { title: '', icon: 'bi bi-house-door', link: 'index.php' },
-            { title: 'Rentals', link: 'manage_rental.php' },
+            { title: '', icon: 'bi bi-house-door', link: '/' },
+            { title: 'Rentals', link: '/rentals' },
             { title: 'Rental Checkout' }
         ]) %>
 
@@ -19,7 +19,7 @@
                 <p class="text-muted mb-0">Create a new tool rental, calculate expected return schedules, and record security deposits.</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="manage_rental.php" class="btn btn-outline-secondary">
+                <a href="/rentals" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i> Back to Rentals
                 </a>
             </div>
@@ -42,7 +42,7 @@
         <% } %>
 
         <!-- MAIN RENTAL FORM -->
-        <form method="POST" action="create_rental.php" id="rentalCheckoutForm" novalidate>
+        <form method="POST" action="/rentals/create" id="rentalCheckoutForm" novalidate>
             <div class="row g-4">
 
                 <!-- LEFT COLUMN: CUSTOMER & PRODUCT SELECTION & TIMING -->
@@ -507,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        fetch(`/ajax_rental.php?action=get_customer&customer_id=${custId}`)
+        fetch(`/rentals/ajax?action=get_customer&customer_id=${custId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.customer) {
@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        fetch(`/ajax_rental.php?action=get_product&product_id=${prodId}`)
+        fetch(`/rentals/ajax?action=get_product&product_id=${prodId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.product) {

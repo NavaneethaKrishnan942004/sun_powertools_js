@@ -1,6 +1,15 @@
 const pool = require('../config/db');
 const { getCustomerFinancialSummary } = require('../utils/customerHelper');
-const { generateSalesNoteNumber, evaluateCreditStatus, getSalesAnalytics, getPaymentStatusInfo, getSaleTypeInfo, getPaymentTypeBadge } = require('../utils/salesNoteHelper');
+const { generateSalesNoteNumber, evaluateCreditStatus, getSalesAnalytics, getPaymentStatusInfo, getSaleTypeInfo, getPaymentTypeBadge, buildPaymentsList } = require('../utils/salesNoteHelper');
+
+// Safe number parsing helper to guarantee NaN never reaches calculations or DB
+function safeNum(val, fallback = 0.00) {
+    if (val === undefined || val === null) return fallback;
+    const s = String(val).trim();
+    if (s === '') return fallback;
+    const parsed = parseFloat(s);
+    return isNaN(parsed) ? fallback : parsed;
+}
 
 // List sales notes with analytics & pagination
 exports.manageSalesNotes = async (req, res) => {
@@ -50,12 +59,11 @@ exports.manageSalesNotes = async (req, res) => {
                         );
                     }
 
-                    // 2. Remove or reverse customer financial transaction
+                    // 2. Remove customer financial transactions (both sale and any payments)
                     await conn.query(
                         `DELETE FROM customer_transactions 
                         WHERE customer_id = ? 
-                          AND reference_number = ? 
-                          AND transaction_type = 'sale'`,
+                          AND reference_number = ?`,
                         [parseInt(sale.customer_id, 10), sale.sales_note_no]
                     );
 
@@ -86,6 +94,7 @@ exports.manageSalesNotes = async (req, res) => {
         const search = (req.query.search || '').trim();
         const customerIdFilter = parseInt(req.query.customer_id || 0, 10);
         const paymentTypeFilter = (req.query.payment_type || '').trim();
+        const paymentStatusFilter = (req.query.payment_status || '').trim();
         const creditStatusFilter = (req.query.credit_status || '').trim();
         const dateFrom = (req.query.date_from || '').trim();
         const dateTo = (req.query.date_to || '').trim();
@@ -126,6 +135,17 @@ exports.manageSalesNotes = async (req, res) => {
         if (paymentTypeFilter !== '') {
             whereSql += ' AND sn.payment_type = ?';
             params.push(paymentTypeFilter);
+        }
+
+        if (paymentStatusFilter !== '') {
+            const pStatusLower = paymentStatusFilter.toLowerCase();
+            if (pStatusLower === 'paid' || pStatusLower === 'fully paid') {
+                whereSql += ' AND (sn.paid_amount >= sn.total_amount - 0.001)';
+            } else if (pStatusLower === 'partial' || pStatusLower === 'partially paid') {
+                whereSql += ' AND (sn.paid_amount > 0.001 AND sn.paid_amount < sn.total_amount - 0.001)';
+            } else if (pStatusLower === 'unpaid') {
+                whereSql += ' AND (sn.paid_amount <= 0.001 AND sn.total_amount > 0.001)';
+            }
         }
 
         if (creditStatusFilter !== '') {
@@ -174,6 +194,22 @@ exports.manageSalesNotes = async (req, res) => {
 
         const [salesNotes] = await pool.query(dataSql, [...params, limit, offset]);
 
+        let paymentsByRef = {};
+        if (salesNotes.length > 0) {
+            const noteNos = salesNotes.map(sn => sn.sales_note_no);
+            const [allTxPayments] = await pool.query(
+                `SELECT reference_number, transaction_date, payment_method, credit_amount, total_amount, reason, notes, id
+                FROM customer_transactions
+                WHERE reference_number IN (?) AND transaction_type = 'payment'
+                ORDER BY transaction_date ASC, id ASC`,
+                [noteNos]
+            );
+            for (const p of allTxPayments) {
+                if (!paymentsByRef[p.reference_number]) paymentsByRef[p.reference_number] = [];
+                paymentsByRef[p.reference_number].push(p);
+            }
+        }
+
         salesNotes.forEach(sn => {
             const sTypeInfo = getSaleTypeInfo(sn.sale_type, sn.credit_amount, sn.payment_type);
             const pStatusInfo = getPaymentStatusInfo(sn.paid_amount, sn.total_amount);
@@ -184,6 +220,25 @@ exports.manageSalesNotes = async (req, res) => {
             sn.payment_status_code = pStatusInfo.code;
             sn.payment_status_badge = pStatusInfo.badge_html;
             sn.balance_amount = pStatusInfo.balance;
+
+            const subPmts = paymentsByRef[sn.sales_note_no] || [];
+            sn.payments_list = buildPaymentsList(sn, subPmts);
+
+            const firstPay = (sn.first_payment !== undefined && sn.first_payment !== null)
+                ? parseFloat(sn.first_payment)
+                : (parseFloat(sn.paid_amount) || 0.00);
+            sn.first_payment_amt = firstPay;
+            sn.credit_payments_amt = Math.max(0.00, parseFloat(sn.paid_amount || 0) - firstPay);
+            sn.remaining_credit = Math.max(0.00, parseFloat(sn.total_amount || 0) - parseFloat(sn.paid_amount || 0));
+
+            const creditLimit = parseFloat(sn.credit_limit || 0);
+            const newOut = parseFloat(sn.new_outstanding || 0);
+            const isCreditSale = (sn.computed_sale_type === 'credit') || (Number(sn.credit_amount) > 0.001);
+            sn.is_credit_limit_exceeded = isCreditSale && (
+                sn.credit_status === 'Limit Exceeded' || 
+                sn.credit_status === 'Credit Limit Exceeded' || 
+                (creditLimit > 0 && newOut > creditLimit)
+            );
         });
 
         const [customersList] = await pool.query(
@@ -203,6 +258,7 @@ exports.manageSalesNotes = async (req, res) => {
             search,
             customerIdFilter,
             paymentTypeFilter,
+            paymentStatusFilter,
             creditStatusFilter,
             dateFrom,
             dateTo,
@@ -321,9 +377,9 @@ exports.createSalesNote = async (req, res) => {
         const currentSalesDateTime = `${salesDate}T${salesTime}`;
         const paymentType = (body.payment_type || 'Cash').trim();
         const itemsInput = body.items || [];
-        const inputOtherCharges = body.other_charges ? Math.max(0.00, parseFloat(body.other_charges)) : 0.00;
+        const inputOtherCharges = Math.max(0.00, safeNum(body.other_charges, 0.00));
         const notes = (body.notes || '').trim();
-        const creditOverride = body.credit_override ? 1 : 0;
+        let creditOverride = (body.credit_override === '1' || body.credit_override === 1 || body.credit_override === 'on' || body.credit_override === true || body.credit_override === 'true') ? 1 : 0;
 
         const errors = [];
 
@@ -365,9 +421,9 @@ exports.createSalesNote = async (req, res) => {
             for (let index = 0; index < itemsInput.length; index++) {
                 const itemData = itemsInput[index];
                 const productId = parseInt(itemData.product_id || 0, 10);
-                const qty = parseFloat(itemData.quantity || 0);
-                const itemDiscount = Math.max(0.00, parseFloat(itemData.discount || 0.00));
-                const itemTaxPercent = Math.max(0.00, parseFloat(itemData.tax_percent || 0.00));
+                const qty = Math.max(0.00, safeNum(itemData.quantity, 0.00));
+                const itemDiscount = Math.max(0.00, safeNum(itemData.discount, 0.00));
+                const itemTaxPercent = Math.max(0.00, safeNum(itemData.tax_percent, 0.00));
 
                 if (productId <= 0 || qty <= 0) {
                     errors.push(`Item #${index + 1}: Product and quantity must be greater than zero.`);
@@ -389,13 +445,17 @@ exports.createSalesNote = async (req, res) => {
                 }
                 const product = prodRows[0];
 
-                const availableStock = parseFloat(product.stock_quantity || 0);
+                const availableStock = safeNum(product.stock_quantity, 0.00);
+                if (availableStock <= 0) {
+                    errors.push("This product is out of stock and cannot be added to the sale.");
+                    continue;
+                }
                 if (qty > availableStock) {
                     errors.push(`Insufficient stock for '${product.product_name}'. Available: ${availableStock}, Requested: ${qty}.`);
                     continue;
                 }
 
-                const unitPrice = parseFloat(product.selling_price || 0.00);
+                const unitPrice = safeNum(product.selling_price, 0.00);
                 const lineSubtotal = qty * unitPrice;
                 const lineDiscount = Math.min(lineSubtotal, itemDiscount);
                 const taxableAmount = Math.max(0.00, lineSubtotal - lineDiscount);
@@ -421,44 +481,68 @@ exports.createSalesNote = async (req, res) => {
             }
         }
 
-        const calculatedGrandTotal = Math.max(0.00, (serverSubtotal - serverTotalDiscount) + serverTotalTax + inputOtherCharges);
+        const rawCalculatedGrandTotal = Math.max(0.00, (serverSubtotal - serverTotalDiscount) + serverTotalTax + inputOtherCharges);
+        const roundedGrandTotal = Math.round(rawCalculatedGrandTotal);
+        const calculatedGrandTotal = roundedGrandTotal;
+        let roundOff = Number((roundedGrandTotal - rawCalculatedGrandTotal).toFixed(2));
         let finalGrandTotal = calculatedGrandTotal;
 
         if (body.final_grand_total !== undefined && body.final_grand_total !== null && String(body.final_grand_total).trim() !== '') {
-            const parsedFinal = parseFloat(body.final_grand_total);
-            if (isNaN(parsedFinal) || parsedFinal <= 0) {
+            const parsedFinal = safeNum(body.final_grand_total, -1);
+            if (parsedFinal <= 0) {
                 errors.push('Adjusted / Final Grand Total must be a valid amount greater than zero.');
-            } else if (parsedFinal > calculatedGrandTotal + 0.01) {
+            } else if (parsedFinal > calculatedGrandTotal + 0.01 && parsedFinal > rawCalculatedGrandTotal + 0.01) {
                 errors.push(`Adjusted / Final Grand Total (₹${parsedFinal.toFixed(2)}) cannot exceed the calculated Grand Total (₹${calculatedGrandTotal.toFixed(2)}).`);
             } else {
                 finalGrandTotal = parsedFinal;
             }
+        }
+        if (body.round_off !== undefined && body.round_off !== null && String(body.round_off).trim() !== '') {
+            roundOff = safeNum(body.round_off, roundOff);
         }
 
         const effectiveAdjustmentDiscount = Math.max(0.00, calculatedGrandTotal - finalGrandTotal);
         const totalDiscountToSave = serverTotalDiscount + effectiveAdjustmentDiscount;
         const grandTotal = finalGrandTotal; // Use Final Grand Total for all subsequent financial operations!
 
+        let actualSaleType = saleType;
         let paidAmount = 0.00;
         let creditAmount = 0.00;
         let actualPaymentType = 'Cash';
 
         if (saleType === 'credit') {
-            const inputReceived = body.amount_received !== undefined && body.amount_received !== ''
-                ? parseFloat(body.amount_received)
-                : (body.paid_amount ? parseFloat(body.paid_amount) : 0.00);
+            const inputReceived = safeNum(body.amount_received !== undefined && String(body.amount_received).trim() !== ''
+                ? body.amount_received
+                : (body.paid_amount !== undefined && String(body.paid_amount).trim() !== '' ? body.paid_amount : 0.00), 0.00);
 
-            if (isNaN(inputReceived) || inputReceived < 0) {
+            if (inputReceived < 0) {
                 errors.push('Amount Received Now must be a non-negative number.');
             } else if (inputReceived > grandTotal + 0.01) {
                 errors.push(`Amount Received (₹${inputReceived.toFixed(2)}) cannot be greater than Grand Total (Final Grand Total: ₹${grandTotal.toFixed(2)}).`);
             }
 
-            paidAmount = Math.min(grandTotal, Math.max(0.00, isNaN(inputReceived) ? 0.00 : inputReceived));
-            creditAmount = Math.max(0.00, grandTotal - paidAmount);
-            actualPaymentType = paidAmount > 0 ? (body.payment_method || 'Credit') : 'Credit';
+            const rawPaid = Math.min(grandTotal, Math.max(0.00, inputReceived));
+            const rawCredit = Math.max(0.00, grandTotal - rawPaid);
+
+            // User requirement:
+            // If Amount Received / Paid == Grand Total, save as Normal Sale!
+            // Only if Amount Received < Grand Total (rawCredit > 0.001), save as Credit Sale!
+            if (rawCredit <= 0.001) {
+                actualSaleType = 'sale';
+                paidAmount = grandTotal;
+                creditAmount = 0.00;
+                actualPaymentType = ['Cash', 'UPI', 'Card', 'Bank Transfer'].includes(body.payment_method || body.payment_type)
+                    ? (body.payment_method || body.payment_type)
+                    : 'Cash';
+            } else {
+                actualSaleType = 'credit';
+                paidAmount = rawPaid;
+                creditAmount = rawCredit;
+                actualPaymentType = paidAmount > 0 ? (body.payment_method || body.payment_type || 'Credit') : 'Credit';
+            }
         } else {
             // Normal Sale: Full payment collected at selling price
+            actualSaleType = 'sale';
             paidAmount = grandTotal;
             creditAmount = 0.00;
             actualPaymentType = ['Cash', 'UPI', 'Card', 'Bank Transfer'].includes(paymentType) ? paymentType : 'Cash';
@@ -471,9 +555,9 @@ exports.createSalesNote = async (req, res) => {
 
         if (customer) {
             const fSummary = await getCustomerFinancialSummary(pool, customer.id, customer);
-            prevOutstanding = parseFloat(fSummary.current_outstanding);
-            creditLimit = parseFloat(customer.credit_limit || 0);
-            creditAllowed = parseInt(customer.credit_allowed, 10);
+            prevOutstanding = safeNum(fSummary ? fSummary.current_outstanding : 0, 0.00);
+            creditLimit = safeNum(customer.credit_limit, 0.00);
+            creditAllowed = parseInt(customer.credit_allowed !== undefined ? customer.credit_allowed : 1, 10) || 0;
             newOutstanding = prevOutstanding + creditAmount;
 
             if (creditAmount > 0.001) {
@@ -481,12 +565,19 @@ exports.createSalesNote = async (req, res) => {
                     errors.push(`Credit is not allowed for customer '${customer.customer_name}'. Please choose full payment or update customer credit permissions.`);
                 } else {
                     const creditEval = evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed);
-                    if (creditEval.is_exceeded && !creditOverride) {
-                        const availableCredit = Math.max(0.00, creditLimit - prevOutstanding);
-                        errors.push(`Credit limit exceeded! Customer Credit Limit: ₹${creditLimit.toFixed(2)}, Current Outstanding: ₹${prevOutstanding.toFixed(2)}, Available Credit: ₹${availableCredit.toFixed(2)}, Requested Credit: ₹${creditAmount.toFixed(2)}. Please reduce credit amount or check 'Authorize Credit Limit Override'.`);
+                    if (creditEval.is_exceeded) {
+                        if (!creditOverride) {
+                            errors.push("Sale exceeds customer's credit limit. Check this box to authorize and record this transaction.");
+                        }
                     }
                 }
             }
+        }
+
+        let isLimitExceeded = false;
+        if (customer && creditAmount > 0.001) {
+            const creditEval = evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed);
+            isLimitExceeded = Boolean(creditEval && creditEval.is_exceeded);
         }
 
         if (errors.length > 0) {
@@ -516,23 +607,42 @@ exports.createSalesNote = async (req, res) => {
                 salesDate,
                 salesTime,
                 currentSalesDateTime,
-                saleType,
+                saleType: actualSaleType,
                 finalGrandTotal: body.final_grand_total !== undefined ? body.final_grand_total : '',
                 amountReceived: body.amount_received !== undefined ? body.amount_received : (body.paid_amount || '0.00'),
                 selectedCustomerId: customerId,
                 paymentType: actualPaymentType,
                 notes,
                 creditOverride,
+                creditLimitExceeded: isLimitExceeded,
                 otherCharges: inputOtherCharges,
                 productsList,
                 customersList,
+                initialItemsFormatted: validatedItems.length > 0 ? validatedItems.map(it => ({
+                    product_id: it.product_id,
+                    product_code: it.product_code,
+                    product_name: it.product_name,
+                    unit_name: it.unit_name || 'Unit',
+                    quantity: it.quantity,
+                    unit_price: it.unit_price,
+                    discount: it.discount,
+                    tax_percent: it.tax_percent
+                })) : (Array.isArray(itemsInput) ? itemsInput.map(it => ({
+                    product_id: parseInt(it.product_id || 0, 10),
+                    quantity: safeNum(it.quantity, 1),
+                    discount: safeNum(it.discount, 0),
+                    tax_percent: safeNum(it.tax_percent, 0)
+                })) : []),
                 errors
             });
         }
 
-        const finalCreditEval = customer ? evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed) : { status: 'Normal' };
-        const creditStatus = finalCreditEval.status;
+        const finalCreditEval = (customer && creditAmount > 0.001)
+            ? evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed)
+            : { status: 'Within Limit' };
+        const creditStatus = (creditAmount > 0.001) ? finalCreditEval.status : 'Within Limit';
         const finalCustomerId = customer ? customer.id : null;
+        const firstPayment = paidAmount;
 
         const conn = await pool.getConnection();
         try {
@@ -544,16 +654,33 @@ exports.createSalesNote = async (req, res) => {
             const [insertResult] = await conn.query(
                 `INSERT INTO sales_notes (
                     sales_note_no, customer_id, sales_date, sales_time, sale_type, payment_type,
-                    subtotal, discount, tax, other_charges, total_amount,
-                    paid_amount, credit_amount, previous_outstanding, new_outstanding,
+                    subtotal, discount, tax, other_charges, round_off, total_amount,
+                    paid_amount, first_payment, credit_amount, previous_outstanding, new_outstanding,
                     credit_limit, credit_status, credit_override, notes, status,
                     created_by, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW())`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW())`,
                 [
-                    finalNoteNo, finalCustomerId, salesDate, salesTime, saleType, actualPaymentType,
-                    serverSubtotal, totalDiscountToSave, serverTotalTax, inputOtherCharges, grandTotal,
-                    paidAmount, creditAmount, prevOutstanding, newOutstanding,
-                    creditLimit, creditStatus, creditOverride, notes || null,
+                    finalNoteNo,
+                    finalCustomerId,
+                    salesDate,
+                    salesTime,
+                    actualSaleType,
+                    actualPaymentType,
+                    safeNum(serverSubtotal, 0.00),
+                    safeNum(totalDiscountToSave, 0.00),
+                    safeNum(serverTotalTax, 0.00),
+                    safeNum(inputOtherCharges, 0.00),
+                    safeNum(roundOff, 0.00),
+                    safeNum(grandTotal, 0.00),
+                    safeNum(paidAmount, 0.00),
+                    safeNum(firstPayment, 0.00),
+                    safeNum(creditAmount, 0.00),
+                    safeNum(prevOutstanding, 0.00),
+                    safeNum(newOutstanding, 0.00),
+                    safeNum(creditLimit, 0.00),
+                    creditStatus,
+                    creditOverride ? 1 : 0,
+                    notes || null,
                     userId
                 ]
             );
@@ -568,8 +695,17 @@ exports.createSalesNote = async (req, res) => {
                         created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
                     [
-                        salesNoteId, item.product_id, item.product_code, item.product_name, item.unit_name,
-                        item.quantity, item.unit_price, item.discount, item.tax_percent, item.tax_amount, item.line_total
+                        salesNoteId,
+                        item.product_id,
+                        item.product_code,
+                        item.product_name,
+                        item.unit_name,
+                        safeNum(item.quantity, 1.00),
+                        safeNum(item.unit_price, 0.00),
+                        safeNum(item.discount, 0.00),
+                        safeNum(item.tax_percent, 0.00),
+                        safeNum(item.tax_amount, 0.00),
+                        safeNum(item.line_total, 0.00)
                     ]
                 );
 
@@ -577,13 +713,13 @@ exports.createSalesNote = async (req, res) => {
                     `UPDATE product_master 
                     SET stock_quantity = stock_quantity - ? 
                     WHERE id = ?`,
-                    [item.quantity, item.product_id]
+                    [safeNum(item.quantity, 1.00), item.product_id]
                 );
             }
 
             // Record customer financial transaction ONLY if customer is selected
             if (finalCustomerId) {
-                const paymentStatus = (paidAmount >= grandTotal) ? 'Paid' : ((paidAmount > 0.001) ? 'Partial' : 'Unpaid');
+                const paymentStatus = (paidAmount >= grandTotal - 0.001) ? 'Paid' : ((paidAmount > 0.001) ? 'Partial' : 'Unpaid');
 
                 await conn.query(
                     `INSERT INTO customer_transactions (
@@ -596,12 +732,12 @@ exports.createSalesNote = async (req, res) => {
                         finalCustomerId,
                         finalNoteNo,
                         `${salesDate} ${salesTime}:00`,
-                        grandTotal,
-                        paidAmount,
-                        creditAmount,
+                        safeNum(grandTotal, 0.00),
+                        safeNum(paidAmount, 0.00),
+                        safeNum(creditAmount, 0.00),
                         actualPaymentType,
                         paymentStatus,
-                        saleType === 'credit' ? `Credit Sale ${finalNoteNo}` : `Sales Note ${finalNoteNo}`,
+                        actualSaleType === 'credit' ? `Credit Sale ${finalNoteNo}` : `Sales Note ${finalNoteNo}`,
                         notes || null,
                         userId
                     ]
@@ -611,7 +747,7 @@ exports.createSalesNote = async (req, res) => {
             await conn.commit();
             conn.release();
 
-            return res.redirect(`/view_sales_note.php?id=${salesNoteId}&success=${encodeURIComponent(`Sales Note ${finalNoteNo} created successfully!`)}`);
+            return res.redirect(`/sales-notes?success=${encodeURIComponent(`Sales Note ${finalNoteNo} created successfully!`)}`);
         } catch (e) {
             await conn.rollback();
             conn.release();
@@ -627,7 +763,7 @@ exports.createSalesNote = async (req, res) => {
 // Show edit sales note form
 exports.editSalesNoteForm = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_sales_note.php?error=${encodeURIComponent('Invalid Sales Note ID')}`);
         }
@@ -693,11 +829,23 @@ exports.editSalesNoteForm = async (req, res) => {
             };
         });
 
+        const [paymentRows] = await pool.query(
+            `SELECT * FROM customer_transactions
+            WHERE reference_number = ? AND transaction_type = 'payment'
+            ORDER BY transaction_date ASC, id ASC`,
+            [sale.sales_note_no]
+        );
+        const allPayments = buildPaymentsList(sale, paymentRows);
+        const totalSubPayments = paymentRows.reduce((sum, p) => sum + parseFloat(p.credit_amount || 0), 0);
+        const firstPaymentAmt = (sale.first_payment !== undefined && sale.first_payment !== null)
+            ? parseFloat(sale.first_payment)
+            : Math.max(0.00, parseFloat(sale.paid_amount || 0) - totalSubPayments);
+
         const saleTypeInfo = getSaleTypeInfo(sale.sale_type, sale.credit_amount, sale.payment_type);
         const saleType = saleTypeInfo.type;
         const paymentStatusInfo = getPaymentStatusInfo(sale.paid_amount, sale.total_amount);
         const finalGrandTotal = parseFloat(sale.total_amount || 0).toFixed(2);
-        const amountReceived = parseFloat(sale.paid_amount || 0).toFixed(2);
+        const amountReceived = firstPaymentAmt.toFixed(2);
         const balanceAmount = paymentStatusInfo.balance.toFixed(2);
 
         res.render('edit_sales_note', {
@@ -708,6 +856,9 @@ exports.editSalesNoteForm = async (req, res) => {
             finalGrandTotal,
             amountReceived,
             balanceAmount,
+            firstPaymentAmt,
+            totalSubPayments,
+            allPayments,
             paymentStatusInfo,
             productsList,
             customersList,
@@ -726,7 +877,7 @@ exports.editSalesNoteForm = async (req, res) => {
 // Process edit sales note
 exports.editSalesNote = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || req.body.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || req.body.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_sales_note.php?error=${encodeURIComponent('Invalid Sales Note ID')}`);
         }
@@ -750,9 +901,9 @@ exports.editSalesNote = async (req, res) => {
         const salesTime = (body.sales_time || sale.sales_time).trim();
         const paymentType = (body.payment_type || sale.payment_type).trim();
         const itemsInput = body.items || [];
-        const inputOtherCharges = body.other_charges !== undefined ? Math.max(0.00, parseFloat(body.other_charges)) : 0.00;
+        const inputOtherCharges = Math.max(0.00, safeNum(body.other_charges, 0.00));
         const notes = (body.notes || '').trim();
-        const creditOverride = body.credit_override ? 1 : 0;
+        let creditOverride = (body.credit_override === '1' || body.credit_override === 1 || body.credit_override === 'on' || body.credit_override === true || body.credit_override === 'true') ? 1 : 0;
 
         let customer = null;
         const customerId = body.customer_id ? parseInt(body.customer_id, 10) : (sale.customer_id ? parseInt(sale.customer_id, 10) : null);
@@ -789,7 +940,7 @@ exports.editSalesNote = async (req, res) => {
                     `UPDATE product_master 
                     SET stock_quantity = stock_quantity + ? 
                     WHERE id = ?`,
-                    [parseFloat(oldItem.quantity), parseInt(oldItem.product_id, 10)]
+                    [safeNum(oldItem.quantity, 0.00), parseInt(oldItem.product_id, 10)]
                 );
             }
 
@@ -802,9 +953,9 @@ exports.editSalesNote = async (req, res) => {
             for (let index = 0; index < itemsInput.length; index++) {
                 const itemData = itemsInput[index];
                 const productId = parseInt(itemData.product_id || 0, 10);
-                const qty = parseFloat(itemData.quantity || 0);
-                const itemDiscount = Math.max(0.00, parseFloat(itemData.discount || 0.00));
-                const itemTaxPercent = Math.max(0.00, parseFloat(itemData.tax_percent || 0.00));
+                const qty = Math.max(0.00, safeNum(itemData.quantity, 0.00));
+                const itemDiscount = Math.max(0.00, safeNum(itemData.discount, 0.00));
+                const itemTaxPercent = Math.max(0.00, safeNum(itemData.tax_percent, 0.00));
 
                 if (productId <= 0 || qty <= 0) {
                     throw new Error(`Item #${index + 1}: Product and quantity must be greater than zero.`);
@@ -825,12 +976,15 @@ exports.editSalesNote = async (req, res) => {
                 }
                 const product = prodRows[0];
 
-                const availableStock = parseFloat(product.stock_quantity || 0);
+                const availableStock = safeNum(product.stock_quantity, 0.00);
+                if (availableStock <= 0) {
+                    throw new Error("This product is out of stock and cannot be added to the sale.");
+                }
                 if (qty > availableStock) {
                     throw new Error(`Insufficient stock for '${product.product_name}'. Available: ${availableStock}, Requested: ${qty}.`);
                 }
 
-                const unitPrice = parseFloat(product.selling_price || 0.00);
+                const unitPrice = safeNum(product.selling_price, 0.00);
                 const lineSubtotal = qty * unitPrice;
                 const lineDiscount = Math.min(lineSubtotal, itemDiscount);
                 const taxableAmount = Math.max(0.00, lineSubtotal - lineDiscount);
@@ -856,47 +1010,86 @@ exports.editSalesNote = async (req, res) => {
             }
 
             // STEP 3: Grand Total & Split
-            const calculatedGrandTotal = Math.max(0.00, (serverSubtotal - serverTotalDiscount) + serverTotalTax + inputOtherCharges);
+            const rawCalculatedGrandTotal = Math.max(0.00, (serverSubtotal - serverTotalDiscount) + serverTotalTax + inputOtherCharges);
+            const roundedGrandTotal = Math.round(rawCalculatedGrandTotal);
+            const calculatedGrandTotal = roundedGrandTotal;
+            let roundOff = Number((roundedGrandTotal - rawCalculatedGrandTotal).toFixed(2));
             let finalGrandTotal = calculatedGrandTotal;
 
             if (body.final_grand_total !== undefined && body.final_grand_total !== null && String(body.final_grand_total).trim() !== '') {
-                const parsedFinal = parseFloat(body.final_grand_total);
-                if (isNaN(parsedFinal) || parsedFinal <= 0) {
+                const parsedFinal = safeNum(body.final_grand_total, -1);
+                if (parsedFinal <= 0) {
                     throw new Error('Adjusted / Final Grand Total must be a valid amount greater than zero.');
-                } else if (parsedFinal > calculatedGrandTotal + 0.01) {
+                } else if (parsedFinal > calculatedGrandTotal + 0.01 && parsedFinal > rawCalculatedGrandTotal + 0.01) {
                     throw new Error(`Adjusted / Final Grand Total (₹${parsedFinal.toFixed(2)}) cannot exceed the calculated Grand Total (₹${calculatedGrandTotal.toFixed(2)}).`);
                 } else {
                     finalGrandTotal = parsedFinal;
                 }
+            }
+            if (body.round_off !== undefined && body.round_off !== null && String(body.round_off).trim() !== '') {
+                roundOff = safeNum(body.round_off, roundOff);
             }
 
             const effectiveAdjustmentDiscount = Math.max(0.00, calculatedGrandTotal - finalGrandTotal);
             const totalDiscountToSave = serverTotalDiscount + effectiveAdjustmentDiscount;
             const grandTotal = finalGrandTotal;
 
+            // Preserve any subsequent credit payments made via Receive Payment
+            const [subPayments] = await conn.query(
+                `SELECT COALESCE(SUM(credit_amount), 0) AS total_sub_payments
+                FROM customer_transactions
+                WHERE reference_number = ? AND transaction_type = 'payment'`,
+                [sale.sales_note_no]
+            );
+            const totalSubPayments = safeNum(subPayments[0].total_sub_payments, 0.00);
+
+            let actualSaleType = saleType;
             let paidAmount = 0.00;
+            let firstPayment = 0.00;
             let creditAmount = 0.00;
             let actualPaymentType = 'Cash';
 
             if (saleType === 'credit') {
-                const inputReceived = body.amount_received !== undefined && String(body.amount_received).trim() !== ''
-                    ? parseFloat(body.amount_received)
-                    : (body.paid_amount !== undefined && String(body.paid_amount).trim() !== '' ? parseFloat(body.paid_amount) : 0.00);
+                const inputReceived = safeNum(body.amount_received !== undefined && String(body.amount_received).trim() !== ''
+                    ? body.amount_received
+                    : (body.paid_amount !== undefined && String(body.paid_amount).trim() !== '' ? body.paid_amount : 0.00), 0.00);
 
-                if (isNaN(inputReceived) || inputReceived < 0) {
+                if (inputReceived < 0) {
                     throw new Error('Amount Received Now must be a non-negative number.');
                 } else if (inputReceived > grandTotal + 0.01) {
                     throw new Error(`Amount Received (₹${inputReceived.toFixed(2)}) cannot be greater than Grand Total (Final Grand Total: ₹${grandTotal.toFixed(2)}).`);
                 }
 
-                paidAmount = Math.min(grandTotal, Math.max(0.00, isNaN(inputReceived) ? 0.00 : inputReceived));
+                firstPayment = Math.min(grandTotal, Math.max(0.00, inputReceived));
+                paidAmount = Math.min(grandTotal, firstPayment + totalSubPayments);
                 creditAmount = Math.max(0.00, grandTotal - paidAmount);
-                actualPaymentType = paidAmount > 0 ? (body.payment_method || body.payment_type || 'Credit') : 'Credit';
+
+                // User requirement:
+                // If Amount Received / Paid == Grand Total, save as Normal Sale!
+                // Only if Amount Received < Grand Total (creditAmount > 0.001), save as Credit Sale!
+                if (creditAmount <= 0.001) {
+                    actualSaleType = 'sale';
+                    paidAmount = grandTotal;
+                    creditAmount = 0.00;
+                    actualPaymentType = ['Cash', 'UPI', 'Card', 'Bank Transfer'].includes(body.payment_method || body.payment_type)
+                        ? (body.payment_method || body.payment_type)
+                        : 'Cash';
+                } else {
+                    actualSaleType = 'credit';
+                    actualPaymentType = paidAmount > 0 ? (body.payment_method || body.payment_type || 'Credit') : 'Credit';
+                }
             } else {
+                actualSaleType = 'sale';
                 paidAmount = grandTotal;
+                firstPayment = grandTotal;
                 creditAmount = 0.00;
                 actualPaymentType = ['Cash', 'UPI', 'Card', 'Bank Transfer'].includes(paymentType) ? paymentType : 'Cash';
             }
+
+            // Initial credit created by this sale
+            const initialSaleCredit = (actualSaleType === 'credit')
+                ? Math.max(0.00, grandTotal - firstPayment)
+                : 0.00;
 
             // STEP 4: Delete old customer_transaction under the old customer if present
             if (sale.customer_id) {
@@ -916,25 +1109,29 @@ exports.editSalesNote = async (req, res) => {
 
             if (customer) {
                 const fSummary = await getCustomerFinancialSummary(conn, customer.id, customer);
-                prevOutstanding = parseFloat(fSummary.current_outstanding);
-                creditLimit = parseFloat(customer.credit_limit || 0);
-                creditAllowed = parseInt(customer.credit_allowed, 10);
-                newOutstanding = prevOutstanding + creditAmount;
+                const baseOutstanding = safeNum(fSummary ? fSummary.current_outstanding : 0, 0.00) + totalSubPayments;
+                prevOutstanding = baseOutstanding;
+                creditLimit = safeNum(customer.credit_limit, 0.00);
+                creditAllowed = parseInt(customer.credit_allowed !== undefined ? customer.credit_allowed : 1, 10) || 0;
+                newOutstanding = baseOutstanding + creditAmount;
 
                 if (creditAmount > 0.001) {
                     if (creditAllowed === 0) {
                         throw new Error(`Credit is not allowed for customer '${customer.customer_name}'.`);
                     }
                     const creditEval = evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed);
-                    if (creditEval.is_exceeded && !creditOverride) {
-                        const availableCredit = Math.max(0.00, creditLimit - prevOutstanding);
-                        throw new Error(`Credit limit exceeded! Customer Credit Limit: ₹${creditLimit.toFixed(2)}, Current Outstanding: ₹${prevOutstanding.toFixed(2)}, Available Credit: ₹${availableCredit.toFixed(2)}, Requested Credit: ₹${creditAmount.toFixed(2)}. Please reduce credit amount or authorize override.`);
+                    if (creditEval.is_exceeded) {
+                        if (!creditOverride) {
+                            throw new Error("Sale exceeds customer's credit limit. Check this box to authorize and update this transaction.");
+                        }
                     }
                 }
             }
 
-            const finalCreditEval = customer ? evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed) : { status: 'Normal' };
-            const creditStatus = finalCreditEval.status;
+            const finalCreditEval = (customer && creditAmount > 0.001)
+                ? evaluateCreditStatus(newOutstanding, creditLimit, creditAllowed)
+                : { status: 'Within Limit' };
+            const creditStatus = (creditAmount > 0.001) ? finalCreditEval.status : 'Within Limit';
             const finalCustomerId = customer ? customer.id : null;
 
             // STEP 5: Update sales_notes record
@@ -950,8 +1147,10 @@ exports.editSalesNote = async (req, res) => {
                     discount = ?,
                     tax = ?,
                     other_charges = ?,
+                    round_off = ?,
                     total_amount = ?,
                     paid_amount = ?,
+                    first_payment = ?,
                     credit_amount = ?,
                     previous_outstanding = ?,
                     new_outstanding = ?,
@@ -966,20 +1165,22 @@ exports.editSalesNote = async (req, res) => {
                     finalCustomerId,
                     salesDate,
                     salesTime,
-                    saleType,
+                    actualSaleType,
                     actualPaymentType,
-                    serverSubtotal,
-                    totalDiscountToSave,
-                    serverTotalTax,
-                    inputOtherCharges,
-                    grandTotal,
-                    paidAmount,
-                    creditAmount,
-                    prevOutstanding,
-                    newOutstanding,
-                    creditLimit,
+                    safeNum(serverSubtotal, 0.00),
+                    safeNum(totalDiscountToSave, 0.00),
+                    safeNum(serverTotalTax, 0.00),
+                    safeNum(inputOtherCharges, 0.00),
+                    safeNum(roundOff, 0.00),
+                    safeNum(grandTotal, 0.00),
+                    safeNum(paidAmount, 0.00),
+                    safeNum(firstPayment, 0.00),
+                    safeNum(creditAmount, 0.00),
+                    safeNum(prevOutstanding, 0.00),
+                    safeNum(newOutstanding, 0.00),
+                    safeNum(creditLimit, 0.00),
                     creditStatus,
-                    creditOverride,
+                    creditOverride ? 1 : 0,
                     notes || null,
                     userId,
                     id
@@ -1002,12 +1203,12 @@ exports.editSalesNote = async (req, res) => {
                         item.product_code,
                         item.product_name,
                         item.unit_name,
-                        item.quantity,
-                        item.unit_price,
-                        item.discount,
-                        item.tax_percent,
-                        item.tax_amount,
-                        item.line_total
+                        safeNum(item.quantity, 1.00),
+                        safeNum(item.unit_price, 0.00),
+                        safeNum(item.discount, 0.00),
+                        safeNum(item.tax_percent, 0.00),
+                        safeNum(item.tax_amount, 0.00),
+                        safeNum(item.line_total, 0.00)
                     ]
                 );
 
@@ -1015,7 +1216,7 @@ exports.editSalesNote = async (req, res) => {
                     `UPDATE product_master 
                     SET stock_quantity = stock_quantity - ? 
                     WHERE id = ?`,
-                    [item.quantity, item.product_id]
+                    [safeNum(item.quantity, 1.00), item.product_id]
                 );
             }
 
@@ -1034,12 +1235,12 @@ exports.editSalesNote = async (req, res) => {
                         finalCustomerId,
                         sale.sales_note_no,
                         `${salesDate} ${salesTime}:00`,
-                        grandTotal,
-                        paidAmount,
-                        creditAmount,
+                        safeNum(grandTotal, 0.00),
+                        safeNum(paidAmount, 0.00),
+                        safeNum(initialSaleCredit, 0.00),
                         actualPaymentType,
                         paymentStatus,
-                        saleType === 'credit' ? `Credit Sale ${sale.sales_note_no}` : `Sales Note ${sale.sales_note_no}`,
+                        actualSaleType === 'credit' ? `Credit Sale ${sale.sales_note_no}` : `Sales Note ${sale.sales_note_no}`,
                         notes || null,
                         userId
                     ]
@@ -1049,7 +1250,7 @@ exports.editSalesNote = async (req, res) => {
             await conn.commit();
             conn.release();
 
-            return res.redirect(`/view_sales_note.php?id=${id}&success=${encodeURIComponent(`Sales Note ${sale.sales_note_no} updated successfully!`)}`);
+            return res.redirect(`/sales-notes/view/${id}?id=${id}&success=${encodeURIComponent(`Sales Note ${sale.sales_note_no} updated successfully!`)}`);
         } catch (e) {
             await conn.rollback();
             conn.release();
@@ -1090,18 +1291,34 @@ exports.editSalesNote = async (req, res) => {
             const saleTypeInfo = getSaleTypeInfo(body.sale_type || sale.sale_type, body.credit_amount || sale.credit_amount, body.payment_type || sale.payment_type);
             const paymentStatusInfo = getPaymentStatusInfo(body.amount_received !== undefined ? body.amount_received : (body.paid_amount || sale.paid_amount), body.final_grand_total || sale.total_amount);
 
+            const [paymentRows] = await pool.query(
+                `SELECT * FROM customer_transactions
+                WHERE reference_number = ? AND transaction_type = 'payment'
+                ORDER BY transaction_date ASC, id ASC`,
+                [sale.sales_note_no]
+            );
+            const allPayments = buildPaymentsList(sale, paymentRows);
+            const totalSubPayments = paymentRows.reduce((sum, p) => sum + parseFloat(p.credit_amount || 0), 0);
+            const firstPaymentAmt = (sale.first_payment !== undefined && sale.first_payment !== null)
+                ? parseFloat(sale.first_payment)
+                : Math.max(0.00, parseFloat(sale.paid_amount || 0) - totalSubPayments);
+
             return res.render('edit_sales_note', {
                 pageTitle: 'Edit Sales Note',
-                sale: { ...sale, ...body },
+                sale: { ...sale, ...body, credit_override: creditOverride },
                 saleType: body.sale_type || (sale.sale_type === 'credit' ? 'credit' : 'sale'),
                 saleTypeInfo,
                 finalGrandTotal: body.final_grand_total || sale.total_amount,
                 amountReceived: body.amount_received !== undefined ? body.amount_received : sale.paid_amount,
                 balanceAmount: paymentStatusInfo.balance.toFixed(2),
+                firstPaymentAmt,
+                totalSubPayments,
+                allPayments,
                 paymentStatusInfo,
                 productsList,
                 customersList,
                 initialItemsFormatted,
+                creditLimitExceeded: true,
                 getPaymentStatusInfo,
                 getSaleTypeInfo,
                 getPaymentTypeBadge,
@@ -1117,7 +1334,7 @@ exports.editSalesNote = async (req, res) => {
 // View single sales note
 exports.viewSalesNote = async (req, res) => {
     try {
-        const id = parseInt(req.query.id || 0, 10);
+        const id = parseInt(req.params.id || req.query.id || 0, 10);
         if (id <= 0) {
             return res.redirect(`/manage_sales_note.php?error=${encodeURIComponent('Invalid Sales Note ID')}`);
         }
@@ -1169,6 +1386,20 @@ exports.viewSalesNote = async (req, res) => {
         const evalCredit = evaluateCreditStatus(parseFloat(sale.new_outstanding), parseFloat(sale.credit_limit), parseInt(sale.cust_credit_allowed, 10));
         const autoPrint = req.query.print === '1';
 
+        const [paymentHistory] = await pool.query(
+            `SELECT * FROM customer_transactions 
+            WHERE reference_number = ? AND transaction_type = 'payment'
+            ORDER BY transaction_date ASC, id ASC`,
+            [sale.sales_note_no]
+        );
+
+        const allPayments = buildPaymentsList(sale, paymentHistory);
+        const totalCreditPayments = paymentHistory.reduce((sum, p) => sum + parseFloat(p.credit_amount || 0), 0);
+        const firstPaymentAmt = (sale.first_payment !== undefined && sale.first_payment !== null)
+            ? parseFloat(sale.first_payment)
+            : Math.max(0.00, parseFloat(sale.paid_amount || 0) - totalCreditPayments);
+        const remainingCredit = Math.max(0.00, parseFloat(sale.total_amount || 0) - parseFloat(sale.paid_amount || 0));
+
         const saleTypeInfo = getSaleTypeInfo(sale.sale_type, sale.credit_amount, sale.payment_type);
         const paymentStatusInfo = getPaymentStatusInfo(sale.paid_amount, sale.total_amount);
 
@@ -1180,13 +1411,160 @@ exports.viewSalesNote = async (req, res) => {
             autoPrint,
             saleTypeInfo,
             paymentStatusInfo,
+            paymentHistory,
+            allPayments,
+            firstPaymentAmt,
+            totalCreditPayments,
+            remainingCredit,
             getPaymentStatusInfo,
             getSaleTypeInfo,
-            getPaymentTypeBadge
+            getPaymentTypeBadge,
+            success: req.query.success || null,
+            error: req.query.error || null
         });
     } catch (err) {
         console.error('viewSalesNote error:', err);
         res.status(500).send('Internal Server Error: ' + err.message);
+    }
+};
+
+// Record payment for Credit Sale
+exports.receivePayment = async (req, res) => {
+    try {
+        const body = req.body || {};
+        const salesNoteId = parseInt(body.sales_note_id || 0, 10);
+        const paymentAmount = parseFloat(body.payment_amount || 0);
+        const paymentMethod = (body.payment_method || 'Cash').trim();
+        const paymentDateInput = body.payment_date ? body.payment_date.trim() : null;
+        const notes = (body.notes || '').trim();
+
+        if (salesNoteId <= 0) {
+            return res.redirect(`/sales-notes?error=${encodeURIComponent('Invalid Sales Note ID.')}`);
+        }
+
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            return res.redirect(`/sales-notes?error=${encodeURIComponent('Payment amount must be greater than ₹0.00.')}`);
+        }
+
+        const validMethods = ['Cash', 'UPI', 'Card', 'Bank Transfer'];
+        const actualPaymentMethod = validMethods.includes(paymentMethod) ? paymentMethod : 'Cash';
+
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [sales] = await conn.query(
+                `SELECT sn.*, cm.customer_name, cm.customer_code 
+                FROM sales_notes sn
+                LEFT JOIN customer_master cm ON cm.id = sn.customer_id
+                WHERE sn.id = ?
+                LIMIT 1
+                FOR UPDATE`,
+                [salesNoteId]
+            );
+
+            if (!sales.length) {
+                throw new Error('Sales Note record not found.');
+            }
+            const sale = sales[0];
+
+            if (Number(sale.status) === 0) {
+                throw new Error('Cannot receive payment for a cancelled Sales Note.');
+            }
+
+            const totalAmount = parseFloat(sale.total_amount || 0);
+            const currentPaid = parseFloat(sale.paid_amount || 0);
+            const currentBalance = Math.max(0.00, totalAmount - currentPaid);
+
+            if (currentBalance <= 0.001) {
+                throw new Error(`Sales Note ${sale.sales_note_no} is already fully paid.`);
+            }
+
+            if (paymentAmount > currentBalance + 0.01) {
+                throw new Error(`Payment amount (₹${paymentAmount.toFixed(2)}) cannot exceed outstanding balance (₹${currentBalance.toFixed(2)}).`);
+            }
+
+            const newPaid = Math.min(totalAmount, currentPaid + paymentAmount);
+            const newBalance = Math.max(0.00, totalAmount - newPaid);
+
+            const userId = req.session.user_id ? parseInt(req.session.user_id, 10) : 1;
+
+            // Update sales_notes
+            await conn.query(
+                `UPDATE sales_notes 
+                SET paid_amount = ?, 
+                    credit_amount = ?, 
+                    updated_by = ?, 
+                    updated_at = NOW() 
+                WHERE id = ?`,
+                [newPaid, newBalance, userId, salesNoteId]
+            );
+
+            // Count existing payments to assign Payment 2, Payment 3, etc.
+            const [existingPmts] = await conn.query(
+                `SELECT COUNT(*) AS cnt FROM customer_transactions WHERE reference_number = ? AND transaction_type = 'payment'`,
+                [sale.sales_note_no]
+            );
+            const subCount = parseInt(existingPmts[0].cnt || 0, 10);
+            const hasInitialPay = (sale.first_payment !== undefined && sale.first_payment !== null) ? parseFloat(sale.first_payment) > 0.001 : (parseFloat(sale.paid_amount || 0) > subCount);
+            const paymentNumber = (hasInitialPay ? 1 : 0) + subCount + 1;
+            const defaultPaymentReason = `Payment ${paymentNumber} received for Credit Sale ${sale.sales_note_no}`;
+
+            // Log customer transaction if customer_id exists
+            if (sale.customer_id) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const defaultDate = `${year}-${month}-${day} ${hours}:${minutes}:00`;
+                const txDate = paymentDateInput ? `${paymentDateInput} 00:00:00` : defaultDate;
+
+                const paymentStatus = (newPaid >= totalAmount - 0.001) ? 'Paid' : 'Partial';
+
+                await conn.query(
+                    `INSERT INTO customer_transactions (
+                        customer_id, transaction_type, reference_number, transaction_date,
+                        total_amount, paid_amount, debit_amount, credit_amount,
+                        payment_method, payment_status, reason, notes,
+                        created_by, created_at
+                    ) VALUES (?, 'payment', ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, ?, NOW())`,
+                    [
+                        sale.customer_id,
+                        sale.sales_note_no,
+                        txDate,
+                        paymentAmount,
+                        paymentAmount,
+                        paymentAmount,
+                        actualPaymentMethod,
+                        paymentStatus,
+                        defaultPaymentReason,
+                        notes || `Payment ${paymentNumber}`,
+                        userId
+                    ]
+                );
+            }
+
+            await conn.commit();
+            conn.release();
+
+            const redirectTarget = req.headers.referer && req.headers.referer.includes('/sales-notes/view/')
+                ? `/sales-notes/view/${salesNoteId}`
+                : '/sales-notes';
+
+            const msg = `Payment ${paymentNumber} of ₹${paymentAmount.toFixed(2)} received successfully for ${sale.sales_note_no}. Remaining balance: ₹${newBalance.toFixed(2)}.`;
+            return res.redirect(`${redirectTarget}?success=${encodeURIComponent(msg)}`);
+        } catch (e) {
+            await conn.rollback();
+            conn.release();
+            console.error('receivePayment transaction error:', e);
+            const redirectTarget = req.headers.referer || '/sales-notes';
+            return res.redirect(`${redirectTarget}${redirectTarget.includes('?') ? '&' : '?'}error=${encodeURIComponent(e.message)}`);
+        }
+    } catch (err) {
+        console.error('receivePayment error:', err);
+        return res.redirect(`/sales-notes?error=${encodeURIComponent('Internal server error: ' + err.message)}`);
     }
 };
 
