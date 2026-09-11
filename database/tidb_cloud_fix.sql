@@ -282,7 +282,12 @@ DROP TABLE IF EXISTS `_schema_old_customer_transactions`;
 RENAME TABLE `customer_transactions` TO `_schema_old_customer_transactions`, `_schema_fix_customer_transactions` TO `customer_transactions`;
 DROP TABLE IF EXISTS `_schema_old_customer_transactions`;
 
--- 11. RESTORE FOREIGN KEYS (if supported in TiDB cluster)
+-- 11. SALES NOTES SCHEMA FIX (round_off, first_payment)
+-- Note: TiDB requires schema additions one statement at a time
+ALTER TABLE `sales_notes` ADD COLUMN `round_off` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `other_charges`;
+ALTER TABLE `sales_notes` ADD COLUMN `first_payment` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `paid_amount`;
+
+-- 12. RESTORE FOREIGN KEYS (if supported in TiDB cluster)
 ALTER TABLE `product_images` ADD CONSTRAINT `product_images_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`) ON DELETE CASCADE;
 ALTER TABLE `product_rental_rates` ADD CONSTRAINT `product_rental_rates_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `product_master` (`id`) ON DELETE CASCADE;
 

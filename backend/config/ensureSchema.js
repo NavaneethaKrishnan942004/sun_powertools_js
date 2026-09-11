@@ -218,13 +218,110 @@ const TABLE_DEFINITIONS = {
             UNIQUE KEY \`uk_user_email\` (\`user_email\`),
             UNIQUE KEY \`uk_user_phone\` (\`user_phone\`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+    sales_notes: `
+        CREATE TABLE IF NOT EXISTS \`sales_notes\` (
+            \`id\` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            \`sales_note_no\` varchar(50) NOT NULL,
+            \`customer_id\` int(10) UNSIGNED DEFAULT NULL,
+            \`sales_date\` date NOT NULL,
+            \`sales_time\` time NOT NULL,
+            \`sale_type\` enum('sale','credit') NOT NULL DEFAULT 'sale',
+            \`payment_type\` enum('Cash','UPI','Card','Bank Transfer','Credit','Mixed') NOT NULL DEFAULT 'Cash',
+            \`subtotal\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`discount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`tax\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`other_charges\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`round_off\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`total_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`paid_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`first_payment\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`credit_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`previous_outstanding\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`new_outstanding\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`credit_limit\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`credit_status\` varchar(50) NOT NULL DEFAULT 'Within Limit',
+            \`credit_override\` tinyint(1) NOT NULL DEFAULT 0,
+            \`notes\` text DEFAULT NULL,
+            \`status\` tinyint(1) NOT NULL DEFAULT 1,
+            \`created_by\` int(10) UNSIGNED DEFAULT NULL,
+            \`created_at\` datetime NOT NULL,
+            \`updated_by\` int(10) UNSIGNED DEFAULT NULL,
+            \`updated_at\` datetime DEFAULT NULL,
+            PRIMARY KEY (\`id\`),
+            UNIQUE KEY \`uk_sales_note_no\` (\`sales_note_no\`),
+            KEY \`idx_sn_customer\` (\`customer_id\`),
+            KEY \`idx_sn_date\` (\`sales_date\`),
+            KEY \`idx_sn_status\` (\`status\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+    sales_note_items: `
+        CREATE TABLE IF NOT EXISTS \`sales_note_items\` (
+            \`id\` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            \`sales_note_id\` int(10) UNSIGNED NOT NULL,
+            \`product_id\` int(11) NOT NULL,
+            \`product_code\` varchar(30) NOT NULL,
+            \`product_name\` varchar(255) NOT NULL,
+            \`unit_name\` varchar(50) DEFAULT NULL,
+            \`quantity\` decimal(10,2) NOT NULL DEFAULT 1.00,
+            \`unit_price\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`discount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`tax_percent\` decimal(5,2) NOT NULL DEFAULT 0.00,
+            \`tax_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`line_total\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`created_at\` datetime NOT NULL,
+            \`updated_at\` datetime DEFAULT NULL,
+            PRIMARY KEY (\`id\`),
+            KEY \`idx_sni_sales_note\` (\`sales_note_id\`),
+            KEY \`idx_sni_product\` (\`product_id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+    rentals: `
+        CREATE TABLE IF NOT EXISTS \`rentals\` (
+            \`id\` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            \`rental_no\` varchar(50) NOT NULL UNIQUE,
+            \`customer_id\` int(10) UNSIGNED NOT NULL,
+            \`product_id\` int(11) NOT NULL,
+            \`rental_period_type\` enum('hourly','daily','weekly','monthly','custom') NOT NULL DEFAULT 'daily',
+            \`rental_rate\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`estimated_duration\` decimal(10,2) NOT NULL DEFAULT 1.00,
+            \`security_deposit\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`check_in_datetime\` datetime NOT NULL,
+            \`expected_checkout_datetime\` datetime NOT NULL,
+            \`actual_return_datetime\` datetime DEFAULT NULL,
+            \`actual_duration\` varchar(100) DEFAULT NULL,
+            \`overdue_duration\` varchar(100) DEFAULT NULL,
+            \`overdue_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`advance_rental_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`total_rental_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`additional_charges\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`deposit_returned\` tinyint(1) NOT NULL DEFAULT 0,
+            \`deposit_return_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`deposit_return_datetime\` datetime DEFAULT NULL,
+            \`deposit_deduction_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`deposit_deduction_reason\` text DEFAULT NULL,
+            \`remaining_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`refund_amount\` decimal(12,2) NOT NULL DEFAULT 0.00,
+            \`payment_method\` varchar(50) NOT NULL DEFAULT 'Cash',
+            \`rental_status\` enum('Active','Returned','Overdue','Cancelled') NOT NULL DEFAULT 'Active',
+            \`notes\` text DEFAULT NULL,
+            \`created_by\` int(10) UNSIGNED DEFAULT NULL,
+            \`created_at\` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            \`updated_by\` int(10) UNSIGNED DEFAULT NULL,
+            \`updated_at\` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (\`id\`),
+            KEY \`idx_rentals_customer\` (\`customer_id\`),
+            KEY \`idx_rentals_product\` (\`product_id\`),
+            KEY \`idx_rentals_status\` (\`rental_status\`),
+            KEY \`idx_rentals_dates\` (\`check_in_datetime\`, \`expected_checkout_datetime\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `
 };
 
 /**
- * Ensures all database tables have AUTO_INCREMENT PRIMARY KEY on their 'id' column.
- * Handles TiDB Cloud (which rejects ALTER TABLE ... MODIFY id AUTO_INCREMENT)
- * by safely recreating and swapping tables while preserving existing rows and IDs.
+ * Ensures all database tables have AUTO_INCREMENT PRIMARY KEY on their 'id' column,
+ * and verifies that required columns (like round_off, first_payment, sale_type) exist.
+ * Compatible with TiDB Cloud & MySQL.
  */
 async function ensureSchema() {
     let conn;
@@ -242,6 +339,7 @@ async function ensureSchema() {
                 console.log(`[Schema] Table '${tableName}' does not exist. Creating...`);
                 await conn.query(createSql);
                 console.log(`[Schema] Table '${tableName}' created with AUTO_INCREMENT.`);
+                existingTables.push(tableName);
                 continue;
             }
 
@@ -309,6 +407,46 @@ async function ensureSchema() {
                     await conn.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
                     console.error(`[Schema] Error migrating '${tableName}' in TiDB:`, tidbErr.message);
                 }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // Column-Level Schema Verification & Idempotent Migrations
+        // ---------------------------------------------------------
+        console.log('[Schema] Checking column-level definitions for sales_notes and other tables...');
+
+        const COLUMN_CHECKS = [
+            {
+                table: 'sales_notes',
+                column: 'sale_type',
+                sql: "ALTER TABLE `sales_notes` ADD COLUMN `sale_type` ENUM('sale', 'credit') NOT NULL DEFAULT 'sale' AFTER `sales_time`"
+            },
+            {
+                table: 'sales_notes',
+                column: 'round_off',
+                sql: "ALTER TABLE `sales_notes` ADD COLUMN `round_off` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `other_charges`"
+            },
+            {
+                table: 'sales_notes',
+                column: 'first_payment',
+                sql: "ALTER TABLE `sales_notes` ADD COLUMN `first_payment` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `paid_amount`"
+            }
+        ];
+
+        for (const check of COLUMN_CHECKS) {
+            try {
+                if (!existingTables.includes(check.table)) continue;
+
+                const [colCheck] = await conn.query(`SHOW COLUMNS FROM \`${check.table}\` LIKE ?`, [check.column]);
+                if (colCheck.length === 0) {
+                    console.log(`[Schema] Missing column '${check.column}' in '${check.table}'. Adding column...`);
+                    await conn.query(check.sql);
+                    console.log(`[Schema] Successfully added column '${check.column}' to '${check.table}'.`);
+                } else {
+                    console.log(`[Schema] Column '${check.column}' in '${check.table}' already exists.`);
+                }
+            } catch (colErr) {
+                console.error(`[Schema] Failed to verify/add column '${check.column}' in '${check.table}':`, colErr.message);
             }
         }
 

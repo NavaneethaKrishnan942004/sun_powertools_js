@@ -110,8 +110,24 @@ async function testAll() {
         console.log('   [PASS] Inserted Transaction with ID:', txCheck[0].id);
         await conn.query('DELETE FROM customer_transactions WHERE id = ?', [txId]);
 
+        // Test Sales Note insert with round_off and first_payment
+        console.log('\n[10] Testing Sales Note insert with round_off & first_payment in strict mode...');
+        const snCode = `SN-TST-${Date.now().toString().slice(-4)}`;
+        const [snRes] = await conn.query(
+            `INSERT INTO sales_notes (
+                sales_note_no, customer_id, sales_date, sales_time, sale_type, payment_type,
+                subtotal, discount, tax, other_charges, round_off, total_amount,
+                paid_amount, first_payment, credit_amount, previous_outstanding, new_outstanding,
+                credit_limit, credit_status, credit_override, notes, status, created_by, created_at
+            ) VALUES (?, 1, '2026-09-11', '12:00:00', 'sale', 'Cash', 100.00, 0.00, 0.00, 0.00, 0.15, 100.15, 100.15, 100.15, 0.00, 0.00, 0.00, 0.00, 'Within Limit', 0, 'Test Note', 1, 1, NOW())`,
+            [snCode]
+        );
+        const [snCheck] = await conn.query('SELECT * FROM sales_notes WHERE id = ?', [snRes.insertId]);
+        console.log('   [PASS] Inserted Sales Note:', snCheck[0].sales_note_no, 'Round Off:', snCheck[0].round_off, 'First Payment:', snCheck[0].first_payment);
+        await conn.query('DELETE FROM sales_notes WHERE id = ?', [snRes.insertId]);
+
         console.log('\n====================================================');
-        console.log(' ALL 9 STRICT MODE TESTS PASSED PERFECTLY!');
+        console.log(' ALL 10 STRICT MODE TESTS PASSED PERFECTLY!');
         console.log('====================================================');
     } finally {
         conn.release();

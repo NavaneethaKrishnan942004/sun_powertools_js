@@ -32,7 +32,7 @@ poolConfig.database = process.env.DB_NAME || process.env.MYSQL_DATABASE || poolC
 const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(poolConfig.host.toLowerCase());
 const sslRequested = process.env.DB_SSL !== undefined 
     ? (process.env.DB_SSL === 'true' || process.env.DB_SSL === '1') 
-    : (!isLocalhost && process.env.NODE_ENV === 'production');
+    : !isLocalhost;
 
 if (sslRequested && !isLocalhost) {
     const rejectUnauth = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true;
