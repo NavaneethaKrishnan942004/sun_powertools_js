@@ -65,7 +65,7 @@
                                                 <div class="col-12">
                                                     <label class="form-label small fw-semibold">Select Customer <span
                                                             class="text-danger">*</span></label>
-                                                    <select name="customer_id" id="customerSelect" class="form-select"
+                                                    <select name="customer_id" id="customerSelect" class="form-select searchable-select"
                                                         required>
                                                         <option value="">-- Select Customer from Database --</option>
                                                         <% customers.forEach(c=> { %>
@@ -141,7 +141,7 @@
                                                 <div class="col-12">
                                                     <label class="form-label small fw-semibold">Select Rental Product
                                                         <span class="text-danger">*</span></label>
-                                                    <select name="product_id" id="productSelect" class="form-select"
+                                                    <select name="product_id" id="productSelect" class="form-select searchable-select"
                                                         required>
                                                         <option value="">-- Choose Rental Equipment --</option>
                                                         <% products.forEach(p=> { %>
@@ -904,6 +904,9 @@
                             const newOpt = new Option(`${c.customer_code} - ${c.customer_name} (${c.mobile_number})`, c.id, true, true);
                             customerSelect.add(newOpt);
                             customerSelect.value = c.id;
+                            if (customerSelect._searchableSelect) {
+                                customerSelect._searchableSelect.refresh();
+                            }
 
                             // Trigger change event to load customer details in profile box
                             customerSelect.dispatchEvent(new Event('change'));
@@ -939,6 +942,9 @@
             }
             if (productSelect.value) {
                 productSelect.dispatchEvent(new Event('change'));
+            }
+            if (window.SearchableSelect) {
+                SearchableSelect.init('.searchable-select');
             }
             updateCalculations();
         });

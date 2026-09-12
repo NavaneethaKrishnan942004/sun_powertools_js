@@ -6,16 +6,14 @@
         <!-- Breadcrumb Navigation -->
         <%- renderBreadcrumbs([
             { title: '', icon: 'bi bi-house-door', link: '/' },
-            { title: 'Settings', link: '/settings' },
-            { title: 'DMS Masters', link: '/masters' },
-            { title: 'Product Master' }
+            { title: 'Product' }
         ]) %>
 
         <!-- PAGE HEADING -->
         <div class="page-heading d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
             <div>
                 <h1 class="page-title mb-1">
-                    <i class="bi bi-box-seam text-primary me-2"></i>Product Master
+                    <i class="bi bi-box-seam text-primary me-2"></i>Product
                 </h1>
             </div>
             <a href="/products/create" class="btn btn-primary shadow-sm">
@@ -89,11 +87,11 @@
                     </div>
 
                     <!-- Expandable Filter Panel -->
-                    <div class="collapse <%= (statusFilter !== '' || categoryFilter !== '' || brandFilter !== '') ? 'show' : '' %>" id="filterSection">
+                    <div class="collapse <%= (statusFilter !== '' || (typeof productTypeFilter !== 'undefined' && productTypeFilter !== '') || categoryFilter !== '' || brandFilter !== '') ? 'show' : '' %>" id="filterSection">
                         <div class="filter-panel-box">
                             <div class="row g-3">
                                 <!-- STATUS -->
-                                <div class="col-12 col-sm-6 col-md-4">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <label class="form-label small fw-semibold text-muted">Status</label>
                                     <select name="status" class="form-select">
                                         <option value="">All Statuses</option>
@@ -102,10 +100,20 @@
                                     </select>
                                 </div>
 
+                                <!-- PRODUCT TYPE -->
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <label class="form-label small fw-semibold text-muted">Product Type</label>
+                                    <select name="product_type" class="form-select searchable-select">
+                                        <option value="">All Types</option>
+                                        <option value="Sales" <%= (typeof productTypeFilter !== 'undefined' && productTypeFilter === 'Sales') ? 'selected' : '' %>>Sales</option>
+                                        <option value="Rental" <%= (typeof productTypeFilter !== 'undefined' && productTypeFilter === 'Rental') ? 'selected' : '' %>>Rental</option>
+                                    </select>
+                                </div>
+
                                 <!-- CATEGORY -->
-                                <div class="col-12 col-sm-6 col-md-4">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <label class="form-label small fw-semibold text-muted">Category</label>
-                                    <select name="category_id" class="form-select">
+                                    <select name="category_id" class="form-select searchable-select">
                                         <option value="">All Categories</option>
                                         <% categories.forEach(category => { %>
                                             <option value="<%= category.id %>" <%= String(categoryFilter) === String(category.id) ? 'selected' : '' %>>
@@ -116,9 +124,9 @@
                                 </div>
 
                                 <!-- BRAND -->
-                                <div class="col-12 col-sm-6 col-md-4">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <label class="form-label small fw-semibold text-muted">Brand</label>
-                                    <select name="brand_id" class="form-select">
+                                    <select name="brand_id" class="form-select searchable-select">
                                         <option value="">All Brands</option>
                                         <% brands.forEach(brand => { %>
                                             <option value="<%= brand.id %>" <%= String(brandFilter) === String(brand.id) ? 'selected' : '' %>>
@@ -161,6 +169,7 @@
                                 <th>Short Name</th>
                                 <th>Category</th>
                                 <th>Brand</th>
+                                <th>Type</th>
                                 <th>Sale</th>
                                 <th>Rental</th>
                                 <th>Status</th>
@@ -174,7 +183,7 @@
                         <tbody>
                             <% if (!products || products.length === 0) { %>
                                 <tr>
-                                    <td colspan="13" class="text-center py-5 text-muted">
+                                    <td colspan="14" class="text-center py-5 text-muted">
                                         <div class="my-4">
                                             <i class="bi bi-box-seam display-4 text-muted d-block mb-3"></i>
                                             <h5 class="fw-semibold text-body">No Products Found</h5>
@@ -214,6 +223,14 @@
 
                                         <!-- BRAND -->
                                         <td class="text-nowrap"><%= row.brand_code %> - <%= row.brand_name %></td>
+
+                                        <!-- TYPE -->
+                                        <td>
+                                            <span class="badge <%= (row.product_type === 'Rental' || (Number(row.rental_available) === 1 && row.product_type !== 'Sales')) ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' %>">
+                                                <i class="bi <%= (row.product_type === 'Rental' || (Number(row.rental_available) === 1 && row.product_type !== 'Sales')) ? 'bi-clock-history' : 'bi-bag-check' %> me-1"></i>
+                                                <%= row.product_type || (Number(row.rental_available) === 1 ? 'Rental' : 'Sales') %>
+                                            </span>
+                                        </td>
 
                                         <!-- SALE -->
                                         <td>

@@ -116,6 +116,7 @@ const TABLE_DEFINITIONS = {
             \`short_name\` varchar(100) NOT NULL,
             \`category_id\` int(11) NOT NULL,
             \`brand_id\` int(11) NOT NULL,
+            \`product_type\` enum('Sales','Rental') NOT NULL DEFAULT 'Sales',
             \`description\` text DEFAULT NULL,
             \`sale_available\` tinyint(1) NOT NULL DEFAULT 0,
             \`stock_quantity\` int(11) NOT NULL DEFAULT 50,
@@ -430,6 +431,14 @@ async function ensureSchema() {
                 table: 'sales_notes',
                 column: 'first_payment',
                 sql: "ALTER TABLE `sales_notes` ADD COLUMN `first_payment` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `paid_amount`"
+            },
+            {
+                table: 'product_master',
+                column: 'product_type',
+                sql: "ALTER TABLE `product_master` ADD COLUMN `product_type` ENUM('Sales', 'Rental') NOT NULL DEFAULT 'Sales' AFTER `brand_id`",
+                onAdded: async (c) => {
+                    await c.query("UPDATE `product_master` SET `product_type` = IF(`rental_available` = 1 AND (`sale_available` = 0 OR `sale_available` IS NULL), 'Rental', 'Sales')");
+                }
             }
         ];
 
@@ -441,6 +450,9 @@ async function ensureSchema() {
                 if (colCheck.length === 0) {
                     console.log(`[Schema] Missing column '${check.column}' in '${check.table}'. Adding column...`);
                     await conn.query(check.sql);
+                    if (typeof check.onAdded === 'function') {
+                        await check.onAdded(conn);
+                    }
                     console.log(`[Schema] Successfully added column '${check.column}' to '${check.table}'.`);
                 } else {
                     console.log(`[Schema] Column '${check.column}' in '${check.table}' already exists.`);

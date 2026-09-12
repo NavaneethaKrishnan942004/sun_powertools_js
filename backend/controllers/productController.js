@@ -22,7 +22,7 @@ async function generateProductCode() {
 // List products
 exports.manageProducts = async (req, res) => {
     try {
-        const { search = '', status = '', category_id = '', brand_id = '' } = req.query;
+        const { search = '', status = '', category_id = '', brand_id = '', product_type = '' } = req.query;
 
         const page = Math.max(1, parseInt(req.query.page || 1, 10));
         const limit = 10;
@@ -58,6 +58,14 @@ exports.manageProducts = async (req, res) => {
         if (status !== '' && ['0', '1'].includes(status)) {
             whereSql += ` AND p.status = ?`;
             params.push(parseInt(status, 10));
+        }
+
+        if (product_type !== '' && ['Sales', 'Rental'].includes(product_type)) {
+            if (product_type === 'Sales') {
+                whereSql += ` AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))`;
+            } else if (product_type === 'Rental') {
+                whereSql += ` AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))`;
+            }
         }
 
         if (category_id !== '') {
@@ -105,6 +113,7 @@ exports.manageProducts = async (req, res) => {
             brands,
             search,
             statusFilter: status,
+            productTypeFilter: product_type,
             categoryFilter: category_id,
             brandFilter: brand_id,
             page,
@@ -154,6 +163,7 @@ exports.createProductForm = async (req, res) => {
             shortNameError: '',
             categoryError: '',
             brandError: '',
+            productTypeError: '',
             imageError: '',
             saleError: '',
             sellingPriceError: '',
@@ -198,14 +208,18 @@ exports.createProduct = async (req, res) => {
         const shortName = (body.short_name || '').trim();
         const categoryId = parseInt(body.category_id || 0, 10);
         const brandId = parseInt(body.brand_id || 0, 10);
+        const productType = (body.product_type || '').trim();
         const description = (body.description || '').trim();
-        const saleAvailable = (body.sale_available || '') === 'yes' ? 1 : 0;
+        
+        // Product Type strictly controls sales and rental availability
+        const saleAvailable = productType === 'Sales' ? 1 : 0;
+        const rentalAvailable = productType === 'Rental' ? 1 : 0;
+        
         const purchasePrice = (body.purchase_price || '').trim();
         const sellingPrice = (body.selling_price || '').trim();
         const discountAllowed = (body.discount_allowed || 'no') === 'yes' ? 1 : 0;
         const discountPercent = (body.discount_percent || '').trim();
         const saleUnit = (body.sale_unit || '').trim();
-        const rentalAvailable = (body.rental_available || '') === 'yes' ? 1 : 0;
         const powerRating = (body.power_rating || '').trim();
         const voltage = (body.voltage || '').trim();
         const rpm = (body.rpm || '').trim();
@@ -221,6 +235,7 @@ exports.createProduct = async (req, res) => {
         let shortNameError = '';
         let categoryError = '';
         let brandError = '';
+        let productTypeError = '';
         let imageError = '';
         let saleError = '';
         let sellingPriceError = '';
@@ -260,24 +275,26 @@ exports.createProduct = async (req, res) => {
             errors.push(brandError);
         }
 
-        if (!body.sale_available) {
-            saleError = 'Sale Available is required.';
-            errors.push(saleError);
+        // Validate Product Type
+        if (productType === '') {
+            productTypeError = 'Product Type is required. Please select Sales or Rental.';
+            errors.push(productTypeError);
+        } else if (!['Sales', 'Rental'].includes(productType)) {
+            productTypeError = 'Product Type must be either Sales or Rental.';
+            errors.push(productTypeError);
         }
 
-        if (saleAvailable === 1) {
+        // Conditional Section Validations
+        if (productType === 'Sales') {
             if (sellingPrice === '') {
-                sellingPriceError = 'Selling Price is required.';
+                sellingPriceError = 'Selling Price is required for Sales product.';
                 errors.push(sellingPriceError);
-            } else if (isNaN(Number(sellingPrice))) {
-                sellingPriceError = 'Selling Price must be a valid number.';
+            } else if (isNaN(Number(sellingPrice)) || Number(sellingPrice) < 0) {
+                sellingPriceError = 'Selling Price must be a valid non-negative number.';
                 errors.push(sellingPriceError);
             }
-        }
-
-        if (!body.rental_available) {
-            rentalError = 'Rental Available is required.';
-            errors.push(rentalError);
+        } else if (productType === 'Rental') {
+            // Check if any rental rates configured (optional check, doesn't block if configured later)
         }
 
         if (!files || files.length === 0) {
@@ -297,6 +314,7 @@ exports.createProduct = async (req, res) => {
                 shortNameError,
                 categoryError,
                 brandError,
+                productTypeError,
                 imageError,
                 saleError,
                 sellingPriceError,
@@ -322,6 +340,7 @@ exports.createProduct = async (req, res) => {
                     short_name,
                     category_id,
                     brand_id,
+                    product_type,
                     description,
                     sale_available,
                     purchase_price,
@@ -342,7 +361,7 @@ exports.createProduct = async (req, res) => {
                     status,
                     created_by,
                     created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     nextProductId,
                     productCode,
@@ -350,6 +369,7 @@ exports.createProduct = async (req, res) => {
                     shortName,
                     categoryId,
                     brandId,
+                    productType,
                     description || null,
                     saleAvailable,
                     purchasePrice !== '' ? parseFloat(purchasePrice) : null,
@@ -479,6 +499,7 @@ exports.editProductForm = async (req, res) => {
             return res.redirect('/products');
         }
         const product = pRows[0];
+        product.product_type = product.product_type || (product.rental_available === 1 && !product.sale_available ? 'Rental' : 'Sales');
 
         const [categories] = await pool.query('SELECT id, category_code, category_name FROM category_master WHERE status = 1 ORDER BY category_name');
         const [brands] = await pool.query('SELECT id, brand_code, brand_name FROM brand_master WHERE status = 1 ORDER BY brand_name');
@@ -534,14 +555,17 @@ exports.editProduct = async (req, res) => {
         const shortName = (body.short_name || '').trim();
         const categoryId = parseInt(body.category_id || 0, 10);
         const brandId = parseInt(body.brand_id || 0, 10);
+        const productType = (body.product_type || '').trim() || (pRows[0].product_type || (pRows[0].rental_available === 1 && !pRows[0].sale_available ? 'Rental' : 'Sales'));
         const description = (body.description || '').trim();
-        const saleAvailable = (body.sale_available || '') === 'yes' ? 1 : 0;
+        
+        const saleAvailable = productType === 'Sales' ? 1 : 0;
+        const rentalAvailable = productType === 'Rental' ? 1 : 0;
+        
         const purchasePrice = (body.purchase_price || '').trim();
         const sellingPrice = (body.selling_price || '').trim();
         const discountAllowed = (body.discount_allowed || 'no') === 'yes' ? 1 : 0;
         const discountPercent = (body.discount_percent || '').trim();
         const saleUnit = (body.sale_unit || '').trim();
-        const rentalAvailable = (body.rental_available || '') === 'yes' ? 1 : 0;
         const powerRating = (body.power_rating || '').trim();
         const voltage = (body.voltage || '').trim();
         const rpm = (body.rpm || '').trim();
@@ -573,7 +597,7 @@ exports.editProduct = async (req, res) => {
         if (brandId <= 0) errors.push('Brand is required.');
 
         if (saleAvailable === 1 && sellingPrice === '') {
-            errors.push('Selling Price is required when Sale Available is Yes.');
+            errors.push('Selling Price is required for Sales product.');
         }
 
         const [images] = await pool.query('SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, id ASC', [id]);
@@ -587,7 +611,7 @@ exports.editProduct = async (req, res) => {
             return res.render('edit_product', {
                 pageTitle: 'Edit Product',
                 id,
-                product: { ...pRows[0], ...body, status },
+                product: { ...pRows[0], ...body, product_type: productType, status },
                 categories,
                 brands,
                 units,
@@ -611,6 +635,7 @@ exports.editProduct = async (req, res) => {
                     short_name = ?,
                     category_id = ?,
                     brand_id = ?,
+                    product_type = ?,
                     description = ?,
                     sale_available = ?,
                     purchase_price = ?,
@@ -637,6 +662,7 @@ exports.editProduct = async (req, res) => {
                     shortName,
                     categoryId,
                     brandId,
+                    productType,
                     description || null,
                     saleAvailable,
                     purchasePrice !== '' ? parseFloat(purchasePrice) : null,
@@ -809,3 +835,63 @@ exports.viewProduct = async (req, res) => {
         res.status(500).send('Internal Server Error: ' + err.message);
     }
 };
+
+// API: Filter products by type (Sales / Rental) and search term
+exports.apiGetProducts = async (req, res) => {
+    try {
+        const type = (req.query.type || '').trim().toLowerCase();
+        const search = (req.query.q || req.query.search || '').trim();
+
+        let whereSql = ' WHERE p.status = 1';
+        const params = [];
+
+        if (type === 'sales' || type === 'sale') {
+            whereSql += " AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))";
+        } else if (type === 'rental' || type === 'rent') {
+            whereSql += " AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))";
+        }
+
+        if (search !== '') {
+            whereSql += ` AND (
+                p.product_code LIKE ? 
+                OR p.product_name LIKE ? 
+                OR p.short_name LIKE ?
+                OR b.brand_name LIKE ?
+                OR c.category_name LIKE ?
+            )`;
+            const sp = `%${search}%`;
+            params.push(sp, sp, sp, sp, sp);
+        }
+
+        const sql = `
+            SELECT 
+                p.id, 
+                p.product_code, 
+                p.product_name, 
+                p.short_name, 
+                p.product_type,
+                p.sale_available,
+                p.rental_available,
+                p.selling_price, 
+                p.stock_quantity, 
+                p.discount_allowed, 
+                p.discount_percent,
+                p.sale_unit,
+                b.brand_name, 
+                c.category_name
+            FROM product_master p
+            LEFT JOIN brand_master b ON b.id = p.brand_id
+            LEFT JOIN category_master c ON c.id = p.category_id
+            ${whereSql}
+            ORDER BY p.product_name ASC
+            LIMIT 50
+        `;
+
+        const [products] = await pool.query(sql, params);
+        return res.json({ success: true, count: products.length, products });
+    } catch (err) {
+        console.error('apiGetProducts error:', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+

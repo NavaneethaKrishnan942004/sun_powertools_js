@@ -240,7 +240,8 @@ async function runRentalTests() {
         // STEP 4: END-TO-END RENTAL CREATION & RETURN WORKFLOWS
         console.log('\n--- TEST GROUP 4: End-to-End Rental Workflows ---');
 
-        // Check initial product stock
+        // Ensure sufficient initial product stock for rental tests
+        await pool.query('UPDATE product_master SET stock_quantity = 20 WHERE id = 1');
         const [p1Rows] = await pool.query('SELECT stock_quantity FROM product_master WHERE id = 1');
         const initialStock = parseInt(p1Rows[0].stock_quantity, 10);
 

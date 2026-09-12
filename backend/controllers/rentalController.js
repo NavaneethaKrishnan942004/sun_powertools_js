@@ -168,7 +168,7 @@ exports.createRentalForm = async (req, res) => {
             FROM product_master p
             LEFT JOIN brand_master b ON b.id = p.brand_id
             LEFT JOIN category_master c ON c.id = p.category_id
-            WHERE p.status = 1 AND p.rental_available = 1 AND p.stock_quantity > 0
+            WHERE p.status = 1 AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = ''))) AND p.stock_quantity > 0
             ORDER BY p.product_name ASC
         `);
 
@@ -297,7 +297,7 @@ exports.createRental = async (req, res) => {
         // Return with errors if any
         if (errors.length > 0) {
             const [customers] = await pool.query(`SELECT id, customer_code, customer_name, company_name, mobile_number FROM customer_master WHERE status = 1 ORDER BY customer_name ASC`);
-            const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND p.rental_available = 1 AND p.stock_quantity > 0`);
+            const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = ''))) AND p.stock_quantity > 0`);
             const [rentalRates] = await pool.query(`SELECT prr.*, u.unit_name, u.unit_code FROM product_rental_rates prr LEFT JOIN unit_master u ON u.id = prr.rental_unit_id WHERE prr.available = 1`);
             const rentalNo = await generateRentalNumber(pool);
 
@@ -329,7 +329,7 @@ exports.createRental = async (req, res) => {
             await conn.rollback();
             conn.release();
             const [customers] = await pool.query(`SELECT id, customer_code, customer_name, company_name, mobile_number FROM customer_master WHERE status = 1 ORDER BY customer_name ASC`);
-            const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND p.rental_available = 1 AND p.stock_quantity > 0`);
+            const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = ''))) AND p.stock_quantity > 0`);
             const [rentalRates] = await pool.query(`SELECT prr.*, u.unit_name, u.unit_code FROM product_rental_rates prr LEFT JOIN unit_master u ON u.id = prr.rental_unit_id WHERE prr.available = 1`);
 
             return res.render('create_rental', {
@@ -454,7 +454,7 @@ exports.createRental = async (req, res) => {
         console.error('createRental error:', err);
 
         const [customers] = await pool.query(`SELECT id, customer_code, customer_name, company_name, mobile_number FROM customer_master WHERE status = 1 ORDER BY customer_name ASC`);
-        const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND p.rental_available = 1 AND p.stock_quantity > 0`);
+        const [products] = await pool.query(`SELECT p.id, p.product_code, p.product_name, p.short_name, p.stock_quantity FROM product_master p WHERE p.status = 1 AND (p.product_type = 'Rental' OR (p.rental_available = 1 AND (p.product_type IS NULL OR p.product_type = ''))) AND p.stock_quantity > 0`);
         const [rentalRates] = await pool.query(`SELECT prr.*, u.unit_name, u.unit_code FROM product_rental_rates prr LEFT JOIN unit_master u ON u.id = prr.rental_unit_id WHERE prr.available = 1`);
 
         return res.render('create_rental', {

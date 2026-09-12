@@ -6,16 +6,14 @@
 <!-- Breadcrumb Navigation -->
 <%- renderBreadcrumbs([
     { title: '', icon: 'bi bi-house-door', link: '/' },
-    { title: 'Settings', link: '/settings' },
-    { title: 'DMS Masters', link: '/masters' },
-    { title: 'Product Master', link: '/products' },
+    { title: 'Product', link: '/products' },
     { title: 'Edit' }
 ]) %>
 
 <div class="page-heading d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="page-title mb-1">Edit Product</h1>
-        <p class="text-muted mb-0">Update product information.</p>
+        <p class="text-muted mb-0">Update product information <%= product.product_code %>.</p>
     </div>
     <div class="d-flex gap-2">
         <a href="/products/view/<%= id %>" class="btn btn-outline-secondary">View</a>
@@ -37,7 +35,7 @@
 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div class="card-title mb-0">
         <h5 class="mb-0 fw-bold">
-            <i class="bi bi-box-seam me-2 text-primary"></i>1. Basic Information
+            Basic Information
         </h5>
     </div>
     <div class="card-header-actions">
@@ -60,10 +58,7 @@
 <div class="row g-3">
 
 <!-- PRODUCT ID -->
-<div class="col-12 col-md-6">
-    <label class="form-label">Product ID</label>
-    <input type="text" class="form-control" value="<%= product.product_code %>" readonly>
-</div>
+
 
 <!-- PRODUCT NAME -->
 <div class="col-12">
@@ -96,7 +91,7 @@
 <!-- CATEGORY -->
 <div class="col-12 col-md-6">
     <label class="form-label">Category <span class="text-danger">*</span></label>
-    <select name="category_id" class="form-select" required>
+    <select name="category_id" id="editCategoryId" class="form-select searchable-select" required>
         <option value="">Select Category</option>
         <% categories.forEach(category => { %>
         <option
@@ -112,7 +107,7 @@
 <!-- BRAND -->
 <div class="col-12 col-md-6">
     <label class="form-label">Brand <span class="text-danger">*</span></label>
-    <select name="brand_id" class="form-select" required>
+    <select name="brand_id" id="editBrandId" class="form-select searchable-select" required>
         <option value="">Select Brand</option>
         <% brands.forEach(brand => { %>
         <option
@@ -123,6 +118,26 @@
         </option>
         <% }) %>
     </select>
+</div>
+
+<!-- PRODUCT TYPE (STATIC DROPDOWN: SALES / RENTAL) -->
+<div class="col-12 col-md-6">
+    <label class="form-label fw-semibold">Product Type <span class="text-danger">*</span></label>
+    <select name="product_type" id="editProductType" class="form-select searchable-select" required>
+        <option value="Sales" <%= product.product_type === 'Sales' ? 'selected' : '' %>>Sales</option>
+        <option value="Rental" <%= product.product_type === 'Rental' ? 'selected' : '' %>>Rental</option>
+    </select>
+    <small class="text-muted d-block mt-1">Designates whether this product is available for Sales or Rental.</small>
+</div>
+
+<!-- RELATIONSHIP / HISTORICAL NOTICE -->
+<div id="typeChangeNotice" class="col-12" style="display:none">
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 shadow-sm border border-warning-subtle">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+        <div>
+            <strong>Notice:</strong> Changing Product Type may affect where this product is available. Existing transactions will not be changed.
+        </div>
+    </div>
 </div>
 
 <!-- EXISTING IMAGES -->
@@ -177,47 +192,51 @@
 </div>
 
 <!-- SALES -->
-<div class="card shadow-sm mb-4">
-<div class="card-header">
-    <h5 class="mb-0">2. Sales</h5>
+<div class="card shadow-sm mb-4" id="editSalesSectionCard" style="display: <%= product.product_type === 'Sales' ? 'block' : 'none' %>;">
+<div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-tag me-2"></i>Sales Information</h5>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">Sales Specific</span>
 </div>
 <div class="card-body">
 <div class="row g-3">
 
+<input type="hidden" name="sale_available" id="editSaleAvailable" value="<%= product.product_type === 'Sales' ? 'yes' : 'no' %>">
+
 <div class="col-12 col-md-4">
-    <label class="form-label">Sale Available <span class="text-danger">*</span></label>
-    <select name="sale_available" id="editSaleAvailable" class="form-select" required>
-        <option value="yes" <%= Number(product.sale_available) === 1 ? 'selected' : '' %>>Yes</option>
-        <option value="no" <%= Number(product.sale_available) === 0 ? 'selected' : '' %>>No</option>
-    </select>
+    <label class="form-label">Purchase Price (₹)</label>
+    <div class="input-group">
+        <span class="input-group-text">₹</span>
+        <input
+            type="number"
+            name="purchase_price"
+            class="form-control"
+            step="0.01"
+            min="0"
+            value="<%= product.purchase_price !== null ? product.purchase_price : '' %>"
+        >
+    </div>
 </div>
 
 <div class="col-12 col-md-4">
-    <label class="form-label">Purchase Price</label>
-    <input
-        type="number"
-        name="purchase_price"
-        class="form-control"
-        step="0.01"
-        min="0"
-        value="<%= product.purchase_price !== null ? product.purchase_price : '' %>"
-    >
+    <label class="form-label">
+        Selling Price (₹) <span class="text-danger edit-sale-required">*</span>
+    </label>
+    <div class="input-group">
+        <span class="input-group-text">₹</span>
+        <input
+            type="number"
+            name="selling_price"
+            id="editSellingPrice"
+            class="form-control"
+            step="0.01"
+            min="0"
+            value="<%= product.selling_price !== null ? product.selling_price : '' %>"
+        >
+    </div>
 </div>
 
 <div class="col-12 col-md-4">
-    <label class="form-label">Selling Price</label>
-    <input
-        type="number"
-        name="selling_price"
-        class="form-control"
-        step="0.01"
-        min="0"
-        value="<%= product.selling_price !== null ? product.selling_price : '' %>"
-    >
-</div>
-
-<div class="col-12 col-md-4">
-    <label class="form-label">Discount Allow</label>
+    <label class="form-label">Discount Allowed</label>
     <select name="discount_allowed" id="editDiscountAllowed" class="form-select">
         <option value="yes" <%= Number(product.discount_allowed) === 1 ? 'selected' : '' %>>Yes</option>
         <option value="no" <%= Number(product.discount_allowed) === 0 ? 'selected' : '' %>>No</option>
@@ -230,15 +249,18 @@
     style="<%= Number(product.discount_allowed) === 1 ? '' : 'display:none' %>"
 >
     <label class="form-label">Discount %</label>
-    <input
-        type="number"
-        name="discount_percent"
-        class="form-control"
-        step="0.01"
-        min="0"
-        max="100"
-        value="<%= product.discount_percent !== null ? product.discount_percent : '' %>"
-    >
+    <div class="input-group">
+        <input
+            type="number"
+            name="discount_percent"
+            class="form-control"
+            step="0.01"
+            min="0"
+            max="100"
+            value="<%= product.discount_percent !== null ? product.discount_percent : '' %>"
+        >
+        <span class="input-group-text">%</span>
+    </div>
 </div>
 
 <div class="col-12 col-md-4">
@@ -258,21 +280,14 @@
 </div>
 
 <!-- RENTAL -->
-<div class="card shadow-sm mb-4">
-<div class="card-header">
-    <h5 class="mb-0">3. Rental</h5>
+<div class="card shadow-sm mb-4" id="editRentalSectionCard" style="display: <%= product.product_type === 'Rental' ? 'block' : 'none' %>;">
+<div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-clock-history me-2"></i>Rental Rates & Durations</h5>
+    <span class="badge bg-info-subtle text-info border border-info-subtle fw-semibold">Rental Specific</span>
 </div>
 <div class="card-body">
 
-<div class="row">
-    <div class="col-12 col-md-4">
-        <label class="form-label">Rental Available <span class="text-danger">*</span></label>
-        <select name="rental_available" id="editRentalAvailable" class="form-select" required>
-            <option value="yes" <%= Number(product.rental_available) === 1 ? 'selected' : '' %>>Yes</option>
-            <option value="no" <%= Number(product.rental_available) === 0 ? 'selected' : '' %>>No</option>
-        </select>
-    </div>
-</div>
+<input type="hidden" name="rental_available" id="editRentalAvailable" value="<%= product.product_type === 'Rental' ? 'yes' : 'no' %>">
 
 <div
     id="editRentalSection"
@@ -327,7 +342,7 @@
                 <div class="row g-3">
                     <div class="col-12 col-md-4">
                         <label class="form-label">Rental Unit <span class="text-danger">*</span></label>
-                        <select name="rental_unit_id[<%= key %>]" class="form-select edit-rental-required">
+                        <select name="rental_unit_id[<%= key %>]" class="form-select searchable-select edit-rental-required">
                             <option value="">Select Unit</option>
                             <% units.forEach(unit => { %>
                             <option
@@ -348,7 +363,8 @@
                             class="form-control edit-rental-required"
                             step="0.01"
                             min="0"
-                            value="<%= (rate && rate.security_deposit !== null) ? rate.security_deposit : '' %>"
+                            placeholder="0.00"
+                            value="<%= rate && rate.security_deposit !== null ? rate.security_deposit : '' %>"
                         >
                     </div>
 
@@ -360,7 +376,8 @@
                             class="form-control edit-rental-required"
                             step="0.01"
                             min="0"
-                            value="<%= (rate && rate.rental_rate !== null) ? rate.rental_rate : '' %>"
+                            placeholder="0.00"
+                            value="<%= rate && rate.rental_rate !== null ? rate.rental_rate : '' %>"
                         >
                     </div>
                 </div>
@@ -377,25 +394,46 @@
 <!-- SPECIFICATIONS -->
 <div class="card shadow-sm mb-4">
 <div class="card-header">
-    <h5 class="mb-0">4. Specifications</h5>
+    <h5 class="mb-0">Specifications</h5>
 </div>
 <div class="card-body">
 <div class="row g-3">
-    <% const specifications = {
-        power_rating: 'Power Rating',
-        voltage: 'Voltage',
-        rpm: 'RPM',
-        chuck_disc_size: 'Chuck / Disc Size',
-        weight: 'Weight',
-        battery_capacity: 'Battery Capacity',
-        warranty_period: 'Warranty Period'
-    }; %>
-    <% for (const [field, label] of Object.entries(specifications)) { %>
-    <div class="col-12 col-md-4">
-        <label class="form-label"><%= label %></label>
-        <input type="text" name="<%= field %>" class="form-control" value="<%= product[field] || '' %>">
-    </div>
-    <% } %>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Power Rating</label>
+    <input type="text" name="power_rating" class="form-control" value="<%= product.power_rating || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Voltage</label>
+    <input type="text" name="voltage" class="form-control" value="<%= product.voltage || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">RPM</label>
+    <input type="text" name="rpm" class="form-control" value="<%= product.rpm || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Chuck / Disc Size</label>
+    <input type="text" name="chuck_disc_size" class="form-control" value="<%= product.chuck_disc_size || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Weight</label>
+    <input type="text" name="weight" class="form-control" value="<%= product.weight || '' %>">
+</div>
+
+<div class="col-12 col-md-4">
+    <label class="form-label">Battery Capacity</label>
+    <input type="text" name="battery_capacity" class="form-control" value="<%= product.battery_capacity || '' %>">
+</div>
+
+<div class="col-12">
+    <label class="form-label">Warranty Period</label>
+    <input type="text" name="warranty_period" class="form-control" value="<%= product.warranty_period || '' %>">
+</div>
+
 </div>
 </div>
 </div>
@@ -403,7 +441,7 @@
 <!-- WARRANTY -->
 <div class="card shadow-sm mb-4">
 <div class="card-header">
-    <h5 class="mb-0">5. Warranty & Maintenance</h5>
+    <h5 class="mb-0">Warranty & Maintenance</h5>
 </div>
 <div class="card-body">
 <div class="row g-3">
@@ -463,19 +501,71 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    const editProductType = document.getElementById('editProductType');
+    const editSalesSectionCard = document.getElementById('editSalesSectionCard');
+    const editRentalSectionCard = document.getElementById('editRentalSectionCard');
+    const editSaleAvailable = document.getElementById('editSaleAvailable');
+    const editRentalAvailable = document.getElementById('editRentalAvailable');
+    const editSellingPrice = document.getElementById('editSellingPrice');
+    const editSaleRequired = document.querySelector('.edit-sale-required');
+    const typeChangeNotice = document.getElementById('typeChangeNotice');
+    const initialProductType = editProductType ? editProductType.value : '';
+
+    function handleEditProductTypeChange() {
+        const type = editProductType ? editProductType.value : '';
+
+        // Show warning notice if product type changed from original
+        if (typeChangeNotice) {
+            typeChangeNotice.style.display = (type !== initialProductType) ? 'block' : 'none';
+        }
+
+        if (type === 'Sales') {
+            if (editSalesSectionCard) editSalesSectionCard.style.display = 'block';
+            if (editRentalSectionCard) editRentalSectionCard.style.display = 'none';
+            if (editSaleAvailable) editSaleAvailable.value = 'yes';
+            if (editRentalAvailable) editRentalAvailable.value = 'no';
+            if (editSellingPrice) {
+                editSellingPrice.required = true;
+                if (editSaleRequired) editSaleRequired.style.display = 'inline';
+            }
+            document.querySelectorAll('.edit-rental-required').forEach(function (input) {
+                input.required = false;
+            });
+        } else if (type === 'Rental') {
+            if (editSalesSectionCard) editSalesSectionCard.style.display = 'none';
+            if (editRentalSectionCard) {
+                editRentalSectionCard.style.display = 'block';
+                const rentalSec = document.getElementById('editRentalSection');
+                if (rentalSec) rentalSec.style.display = 'block';
+            }
+            if (editSaleAvailable) editSaleAvailable.value = 'no';
+            if (editRentalAvailable) editRentalAvailable.value = 'yes';
+            if (editSellingPrice) {
+                editSellingPrice.required = false;
+                if (editSaleRequired) editSaleRequired.style.display = 'none';
+            }
+            document.querySelectorAll('.edit-rental-checkbox').forEach(function (checkbox) {
+                const period = checkbox.dataset.period;
+                const fields = document.getElementById('editRentalFields' + period.charAt(0).toUpperCase() + period.slice(1));
+                if (fields && checkbox.checked) {
+                    fields.querySelectorAll('.edit-rental-required').forEach(function (input) {
+                        input.required = true;
+                    });
+                }
+            });
+        }
+    }
+
+    if (editProductType) {
+        editProductType.addEventListener('change', handleEditProductTypeChange);
+        handleEditProductTypeChange();
+    }
+
     const discount = document.getElementById('editDiscountAllowed');
     const discountWrapper = document.getElementById('editDiscountWrapper');
     if (discount && discountWrapper) {
         discount.addEventListener('change', function () {
             discountWrapper.style.display = this.value === 'yes' ? 'block' : 'none';
-        });
-    }
-
-    const rental = document.getElementById('editRentalAvailable');
-    const rentalSection = document.getElementById('editRentalSection');
-    if (rental && rentalSection) {
-        rental.addEventListener('change', function () {
-            rentalSection.style.display = this.value === 'yes' ? 'block' : 'none';
         });
     }
 
@@ -485,9 +575,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const fields = document.getElementById('editRentalFields' + period.charAt(0).toUpperCase() + period.slice(1));
             if (fields) {
                 fields.style.display = this.checked ? 'block' : 'none';
-                fields.querySelectorAll('.edit-rental-required').forEach(function (input) {
-                    input.required = checkbox.checked;
-                });
+                if (editProductType && editProductType.value === 'Rental') {
+                    fields.querySelectorAll('.edit-rental-required').forEach(function (input) {
+                        input.required = checkbox.checked;
+                    });
+                }
             }
         });
     });
@@ -498,6 +590,10 @@ document.addEventListener('DOMContentLoaded', function () {
         warranty.addEventListener('change', function () {
             warrantyWrapper.style.display = this.value === 'yes' ? 'block' : 'none';
         });
+    }
+
+    if (window.SearchableSelect) {
+        window.SearchableSelect.init('.searchable-select');
     }
 });
 </script>

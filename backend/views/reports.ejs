@@ -128,7 +128,7 @@ const hasActiveFilters = Boolean(
                         <!-- Customer Filter -->
                         <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small fw-semibold text-muted">Customer</label>
-                            <select name="customer_id" class="form-select">
+                            <select name="customer_id" class="form-select searchable-select">
                                 <option value="">All Customers</option>
                                 <% (customersList || []).forEach(function(c) { %>
                                     <option value="<%= c.id %>" <%= Number(customerId) === Number(c.id) ? 'selected' : '' %>>
@@ -177,7 +177,7 @@ const hasActiveFilters = Boolean(
                             <!-- Product Filter -->
                             <div class="col-12 col-sm-6 col-md-3">
                                 <label class="form-label small fw-semibold text-muted">Rental Product</label>
-                                <select name="product_id" class="form-select">
+                                <select name="product_id" class="form-select searchable-select">
                                     <option value="">All Products</option>
                                     <% (productsList || []).filter(p => p.rental_available == 1).forEach(function(p) { %>
                                         <option value="<%= p.id %>" <%= Number(productId) === Number(p.id) ? 'selected' : '' %>>

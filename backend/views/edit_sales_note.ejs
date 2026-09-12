@@ -83,7 +83,7 @@
                                 <!-- Customer Selection -->
                                 <div class="col-12">
                                     <label class="form-label small fw-semibold">Customer</label>
-                                    <select name="customer_id" id="customerSelect" class="form-select" required>
+                                    <select name="customer_id" id="customerSelect" class="form-select searchable-select" required>
                                         <% customersList.forEach(c => { %>
                                             <option value="<%= c.id %>" <%= Number(sale.customer_id) === Number(c.id) ? 'selected' : '' %>>
                                                 <%= c.customer_code %> - <%= c.customer_name %> (<%= c.mobile_number %>)
@@ -161,7 +161,7 @@
                                 <div class="row g-2 align-items-end">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label small fw-semibold">Choose Product to Add</label>
-                                        <select id="quickProductSelect" class="form-select">
+                                        <select id="quickProductSelect" class="form-select searchable-select">
                                             <option value="">-- Search / Select Product --</option>
                                             <% productsList.forEach(p => { %>
                                                 <option value="<%= p.id %>"
@@ -620,6 +620,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         quickProductSelect.value = '';
+        if (quickProductSelect._searchableSelect) {
+            quickProductSelect._searchableSelect.refresh();
+        }
         quickStockDisplay.value = '-';
         quickQuantityInput.value = 1;
 
@@ -961,6 +964,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     renderItemsTable();
     handleSaleTypeChange();
+    if (window.SearchableSelect) {
+        SearchableSelect.init('.searchable-select');
+    }
 
     function escapeHtml(text) {
         if (!text) return '';

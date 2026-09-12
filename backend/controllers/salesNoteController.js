@@ -314,7 +314,7 @@ exports.createSalesNoteForm = async (req, res) => {
             LEFT JOIN category_master c ON c.id = p.category_id
             LEFT JOIN brand_master b ON b.id = p.brand_id
             LEFT JOIN unit_master u ON u.id = p.sale_unit
-            WHERE p.status = 1 AND p.sale_available = 1
+            WHERE p.status = 1 AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))
             ORDER BY p.product_name ASC
         `);
 
@@ -591,7 +591,7 @@ exports.createSalesNote = async (req, res) => {
                 LEFT JOIN category_master c ON c.id = p.category_id
                 LEFT JOIN brand_master b ON b.id = p.brand_id
                 LEFT JOIN unit_master u ON u.id = p.sale_unit
-                WHERE p.status = 1 AND p.sale_available = 1
+                WHERE p.status = 1 AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))
                 ORDER BY p.product_name ASC
             `);
 
@@ -806,7 +806,7 @@ exports.editSalesNoteForm = async (req, res) => {
             LEFT JOIN category_master c ON c.id = p.category_id
             LEFT JOIN brand_master b ON b.id = p.brand_id
             LEFT JOIN unit_master u ON u.id = p.sale_unit
-            WHERE p.status = 1 AND p.sale_available = 1
+            WHERE p.status = 1 AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))
             ORDER BY p.product_name ASC
         `);
 
@@ -1712,7 +1712,7 @@ exports.ajaxSalesNote = async (req, res) => {
                     FROM product_master p
                     LEFT JOIN category_master c ON c.id = p.category_id
                     LEFT JOIN brand_master b ON b.id = p.brand_id
-                    WHERE p.status = 1 AND p.sale_available = 1
+                    WHERE p.status = 1 AND (p.product_type = 'Sales' OR (p.sale_available = 1 AND (p.product_type IS NULL OR p.product_type = '')))
                 `;
                 const params = [];
                 if (q !== '') {

@@ -6,9 +6,7 @@
 <!-- Breadcrumb Navigation -->
 <%- renderBreadcrumbs([
     { title: '', icon: 'bi bi-house-door', link: '/' },
-    { title: 'Settings', link: '/settings' },
-    { title: 'DMS Masters', link: '/masters' },
-    { title: 'Product Master', link: '/products' },
+    { title: 'Product', link: '/products' },
     { title: 'Add' }
 ]) %>
 
@@ -35,7 +33,7 @@
 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div class="card-title mb-0">
         <h5 class="mb-0 fw-bold">
-            <i class="bi bi-box-seam me-2 text-primary"></i>1. Basic Information
+           Basic Information
         </h5>
     </div>
     <div class="card-header-actions">
@@ -96,7 +94,7 @@
 <!-- CATEGORY -->
 <div class="col-12 col-md-6">
     <label class="form-label">Category <span class="text-danger">*</span></label>
-    <select name="category_id" class="form-select <%= categoryError ? 'is-invalid' : '' %>" required>
+    <select name="category_id" id="categoryId" class="form-select searchable-select <%= categoryError ? 'is-invalid' : '' %>" required>
         <option value="">Select Category</option>
         <% categories.forEach(category => { %>
         <option
@@ -115,7 +113,7 @@
 <!-- BRAND -->
 <div class="col-12 col-md-6">
     <label class="form-label">Brand <span class="text-danger">*</span></label>
-    <select name="brand_id" class="form-select <%= brandError ? 'is-invalid' : '' %>" required>
+    <select name="brand_id" id="brandId" class="form-select searchable-select <%= brandError ? 'is-invalid' : '' %>" required>
         <option value="">Select Brand</option>
         <% brands.forEach(brand => { %>
         <option
@@ -131,8 +129,21 @@
     <% } %>
 </div>
 
+<!-- PRODUCT TYPE (STATIC DROPDOWN: SALES / RENTAL) -->
+<div class="col-12 col-md-6">
+    <label class="form-label fw-semibold">Product Type <span class="text-danger">*</span></label>
+    <select name="product_type" id="productType" class="form-select searchable-select <%= (typeof productTypeError !== 'undefined' && productTypeError) ? 'is-invalid' : '' %>" required>
+        <option value="">Select Product Type</option>
+        <option value="Sales" <%= (old && old.product_type === 'Sales') ? 'selected' : '' %>>Sales</option>
+        <option value="Rental" <%= (old && old.product_type === 'Rental') ? 'selected' : '' %>>Rental</option>
+    </select>
+    <% if (typeof productTypeError !== 'undefined' && productTypeError) { %>
+    <div class="validation-message text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i><%= productTypeError %></div>
+    <% } %>
+</div>
+
 <!-- IMAGES -->
-<div class="col-12">
+<div class="col-12 col-md-6">
     <label class="form-label">Product Image <span class="text-danger">*</span></label>
     <input
         type="file"
@@ -168,54 +179,54 @@
 </div>
 </div>
 
-<!-- SECTION 2 SALES -->
-<div class="card shadow-sm mb-4">
-<div class="card-header">
-    <h5 class="mb-0">2. Sales</h5>
+<!-- CONDITIONAL SECTION: SALES INFORMATION (SHOWN ONLY IF PRODUCT TYPE = SALES) -->
+<div class="card shadow-sm mb-4" id="salesSectionCard" style="display: <%= (old && old.product_type === 'Sales') ? 'block' : 'none' %>;">
+<div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0 fw-bold text-primary">
+        <i class="bi bi-tag me-2"></i>Sales Information
+    </h5>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">Sales Specific</span>
 </div>
 <div class="card-body">
 <div class="row g-3">
 
-<!-- SALE AVAILABLE -->
+<input type="hidden" name="sale_available" id="saleAvailable" value="<%= (old && old.product_type === 'Rental') ? 'no' : 'yes' %>">
+
+<!-- PURCHASE PRICE -->
 <div class="col-12 col-md-4">
-    <label class="form-label">Sale Available <span class="text-danger">*</span></label>
-    <select name="sale_available" id="saleAvailable" class="form-select" required>
-        <option value="">Select</option>
-        <option value="yes" <%= (old && old.sale_available === 'yes') ? 'selected' : '' %>>Yes</option>
-        <option value="no" <%= (old && old.sale_available === 'no') ? 'selected' : '' %>>No</option>
-    </select>
+    <label class="form-label">Purchase Price (₹)</label>
+    <div class="input-group">
+        <span class="input-group-text">₹</span>
+        <input
+            type="number"
+            name="purchase_price"
+            class="form-control"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value="<%= (old && old.purchase_price) || '' %>"
+        >
+    </div>
 </div>
 
-<!-- PURCHASE -->
-<div class="col-12 col-md-4">
-    <label class="form-label">Purchase Price</label>
-    <input
-        type="number"
-        name="purchase_price"
-        class="form-control"
-        step="0.01"
-        min="0"
-        placeholder="Enter purchase price"
-        value="<%= (old && old.purchase_price) || '' %>"
-    >
-</div>
-
-<!-- SELLING -->
+<!-- SELLING PRICE -->
 <div class="col-12 col-md-4">
     <label class="form-label">
-        Selling Price
-        <span class="text-danger sale-required" style="display:none">*</span>
+        Selling Price (₹) <span class="text-danger sale-required">*</span>
     </label>
-    <input
-        type="number"
-        name="selling_price"
-        id="sellingPrice"
-        class="form-control"
-        step="0.01"
-        min="0"
-        placeholder="Enter selling price"
-        value="<%= (old && old.selling_price) || '' %>"
-    >
+    <div class="input-group">
+        <span class="input-group-text">₹</span>
+        <input
+            type="number"
+            name="selling_price"
+            id="sellingPrice"
+            class="form-control <%= sellingPriceError ? 'is-invalid' : '' %>"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value="<%= (old && old.selling_price) || '' %>"
+        >
+    </div>
     <% if (sellingPriceError) { %>
     <div class="validation-message"><%= sellingPriceError %></div>
     <% } %>
@@ -223,7 +234,7 @@
 
 <!-- DISCOUNT -->
 <div class="col-12 col-md-4">
-    <label class="form-label">Discount Allow</label>
+    <label class="form-label">Discount Allowed</label>
     <select name="discount_allowed" id="discountAllowed" class="form-select">
         <option value="no" <%= (old && old.discount_allowed === 'no') ? 'selected' : '' %>>No</option>
         <option value="yes" <%= (old && old.discount_allowed === 'yes') ? 'selected' : '' %>>Yes</option>
@@ -233,29 +244,32 @@
 <!-- DISCOUNT % -->
 <div class="col-12 col-md-4" id="discountPercentWrapper" style="display:none">
     <label class="form-label">Discount %</label>
-    <input
-        type="number"
-        name="discount_percent"
-        class="form-control"
-        step="0.01"
-        min="0"
-        max="100"
-        placeholder="Enter discount percentage"
-        value="<%= (old && old.discount_percent) || '' %>"
-    >
+    <div class="input-group">
+        <input
+            type="number"
+            name="discount_percent"
+            class="form-control"
+            step="0.01"
+            min="0"
+            max="100"
+            placeholder="Enter %"
+            value="<%= (old && old.discount_percent) || '' %>"
+        >
+        <span class="input-group-text">%</span>
+    </div>
 </div>
 
 <!-- UNIT OF SALE -->
 <div class="col-12 col-md-4">
-    <label class="form-label">Unit of Sale</label>
+    <label class="form-label">Unit of Sale (Pack / Unit Qty)</label>
     <input
         type="number"
         name="sale_unit"
         class="form-control"
         step="any"
         min="0"
-        placeholder="Enter number"
-        value="<%= (old && old.sale_unit) || '' %>"
+        placeholder="e.g. 1"
+        value="<%= (old && old.sale_unit) || '1' %>"
     >
 </div>
 
@@ -263,26 +277,18 @@
 </div>
 </div>
 
-<!-- SECTION 3 RENTAL -->
-<div class="card shadow-sm mb-4">
-<div class="card-header">
-    <h5 class="mb-0">3. Rental</h5>
+<!-- CONDITIONAL SECTION: RENTAL INFORMATION (SHOWN ONLY IF PRODUCT TYPE = RENTAL) -->
+<div class="card shadow-sm mb-4" id="rentalSectionCard" style="display: <%= (old && old.product_type === 'Rental') ? 'block' : 'none' %>;">
+<div class="card-header bg-surface py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0 fw-bold text-primary">
+        <i class="bi bi-clock-history me-2"></i>Rental Rates & Durations
+    </h5>
+    <span class="badge bg-info-subtle text-info border border-info-subtle fw-semibold">Rental Specific</span>
 </div>
 <div class="card-body">
-<div class="row g-3">
+<input type="hidden" name="rental_available" id="rentalAvailable" value="<%= (old && old.product_type === 'Rental') ? 'yes' : 'no' %>">
 
-<div class="col-12 col-md-4">
-    <label class="form-label">Rental Available <span class="text-danger">*</span></label>
-    <select name="rental_available" id="rentalAvailable" class="form-select" required>
-        <option value="">Select</option>
-        <option value="yes" <%= (old && old.rental_available === 'yes') ? 'selected' : '' %>>Yes</option>
-        <option value="no" <%= (old && old.rental_available === 'no') ? 'selected' : '' %>>No</option>
-    </select>
-</div>
-
-</div>
-
-<div id="rentalSection" style="display:none" class="mt-4">
+<div id="rentalSection" class="mt-2">
     <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#hourlyTab">Hourly</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#dailyTab">Daily</button></li>
@@ -302,47 +308,58 @@
                     name="rental_available_period[<%= key %>]"
                     id="rentalAvailable<%= key.charAt(0).toUpperCase() + key.slice(1) %>"
                     data-period="<%= key %>"
+                    <%= (key === 'daily' || (old && old.rental_available_period && old.rental_available_period[key])) ? 'checked' : '' %>
                 >
-                <label class="form-check-label" for="rentalAvailable<%= key.charAt(0).toUpperCase() + key.slice(1) %>">Available</label>
+                <label class="form-check-label fw-semibold" for="rentalAvailable<%= key.charAt(0).toUpperCase() + key.slice(1) %>">Enable <%= label %> Rental</label>
             </div>
 
-            <div class="rental-fields" id="rentalFields<%= key.charAt(0).toUpperCase() + key.slice(1) %>" style="display:none">
+            <div class="rental-fields" id="rentalFields<%= key.charAt(0).toUpperCase() + key.slice(1) %>" style="<%= (key === 'daily' || (old && old.rental_available_period && old.rental_available_period[key])) ? 'display:block' : 'display:none' %>">
                 <div class="row g-3">
                     <!-- RENTAL UNIT -->
                     <div class="col-12 col-md-4">
                         <label class="form-label">Rental Unit <span class="text-danger">*</span></label>
-                        <select name="rental_unit_id[<%= key %>]" class="form-select rental-required">
+                        <select name="rental_unit_id[<%= key %>]" class="form-select searchable-select rental-required">
                             <option value="">Select Unit</option>
                             <% units.forEach(unit => { %>
-                            <option value="<%= unit.id %>"><%= unit.unit_code %> - <%= unit.unit_name %></option>
+                            <option value="<%= unit.id %>" <%= (unit.unit_name && unit.unit_name.toLowerCase().includes(key)) ? 'selected' : '' %>>
+                                <%= unit.unit_code %> - <%= unit.unit_name %>
+                            </option>
                             <% }) %>
                         </select>
                     </div>
 
                     <!-- SECURITY DEPOSIT -->
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Security Deposit <span class="text-danger">*</span></label>
-                        <input
-                            type="number"
-                            name="security_deposit[<%= key %>]"
-                            class="form-control rental-required"
-                            step="0.01"
-                            min="0"
-                            placeholder="Enter security deposit"
-                        >
+                        <label class="form-label">Security Deposit (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input
+                                type="number"
+                                name="security_deposit[<%= key %>]"
+                                class="form-control rental-required"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                value="<%= (old && old.security_deposit && old.security_deposit[key]) || '' %>"
+                            >
+                        </div>
                     </div>
 
                     <!-- RENTAL RATE -->
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Rental Rate <span class="text-danger">*</span></label>
-                        <input
-                            type="number"
-                            name="rental_rate[<%= key %>]"
-                            class="form-control rental-required"
-                            step="0.01"
-                            min="0"
-                            placeholder="Enter rental rate"
-                        >
+                        <label class="form-label">Rental Rate (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input
+                                type="number"
+                                name="rental_rate[<%= key %>]"
+                                class="form-control rental-required"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                value="<%= (old && old.rental_rate && old.rental_rate[key]) || '' %>"
+                            >
+                        </div>
                     </div>
                 </div>
             </div>
@@ -358,7 +375,7 @@
 <!-- SECTION 4 SPECIFICATIONS -->
 <div class="card shadow-sm mb-4">
 <div class="card-header">
-    <h5 class="mb-0">4. Specifications</h5>
+    <h5 class="mb-0">Specifications</h5>
 </div>
 <div class="card-body">
 <div class="row g-3">
@@ -393,10 +410,7 @@
     <input type="text" name="battery_capacity" class="form-control" placeholder="e.g. 5Ah" value="<%= (old && old.battery_capacity) || '' %>">
 </div>
 
-<div class="col-12">
-    <label class="form-label">Warranty Period</label>
-    <input type="text" name="warranty_period" class="form-control" placeholder="e.g. 1 Year" value="<%= (old && old.warranty_period) || '' %>">
-</div>
+
 
 </div>
 </div>
@@ -405,7 +419,7 @@
 <!-- SECTION 5 WARRANTY -->
 <div class="card shadow-sm mb-4">
 <div class="card-header">
-    <h5 class="mb-0">5. Warranty & Maintenance</h5>
+    <h5 class="mb-0">Warranty & Maintenance</h5>
 </div>
 <div class="card-body">
 <div class="row g-3">
@@ -470,25 +484,67 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    const productType = document.getElementById('productType');
+    const salesSectionCard = document.getElementById('salesSectionCard');
+    const rentalSectionCard = document.getElementById('rentalSectionCard');
     const saleAvailable = document.getElementById('saleAvailable');
+    const rentalAvailable = document.getElementById('rentalAvailable');
     const sellingPrice = document.getElementById('sellingPrice');
     const saleRequired = document.querySelector('.sale-required');
 
-    function updateSaleFields() {
-        if (saleAvailable && sellingPrice && saleRequired) {
-            if (saleAvailable.value === 'yes') {
+    function updateProductTypeSections() {
+        const type = productType ? productType.value : '';
+
+        if (type === 'Sales') {
+            if (salesSectionCard) salesSectionCard.style.display = 'block';
+            if (rentalSectionCard) rentalSectionCard.style.display = 'none';
+            if (saleAvailable) saleAvailable.value = 'yes';
+            if (rentalAvailable) rentalAvailable.value = 'no';
+            if (sellingPrice) {
                 sellingPrice.required = true;
-                saleRequired.style.display = 'inline';
-            } else {
-                sellingPrice.required = false;
-                saleRequired.style.display = 'none';
+                if (saleRequired) saleRequired.style.display = 'inline';
             }
+            // Remove required attributes from hidden rental inputs
+            document.querySelectorAll('.rental-required').forEach(function (input) {
+                input.required = false;
+            });
+        } else if (type === 'Rental') {
+            if (salesSectionCard) salesSectionCard.style.display = 'none';
+            if (rentalSectionCard) rentalSectionCard.style.display = 'block';
+            if (saleAvailable) saleAvailable.value = 'no';
+            if (rentalAvailable) rentalAvailable.value = 'yes';
+            if (sellingPrice) {
+                sellingPrice.required = false;
+                if (saleRequired) saleRequired.style.display = 'none';
+            }
+            // Re-apply required attributes for active rental periods
+            document.querySelectorAll('.rental-available-checkbox').forEach(function (checkbox) {
+                const period = checkbox.dataset.period;
+                const fields = document.getElementById('rentalFields' + period.charAt(0).toUpperCase() + period.slice(1));
+                if (fields && checkbox.checked) {
+                    fields.querySelectorAll('.rental-required').forEach(function (input) {
+                        input.required = true;
+                    });
+                }
+            });
+        } else {
+            if (salesSectionCard) salesSectionCard.style.display = 'none';
+            if (rentalSectionCard) rentalSectionCard.style.display = 'none';
+            if (saleAvailable) saleAvailable.value = '';
+            if (rentalAvailable) rentalAvailable.value = '';
+            if (sellingPrice) {
+                sellingPrice.required = false;
+                if (saleRequired) saleRequired.style.display = 'none';
+            }
+            document.querySelectorAll('.rental-required').forEach(function (input) {
+                input.required = false;
+            });
         }
     }
 
-    if (saleAvailable) {
-        saleAvailable.addEventListener('change', updateSaleFields);
-        updateSaleFields();
+    if (productType) {
+        productType.addEventListener('change', updateProductTypeSections);
+        updateProductTypeSections();
     }
 
     const discountAllowed = document.getElementById('discountAllowed');
@@ -502,17 +558,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    const rentalAvailable = document.getElementById('rentalAvailable');
-    const rentalSection = document.getElementById('rentalSection');
-    if (rentalAvailable && rentalSection) {
-        rentalAvailable.addEventListener('change', function () {
-            rentalSection.style.display = this.value === 'yes' ? 'block' : 'none';
-        });
-        if (rentalAvailable.value === 'yes') {
-            rentalSection.style.display = 'block';
-        }
-    }
-
     document.querySelectorAll('.rental-available-checkbox').forEach(function (checkbox) {
         checkbox.addEventListener('change', function () {
             const period = this.dataset.period;
@@ -520,9 +565,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (fields) {
                 if (this.checked) {
                     fields.style.display = 'block';
-                    fields.querySelectorAll('.rental-required').forEach(function (input) {
-                        input.required = true;
-                    });
+                    if (productType && productType.value === 'Rental') {
+                        fields.querySelectorAll('.rental-required').forEach(function (input) {
+                            input.required = true;
+                        });
+                    }
                 } else {
                     fields.style.display = 'none';
                     fields.querySelectorAll('.rental-required').forEach(function (input) {
@@ -542,6 +589,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (warrantyApplicable.value === 'yes') {
             warrantyWrapper.style.display = 'block';
         }
+    }
+
+    // Initialize all SearchableSelect comboboxes on this page
+    if (window.SearchableSelect) {
+        window.SearchableSelect.init('.searchable-select');
     }
 });
 </script>

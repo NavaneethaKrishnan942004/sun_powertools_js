@@ -81,6 +81,16 @@
     <div><%= product.brand_code %> - <%= product.brand_name %></div>
 </div>
 
+<div class="col-12 col-md-4">
+    <label class="form-label text-muted">Product Type</label>
+    <div>
+        <span class="badge <%= (product.product_type === 'Rental' || (Number(product.rental_available) === 1 && product.product_type !== 'Sales')) ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' %> px-2.5 py-1 fw-semibold">
+            <i class="bi <%= (product.product_type === 'Rental' || (Number(product.rental_available) === 1 && product.product_type !== 'Sales')) ? 'bi-clock-history' : 'bi-bag-check' %> me-1"></i>
+            <%= product.product_type || (Number(product.rental_available) === 1 ? 'Rental' : 'Sales') %>
+        </span>
+    </div>
+</div>
+
 <div class="col-12">
     <label class="form-label text-muted">Description</label>
     <div class="border rounded p-3 bg-light">

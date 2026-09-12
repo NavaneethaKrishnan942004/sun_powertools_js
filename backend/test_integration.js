@@ -110,10 +110,6 @@ async function runTests() {
         res = await request('/manaage_unit.php');
         console.log(`   Status: ${res.statusCode}, Body includes "Unit Master": ${res.body.includes('Unit Master')}`);
 
-        // 12. Test Product Type Master GET
-        console.log('12. Testing GET /manage_producttype.php...');
-        res = await request('/manage_producttype.php');
-        console.log(`   Status: ${res.statusCode}, Body includes "Product Type Master": ${res.body.includes('Product Type Master')}`);
 
         // 13. Test Customer Master GET
         console.log('13. Testing GET /manage_customer.php...');

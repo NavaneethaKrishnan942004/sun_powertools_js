@@ -14,4 +14,7 @@ router.post(['/products/edit/:id', '/edit_product.php', '/edit_product'], requir
 
 router.get(['/products/view/:id', '/view_product.php', '/view_product'], requireLogin, productController.viewProduct);
 
+// API endpoint for product type filtering
+router.get(['/api/products', '/api/products.php'], requireLogin, productController.apiGetProducts);
+
 module.exports = router;

@@ -16,7 +16,7 @@ const menuItems = [
         active: (cur === '/' || cur === '/index' || currentPage === 'index.php' || currentPage === '')
     },
     {
-        title: 'Sales Notes',
+        title: 'Sales',
         icon: 'bi-receipt',
         link: '/sales-notes',
         active: (cur.startsWith('/sales-notes') || salesPages.includes(currentPage))
@@ -40,18 +40,19 @@ const menuItems = [
         active: (cur.startsWith('/customers') || customerPages.includes(currentPage))
     },
     {
-        title: 'Reports',
-        icon: 'bi-file-earmark-bar-graph',
-        link: '/reports',
-        active: (cur.startsWith('/reports') || reportPages.includes(currentPage))
-    },
-    {
         title: 'Users',
         icon: 'bi-person-badge',
         link: '/users',
         active: (cur.startsWith('/users') || userPages.includes(currentPage))
     },
-    {
+
+        {
+        title: 'Reports',
+        icon: 'bi-file-earmark-bar-graph',
+        link: '/reports',
+        active: (cur.startsWith('/reports') || reportPages.includes(currentPage))
+    },
+        {
         title: 'Profile',
         icon: 'bi-person-circle',
         link: '/profile',
@@ -61,7 +62,7 @@ const menuItems = [
         title: 'Settings',
         icon: 'bi-gear',
         link: '/masters',
-        active: (cur === '/settings' || cur === '/masters' || cur.startsWith('/categories') || cur.startsWith('/brands') || cur.startsWith('/units') || cur.startsWith('/product-types') || ['masters.php', 'manage_category.php', 'manage_brand.php', 'manaage_unit.php', 'manage_producttype.php'].includes(currentPage))
+        active: (cur === '/settings' || cur === '/masters' || cur.startsWith('/categories') || cur.startsWith('/brands') || cur.startsWith('/units') || ['masters.php', 'manage_category.php', 'manage_brand.php', 'manaage_unit.php'].includes(currentPage))
     }
 ];
 %>

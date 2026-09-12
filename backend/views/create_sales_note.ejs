@@ -87,7 +87,7 @@
                                             <%= (typeof saleType !== 'undefined' && saleType === 'credit') ? 'Required for Credit Sale' : 'Optional for Normal Sale' %>
                                         </span>
                                     </div>
-                                    <select name="customer_id" id="customerSelect" class="form-select select2-customer">
+                                    <select name="customer_id" id="customerSelect" class="form-select select2-customer searchable-select">
                                         <option value="">-- Walk-in / Retail Customer (No Customer) --</option>
                                         <% customersList.forEach(c => { %>
                                             <option value="<%= c.id %>" <%= Number(selectedCustomerId) === Number(c.id) ? 'selected' : '' %>>
@@ -175,7 +175,7 @@
                                 <div class="row g-2 align-items-end">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label small fw-semibold">Choose Product to Add</label>
-                                        <select id="quickProductSelect" class="form-select">
+                                        <select id="quickProductSelect" class="form-select searchable-select">
                                             <option value="">-- Search / Select Product --</option>
                                             <% productsList.forEach(p => { %>
                                                 <option value="<%= p.id %>"
@@ -716,6 +716,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Reset quick adder
         quickProductSelect.value = '';
+        if (quickProductSelect._searchableSelect) {
+            quickProductSelect._searchableSelect.refresh();
+        }
         quickStockDisplay.value = '-';
         quickQuantityInput.value = 1;
 
@@ -1198,6 +1201,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const newOpt = new Option(`${c.customer_code} - ${c.customer_name} (${c.mobile_number})`, c.id, true, true);
                     customerSelect.add(newOpt);
                     customerSelect.value = c.id;
+                    if (customerSelect._searchableSelect) {
+                        customerSelect._searchableSelect.refresh();
+                    }
 
                     // Trigger change and load details
                     loadCustomerDetails(c.id);
@@ -1236,6 +1242,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (items && items.length > 0) {
         renderItemsTable();
         recalculateAll();
+    }
+    if (window.SearchableSelect) {
+        SearchableSelect.init('.searchable-select');
     }
 });
 </script>
