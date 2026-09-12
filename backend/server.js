@@ -63,9 +63,15 @@ app.use('/sun_powertools/assets', express.static(assetsDir));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/sun_powertools/uploads', express.static(uploadsDir));
 
-// Serve favicon
+// Serve favicon (SVG & multi-resolution ICO)
 app.get(['/favicon.ico', '/sun_powertools/favicon.ico'], (req, res) => {
-    res.sendFile(path.join(assetsDir, 'images/logo/favicon.ico'), (err) => {
+    res.sendFile(path.join(assetsDir, 'images/favicon/favicon.ico'), (err) => {
+        if (err) res.status(204).end();
+    });
+});
+
+app.get(['/favicon.svg', '/sun_powertools/favicon.svg'], (req, res) => {
+    res.type('image/svg+xml').sendFile(path.join(assetsDir, 'images/favicon/favicon.svg'), (err) => {
         if (err) res.status(204).end();
     });
 });
@@ -131,7 +137,9 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, HOST, () => {
     console.log(`=========================================`);
     console.log(`  Sun PowerTools Node.js Backend Server  `);
-    console.log(`  Running on: http://${HOST}:${PORT}   `);
+    const displayHost = (HOST === '0.0.0.0' || !HOST) ? 'localhost' : HOST;
+    console.log(`  Local URL:   http://${displayHost}:${PORT}`);
+    console.log(`  Network URL: http://127.0.0.1:${PORT}`);
     console.log(`=========================================`);
     
     // Automatically verify and repair table schemas (AUTO_INCREMENT compatibility for TiDB Cloud & MySQL)
